@@ -72,7 +72,7 @@ export default function RootLayout() {
                 }}
             />
             <Tabs.Screen 
-                name="calendar" 
+                name="appointment" 
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <View style={{ 
@@ -121,23 +121,22 @@ export default function RootLayout() {
                             justifyContent: 'center',
                         }}>
                             <View style={{
-                                width: focused ? 55 : 50,
-                                height: focused ? 55 : 50,
+                                width: 50,
+                                height: 50,
                                 backgroundColor: focused ? '#67A9AF' : 'transparent',
-                                borderRadius: focused ? 30 : 15,
+                                borderRadius: 15,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 marginBottom: 2,
-                                shadowColor: focused ? '#67A9AF' : 'transparent',
+                                shadowColor: '#67A9AF',
                                 shadowOffset: { width: 0, height: 6 },
                                 shadowOpacity: 0.4,
                                 shadowRadius: 12,
-                                elevation: focused ? 12 : 0,
-                                marginTop: focused ? -10 : 0,
+                                elevation: focused ? 8 : 0,
                             }}>
                                 <Ionicons 
                                     name={focused ? "heart" : "heart-outline"} 
-                                    size={focused ? 28 : 24} 
+                                    size={24} 
                                     color={focused ? 'white' : color} 
                                 />
                             </View>
@@ -147,14 +146,14 @@ export default function RootLayout() {
                                     height: 8,
                                     backgroundColor: '#67A9AF',
                                     borderRadius: 4,
-                                    marginTop: focused ? 6 : 2,
+                                    marginTop: 2,
                                 }} />
                             )}
                         </View>
                     ),
                 }}
             />
-            <Tabs.Screen 
+            {/* <Tabs.Screen 
                 name="chat" 
                 options={{
                     tabBarIcon: ({ color, focused }) => (
@@ -194,7 +193,7 @@ export default function RootLayout() {
                         </View>
                     ),
                 }}
-            />
+            /> */}
             <Tabs.Screen 
                 name="profile" 
                 options={{

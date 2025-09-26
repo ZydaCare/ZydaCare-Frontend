@@ -1,297 +1,509 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, RegisterData, LoginCredentials, OtpVerification, ResetPasswordData } from '../types/auth';
+import { router } from 'expo-router';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
-const API_URL = 'https://zydacare-backend.onrender.com/api/v1/auth'; // Replace with your actual API URL
+// Types
+interface User {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    photo: string;
+    role: 'patient' | 'doctor';
+    isEmailVerified: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
 
-interface AuthContextType {
+interface AuthState {
     user: User | null;
     token: string | null;
-    isAuthenticated: boolean;
     isLoading: boolean;
+    isAuthenticated: boolean;
     error: string | null;
-    register: (data: RegisterData) => Promise<void>;
-    login: (credentials: LoginCredentials) => Promise<{ user: User; token: string }>;
-    verifyOtp: (data: OtpVerification & { purpose: string }) => Promise<void>;
-    forgotPassword: (email: string) => Promise<void>;
-    resetPassword: (data: ResetPasswordData) => Promise<void>;
-    resendOtp: (email: string, purpose: string) => Promise<void>;
+}
+
+interface LoginData {
+    email: string;
+    password: string;
+}
+
+interface RegisterData {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    role: 'patient' | 'doctor';
+}
+
+interface ForgotPasswordData {
+    email: string;
+}
+
+interface VerifyOtpData {
+    email: string;
+    otp: string;
+    purpose: 'email_verification' | 'password_reset';
+}
+
+interface ResetPasswordData {
+    email: string;
+    otp: string;
+    password: string;
+}
+
+interface ResendOtpData {
+    email: string;
+    purpose: 'email_verification' | 'password_reset';
+}
+
+interface AuthContextType extends AuthState {
+    login: (data: LoginData) => Promise<any>;
+    register: (data: RegisterData) => Promise<any>;
     logout: () => Promise<void>;
+    forgotPassword: (data: ForgotPasswordData) => Promise<any>;
+    verifyOtp: (data: VerifyOtpData) => Promise<any>;
+    resetPassword: (data: ResetPasswordData) => Promise<any>;
+    resendOtp: (data: ResendOtpData) => Promise<any>;
+    getMe: () => Promise<void>;
     clearError: () => void;
+    checkAuthState: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// API Base URL - Replace with your actual backend URL
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+
+// API Helper function
+const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const token = await AsyncStorage.getItem('token');
+
+    const config: RequestInit = {
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` }),
+            ...options.headers,
+        },
+        ...options,
+    };
+
+    const response = await fetch(url, config);
+    const data = await response.json();
+
+    if (!response.ok) {
+        const errorMessage = data?.message || data?.error || 'An error occurred';
+        throw new Error(errorMessage);
+    }
+
+    // ✅ unwrap `data` if it exists
+    return data.data ?? data;
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [state, setState] = useState<{
-        user: User | null;
-        token: string | null;
-        isAuthenticated: boolean;
-        isLoading: boolean;
-        error: string | null;
-    }>({
+    const [authState, setAuthState] = useState<AuthState>({
         user: null,
         token: null,
-        isAuthenticated: false,
         isLoading: true,
+        isAuthenticated: false,
         error: null,
     });
 
-    // Load user from storage on mount and verify token
+    // Check authentication state on app start
     useEffect(() => {
-        const loadUser = async () => {
-            try {
-                const token = await AsyncStorage.getItem('token');
-                const userString = await AsyncStorage.getItem('user');
-
-                if (token && userString) {
-                    try {
-                        const user = JSON.parse(userString);
-                        // Here you might want to verify the token with your backend
-                        // For now, we'll assume the token is valid if it exists
-                        setState(prev => ({
-                            ...prev,
-                            token,
-                            user,
-                            isAuthenticated: true,
-                            isLoading: false,
-                        }));
-                    } catch (error) {
-                        console.error('Error parsing user data:', error);
-                        // Clear invalid data
-                        await AsyncStorage.multiRemove(['token', 'user']);
-                        setState(prev => ({ ...prev, isLoading: false }));
-                    }
-                } else {
-                    setState(prev => ({ ...prev, isLoading: false }));
-                }
-            } catch (error) {
-                console.error('Error loading user from storage:', error);
-                setState(prev => ({ ...prev, isLoading: false }));
-            }
-        };
-
-        loadUser();
+        checkAuthState();
     }, []);
 
-    // API request helper with generic type support
-    const apiRequest = async <T = any>(endpoint: string, method: string, body?: any, headers = {}): Promise<T> => {
+    const checkAuthState = async () => {
         try {
-            console.log(`API Request: ${method} ${API_URL}${endpoint}`, { body });
-            const response = await fetch(`${API_URL}${endpoint}`, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...headers,
-                },
-                ...(body && { body: JSON.stringify(body) }),
-            });
+            const token = await AsyncStorage.getItem('token');
+            const userData = await AsyncStorage.getItem('user');
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                const errorMessage = data?.message ||
-                    data?.error ||
-                    `Request failed with status ${response.status}`;
-                const error: any = new Error(errorMessage);
-                error.response = { status: response.status, data };
-                throw error;
-            }
-
-            return data;
-        } catch (err: any) {
-            console.error('API Error:', err);
-            throw err;
-        }
-    };
-
-    // Auth methods
-    const register = async (data: RegisterData) => {
-        try {
-            setState(prev => ({ ...prev, isLoading: true, error: null }));
-            await apiRequest('/register', 'POST', data);
-        } catch (err: any) {
-            setState(prev => ({ ...prev, error: err.message }));
-            throw err;
-        } finally {
-            setState(prev => ({ ...prev, isLoading: false }));
-        }
-    };
-
-    const verifyOtp = async ({ email, otp, purpose }: OtpVerification & { purpose: string }) => {
-        try {
-            setState(prev => ({ ...prev, isLoading: true, error: null }));
-            const data = await apiRequest('/verify-otp', 'POST', { 
-                email, 
-                otp, 
-                purpose 
-            });
-
-            // Only set authentication state if it's email verification or if token is returned
-            if (data.token && data.user) {
-                await AsyncStorage.setItem('token', data.token);
-                await AsyncStorage.setItem('user', JSON.stringify(data.user));
-
-                setState(prev => ({
+            if (token && userData) {
+                const user = JSON.parse(userData);
+                setAuthState(prev => ({
                     ...prev,
-                    user: data.user,
-                    token: data.token,
+                    token,
+                    user,
                     isAuthenticated: true,
+                    isLoading: false,
+                }));
+
+                // Verify token is still valid by fetching user data
+                try {
+                    await getMe();
+                } catch (error) {
+                    // Token is invalid, clear storage
+                    await logout();
+                }
+            } else {
+                setAuthState(prev => ({
+                    ...prev,
+                    isLoading: false,
+                    isAuthenticated: false,
+                    user: null,
+                    token: null,
                 }));
             }
-            
-            return data;
-        } catch (err: any) {
-            setState(prev => ({ ...prev, error: err.message }));
-            throw err;
-        } finally {
-            setState(prev => ({ ...prev, isLoading: false }));
-        }
-    };
-
-    const login = async ({ email, password }: LoginCredentials): Promise<{ user: User; token: string }> => {
-        try {
-            setState(prev => ({ ...prev, isLoading: true, error: null }));
-            const data = await apiRequest('/login', 'POST', { email, password }) as { user: User; token: string };
-
-            // Store token and user data in AsyncStorage
-            await Promise.all([
-                AsyncStorage.setItem('token', data.token),
-                AsyncStorage.setItem('user', JSON.stringify(data.user))
-            ]);
-
-            setState(prev => ({
+        } catch (error) {
+            console.error('Error checking auth state:', error);
+            setAuthState(prev => ({
                 ...prev,
-                user: data.user,
-                token: data.token,
-                isAuthenticated: true,
                 isLoading: false,
-                error: null
-            }));
-
-            return { user: data.user, token: data.token };
-        } catch (err: any) {
-            setState(prev => ({ ...prev, error: err.message }));
-            throw err;
-        } finally {
-            setState(prev => ({ ...prev, isLoading: false }));
-        }
-    };
-
-    const forgotPassword = async (email: string) => {
-        try {
-            setState(prev => ({ ...prev, isLoading: true, error: null }));
-            await apiRequest('/forgotpassword', 'POST', { email });
-        } catch (err: any) {
-            setState(prev => ({ ...prev, error: err.message }));
-            throw err;
-        } finally {
-            setState(prev => ({ ...prev, isLoading: false }));
-        }
-    };
-
-    const resetPassword = async ({ email, otp, password }: ResetPasswordData) => {
-        try {
-            setState(prev => ({ ...prev, isLoading: true, error: null }));
-
-            // Use the new resetpassword endpoint with email, otp, and password in body
-            const data = await apiRequest('/resetpassword', 'PUT', {
-                email,
-                otp,
-                password
-            });
-
-            if (!data.token || !data.user) {
-                throw new Error('Invalid response from server');
-            }
-
-            // Store the user data and token
-            await AsyncStorage.setItem('token', data.token);
-            await AsyncStorage.setItem('user', JSON.stringify(data.user));
-
-            setState(prev => ({
-                ...prev,
-                user: data.user,
-                token: data.token,
-                isAuthenticated: true,
-                isLoading: false,
-            }));
-        } catch (err: any) {
-            console.error('Error in resetPassword:', err);
-            const errorMessage = err.response?.data?.message || err.message || 'Failed to reset password';
-            setState(prev => ({ ...prev, error: errorMessage, isLoading: false }));
-            throw new Error(errorMessage);
-        } finally {
-            setState(prev => ({ ...prev, isLoading: false }));
-        }
-    };
-
-    const resendOtp = async (email: string, purpose: string = 'email_verification') => {
-        try {
-            setState(prev => ({ ...prev, isLoading: true, error: null }));
-            await apiRequest('/resend-otp', 'POST', { email, purpose });
-        } catch (err: any) {
-            setState(prev => ({ ...prev, error: err.message }));
-            throw err;
-        } finally {
-            setState(prev => ({ ...prev, isLoading: false }));
-        }
-    };
-
-    const logout = async () => {
-        try {
-            // Clear all async storage items
-            await AsyncStorage.multiRemove(['token', 'user']);
-            
-            // Reset state
-            setState({
+                isAuthenticated: false,
                 user: null,
                 token: null,
-                isAuthenticated: false,
+                error: 'Error checking authentication state',
+            }));
+        }
+    };
+
+    const login = async (data: LoginData) => {
+        try {
+            setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+
+            const response = await apiCall('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: data.email.trim(),
+                    password: data.password,
+                }),
+            });
+
+            console.log('Login API response:', response);
+
+            const { token, user } = response;
+
+            const formattedUserData = {
+                ...user,
+                _id: user.id, // normalize field name
+            };
+            delete formattedUserData.id;
+
+            // Save token & user immediately
+            await AsyncStorage.setItem('token', token);
+            await AsyncStorage.setItem('user', JSON.stringify(formattedUserData));
+
+            // ✅ Update context immediately
+            setAuthState(prev => ({
+                ...prev,
+                user: formattedUserData,
+                token,
+                isAuthenticated: true,
                 isLoading: false,
                 error: null,
+            }));
+
+            // ✅ Navigate now (don’t wait for getMe)
+            if (formattedUserData.role === 'doctor') {
+                router.replace('/(doctor)/(tabs)/home');
+            } else {
+                router.replace('/(patient)/(tabs)/home');
+            }
+
+            // ✅ Optionally refresh user in background
+            getMe().catch(err => console.warn("getMe failed after login:", err));
+
+            return response;
+        } catch (error: any) {
+            console.error('Login error:', error);
+            const errorMessage = error.message || 'Login failed';
+            setAuthState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: errorMessage,
+            }));
+            throw new Error(errorMessage);
+        }
+    };
+
+    const register = async (data: RegisterData) => {
+        try {
+            setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+
+            const response = await apiCall('/auth/register', {
+                method: 'POST',
+                body: JSON.stringify(data),
             });
-            
-            // Navigation will be handled by the RootLayoutNav component
-        } catch (error) {
-            console.error('Error during logout:', error);
+
+            setAuthState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: null,
+            }));
+
+            return response;
+        } catch (error: any) {
+            setAuthState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: error.message || 'Registration failed',
+            }));
             throw error;
         }
     };
 
+    const forgotPassword = async (data: ForgotPasswordData) => {
+        try {
+            setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+
+            const response = await apiCall('/auth/forgotpassword', {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+
+            setAuthState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: null,
+            }));
+
+            return response;
+        } catch (error: any) {
+            setAuthState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: error.message || 'Failed to send reset email',
+            }));
+            throw error;
+        }
+    };
+
+    const verifyOtp = async (data: VerifyOtpData) => {
+        try {
+          setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+      
+          const response = await apiCall('/auth/verify-otp', {
+            method: 'POST',
+            body: JSON.stringify(data),
+          });
+      
+          // If it's email verification, store the token and user data
+          if (data.purpose === 'email_verification' && response.token && response.user) {
+            const { token, user } = response;
+      
+            const formattedUserData = {
+              ...user,
+              _id: user.id, // normalize id
+            };
+            delete formattedUserData.id;
+      
+            // ✅ Save token & user
+            await AsyncStorage.setItem('token', token);
+            await AsyncStorage.setItem('user', JSON.stringify(formattedUserData));
+      
+            // ✅ Update context
+            setAuthState(prev => ({
+              ...prev,
+              user: formattedUserData,
+              token,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null,
+            }));
+      
+            // Navigate based on role
+            if (formattedUserData.role === 'doctor') {
+              router.replace('/(doctor)/(tabs)/home');
+            } else {
+              router.replace('/(patient)/(tabs)/home');
+            }
+          } else {
+            setAuthState(prev => ({
+              ...prev,
+              isLoading: false,
+              error: null,
+            }));
+          }
+      
+          return response;
+        } catch (error: any) {
+          setAuthState(prev => ({
+            ...prev,
+            isLoading: false,
+            error: error.message || 'OTP verification failed',
+          }));
+          throw error;
+        }
+      };
+      
+
+    const resetPassword = async (data: ResetPasswordData) => {
+        try {
+            setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+            console.log('Resetting password with data:', { email: data.email, otp: data.otp });
+
+            const response = await apiCall('/auth/resetpassword', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: data.email,
+                    otp: data.otp,
+                    password: data.password
+                }),
+            });
+
+            console.log('Reset password response:', response);
+
+            // Handle different response structures
+            const responseData = response.data || response;
+            
+            // If the response indicates success but doesn't include user data
+            if (responseData.success || responseData.message) {
+                // Just clear the loading state and return success
+                setAuthState(prev => ({
+                    ...prev,
+                    isLoading: false,
+                    error: null,
+                }));
+                return { success: true, message: responseData.message || 'Password reset successful' };
+            }
+
+            // If the response includes a token and user data
+            if (response.token && response.user) {
+                const { token, user: userData } = response;
+                
+                // Store token and user data
+                await AsyncStorage.setItem('token', token);
+                await AsyncStorage.setItem('user', JSON.stringify(userData));
+
+                setAuthState(prev => ({
+                    ...prev,
+                    user: userData,
+                    token,
+                    isAuthenticated: true,
+                    isLoading: false,
+                    error: null,
+                }));
+
+                return { success: true, user: userData };
+            }
+
+            // If we get here, the response format is unexpected
+            console.error('Unexpected response format:', response);
+            throw new Error('Unexpected response from server');
+            
+        } catch (error: any) {
+            console.error('Reset password error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Password reset failed';
+            setAuthState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: errorMessage,
+            }));
+            throw new Error(errorMessage);
+        }
+    };
+
+    const resendOtp = async (data: ResendOtpData) => {
+        try {
+            setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+
+            const response = await apiCall('/auth/resend-otp', {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+
+            setAuthState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: null,
+            }));
+
+            return response;
+        } catch (error: any) {
+            setAuthState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: error.message || 'Failed to resend OTP',
+            }));
+            throw error;
+        }
+    };
+
+    const getMe = async () => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                console.log("No token found, skipping getMe");
+                return null; // don’t call API if logged out
+            }
+
+            const response = await apiCall('/auth/me');
+            console.log('GetMe response:', response);
+
+            const userData = response;
+            if (!userData || !userData._id) {
+                throw new Error('Invalid user data received');
+            }
+
+            await AsyncStorage.setItem('user', JSON.stringify(userData));
+            setAuthState(prev => ({
+                ...prev,
+                user: userData,
+                isAuthenticated: true,
+                error: null,
+            }));
+
+            return userData;
+        } catch (error: any) {
+            console.error('GetMe error:', error);
+            setAuthState(prev => ({
+                ...prev,
+                error: error.message || 'Failed to fetch user data',
+            }));
+            throw error;
+        }
+    };
+
+
+    const logout = async () => {
+        try {
+            await AsyncStorage.multiRemove(['token', 'user']);
+
+            setAuthState({
+                user: null,
+                token: null,
+                isLoading: false,
+                isAuthenticated: false,
+                error: null,
+            });
+
+            console.log('Logout successful');
+            router.replace('/welcome');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    };
+
+
     const clearError = () => {
-        setState(prev => ({ ...prev, error: null }));
+        setAuthState(prev => ({ ...prev, error: null }));
     };
-    
-    // Add a function to check if user is authenticated
-    const isAuthenticated = (): boolean => {
-        return state.isAuthenticated && !!state.token;
-    };
-    
-    // Add a function to get user role
-    const getUserRole = (): string | undefined => {
-        return state.user?.role;
+
+    const contextValue: AuthContextType = {
+        ...authState,
+        login,
+        register,
+        logout,
+        forgotPassword,
+        verifyOtp,
+        resetPassword,
+        resendOtp,
+        getMe,
+        clearError,
+        checkAuthState,
     };
 
     return (
-        <AuthContext.Provider
-            value={{
-                user: state.user,
-                token: state.token,
-                isAuthenticated: state.isAuthenticated,
-                isLoading: state.isLoading,
-                error: state.error,
-                register,
-                login,
-                verifyOtp,
-                forgotPassword,
-                resetPassword,
-                resendOtp,
-                logout,
-                clearError,
-            }}
-        >
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     );

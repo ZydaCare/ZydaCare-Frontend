@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StatusBar, SafeAreaView, KeyboardAvoidingView, Platform, Image, View, Alert } from 'react-native';
+import { StatusBar, SafeAreaView, KeyboardAvoidingView, Platform, Image, View, Alert, Text } from 'react-native';
 import { Images } from '@/assets/Images';
 import OtpInput from '@/components/OtpInput';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -11,6 +11,7 @@ export default function OtpScreen() {
   const [loading, setLoading] = useState(false);
   const otpRef = useRef<any>(null);
   const { verifyOtp, resendOtp, error, clearError } = useAuth();
+  const [message, setMessage] = useState('');
   
   // Get the flow type from URL params
   const { flow = 'signup', email = '' } = useLocalSearchParams<{
@@ -104,8 +105,8 @@ export default function OtpScreen() {
       // Determine the purpose based on flow
       const purpose = flow === 'forgotPassword' ? 'password_reset' : 'email_verification';
       
-      await resendOtp(email, purpose);
-      Alert.alert('Success', 'New OTP sent to your email');
+      await resendOtp({ email, purpose });
+      setMessage(flow === 'forgotPassword' ? 'New password reset OTP sent to your email' : 'New verification OTP sent to your email');
     } catch (error) {
       console.error('Failed to resend OTP:', error);
       Alert.alert('Error', 'Failed to resend OTP. Please try again.');
@@ -153,6 +154,8 @@ export default function OtpScreen() {
             containerClassName="flex-1"
           />
         </View>
+        <Text className="text-center text-gray-500 mt-4">{message}</Text>
+        
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

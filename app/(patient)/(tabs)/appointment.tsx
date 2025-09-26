@@ -1,10 +1,10 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-export default function calendar() {
+export default function appointment() {
   return (
     <View>
-      <Text>calendar</Text>
+      <Text>appointment</Text>
     </View>
   )
 }
