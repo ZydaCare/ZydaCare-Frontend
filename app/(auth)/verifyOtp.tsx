@@ -1,3 +1,4 @@
+import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/authContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -23,10 +24,11 @@ export default function VerifyOtp() {
     const inputRefs = useRef<(TextInput | null)[]>([]);
     const { email, purpose } = useLocalSearchParams<{ email?: string; purpose?: string }>();
     const { verifyOtp, resendOtp, error } = useAuth();
+    const { showToast } = useToast();
 
     useEffect(() => {
         if (!email || !purpose) {
-            Alert.alert('Error', 'Missing required information');
+            showToast('Missing required information', 'error');
             router.back();
             return;
         }
@@ -71,12 +73,12 @@ export default function VerifyOtp() {
         const otpString = otp.join('');
 
         if (otpString.length !== 6) {
-            Alert.alert('Error', 'Please enter the complete 6-digit OTP');
+            showToast('Please enter the complete 6-digit OTP', 'error');
             return;
         }
 
         if (!email || !purpose) {
-            Alert.alert('Error', 'Missing required information');
+            showToast('Missing required information', 'error');
             return;
         }
 
@@ -90,40 +92,19 @@ export default function VerifyOtp() {
 
             if (response.success) {
                 if (purpose === 'email_verification') {
-                    // Alert.alert(
-                    //     'Email Verified',
-                    //     'Your email has been verified successfully',
-                    //     [
-                    //         {
-                    //             text: 'OK',
-                    //             onPress: () => router.replace('/(auth)/login')
-                    //         }
-                    //     ]
-                    // );
+                    showToast('Your email has been verified successfully', 'success');
                     router.replace('/(auth)/login');
                 } else if (purpose === 'password_reset') {
                     router.push({
                         pathname: '/(auth)/newPassword',
                         params: { email, otp: otpString }
                     });
-                    //     Alert.alert(
-                    //         'OTP Verified',
-                    //         'You can now reset your password',
-                    //         [
-                    //             {
-                    //                 text: 'OK',
-                    //                 onPress: () => router.push({
-                    //                     pathname: '/(auth)/newPassword',
-                    //                     params: { email, otp: otpString }
-                    //                 })
-                    //             }
-                    //         ]
-                    //     );
+                    showToast('You can now reset your password', 'success');
                 }
             }
         } catch (error: any) {
             console.error('OTP verification error:', error);
-            Alert.alert('Error', error.message || 'Invalid OTP. Please try again.');
+            showToast(error.message || 'Invalid OTP. Please try again.', 'error');
         } finally {
             setLoading(false);
         }
@@ -131,7 +112,7 @@ export default function VerifyOtp() {
 
     const handleResendOtp = async () => {
         if (!email || !purpose) {
-            Alert.alert('Error', 'Missing required information');
+            showToast('Missing required information', 'error');
             return;
         }
 
@@ -143,12 +124,12 @@ export default function VerifyOtp() {
             });
 
             if (response.success) {
-                Alert.alert('Success', 'OTP has been resent to your email');
+                showToast('OTP has been resent to your email', 'success');
                 startCountdown();
             }
         } catch (error: any) {
             console.error('Resend OTP error:', error);
-            Alert.alert('Error', error.message || 'Failed to resend OTP');
+            showToast(error.message || 'Failed to resend OTP', 'error');
         } finally {
             setResendLoading(false);
         }

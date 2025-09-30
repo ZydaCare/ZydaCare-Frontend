@@ -18,12 +18,14 @@ import { Images } from '@/assets/Images';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/authContext';
 import { ScrollView } from 'react-native';
+import { useToast } from '@/components/ui/Toast';
 
 export default function ForgotPassword() {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const { forgotPassword, error, clearError } = useAuth();
     const { email: paramEmail } = useLocalSearchParams<{ email?: string }>();
+    const { showToast } = useToast();
 
     useEffect(() => {
         if (paramEmail) {
@@ -51,6 +53,7 @@ export default function ForgotPassword() {
             });
         } catch (error) {
             console.error('Forgot password error:', error);
+            showToast('Failed to send OTP. Please try again.', 'error');
         } finally {
             setLoading(false);
         }

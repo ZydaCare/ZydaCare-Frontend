@@ -1,4 +1,5 @@
 import { Images } from '@/assets/Images';
+import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/authContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -26,6 +27,7 @@ export default function Login() {
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const { login, isLoading, error } = useAuth();
+    const { showToast } = useToast();
 
     const Required = () => !email || !password;
 
@@ -34,12 +36,19 @@ export default function Login() {
 
         try {
             setLoading(true);
-            await login({ email, password });
-
+            const result = await login({ email, password });
+            
+            // If email verification is required, we've already been redirected
+            if (result?.requiresVerification) {
+                return;
+            }
+            
+            // Clear form on successful login
             setEmail('');
             setPassword('');
         } catch (error) {
             console.error('Login error:', error);
+            showToast(error?.message || 'Failed to login. Please try again.', 'error');
         } finally {
             setLoading(false);
         }
@@ -90,7 +99,7 @@ export default function Login() {
                                 <Text className="text-gray-700 text-sm font-sans-medium mb-2">Password</Text>
                                 <View className="relative">
                                     <TextInput
-                                        className="w-full h-12 px-4 pr-12 bg-white rounded-lg border border-gray-200"
+                                        className="w-full h-12 px-4 pr-12 bg-white rounded-lg border border-gray-200 text-gray-700"
                                         placeholder="Enter your password"
                                         placeholderTextColor="#9ca3af"
                                         value={password}

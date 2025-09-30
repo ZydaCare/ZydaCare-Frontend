@@ -1,4 +1,5 @@
 import { Images } from '@/assets/Images';
+import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/authContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -28,18 +29,19 @@ export default function Signup() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const { register } = useAuth();
+    const { showToast } = useToast();
 
     const validateForm = () => {
         if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
-            Alert.alert('Error', 'All fields are required');
+            showToast('All fields are required', 'error');
             return false;
         }
         if (!/^\S+@\S+\.\S+$/.test(email)) {
-            Alert.alert('Error', 'Please enter a valid email address');
+            showToast('Please enter a valid email address', 'error');
             return false;
         }
         if (password.length < 8) {
-            Alert.alert('Error', 'Password must be at least 8 characters long');
+            showToast('Password must be at least 8 characters long', 'error');
             return false;
         }
         return true;
@@ -63,7 +65,7 @@ export default function Signup() {
             });
         } catch (error: any) {
             console.error('Signup error:', error);
-            Alert.alert('Error', error?.message || 'Failed to create account. Please try again.');
+            showToast(error?.message || 'Failed to create account. Please try again.', 'error');
         } finally {
             setLoading(false);
         }
@@ -140,7 +142,7 @@ export default function Signup() {
                                 <Text className="text-gray-700 text-sm font-sans-medium mb-2">Password</Text>
                                 <View className="relative">
                                     <TextInput
-                                        className="w-full h-12 px-4 pr-12 bg-white rounded-lg border border-gray-200"
+                                        className="w-full h-12 px-4 pr-12 bg-white rounded-lg border border-gray-200 text-gray-700"
                                         placeholder="Enter your password"
                                         placeholderTextColor="#9ca3af"
                                         value={password}

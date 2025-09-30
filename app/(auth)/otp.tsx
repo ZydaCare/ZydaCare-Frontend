@@ -4,20 +4,61 @@ import { Images } from '@/assets/Images';
 import OtpInput from '@/components/OtpInput';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/authContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useToast } from '@/components/ui/Toast';
 
-type OtpFlowType = 'signup' | 'forgotPassword' | 'changeEmail' | 'twoFactorAuth';
+type LoginResponse = {
+  user?: {
+    role: string;
+    [key: string]: any;
+  };
+  requiresVerification?: boolean;
+  [key: string]: any;
+};
+
+type OtpFlowType = 'signup' | 'forgotPassword' | 'email_verification' | 'changeEmail' | 'twoFactorAuth';
+
+type VerifyOtpResponse = {
+  success: boolean;
+  message?: string;
+  [key: string]: any;
+};
 
 export default function OtpScreen() {
   const [loading, setLoading] = useState(false);
   const otpRef = useRef<any>(null);
-  const { verifyOtp, resendOtp, error, clearError } = useAuth();
+  const { verifyOtp, resendOtp, error, clearError } = useAuth() as {
+    verifyOtp: (data: { email: string; otp: string; purpose: string }) => Promise<VerifyOtpResponse>;
+    resendOtp: (data: { email: string; purpose: string }) => Promise<{ success: boolean; message?: string }>;
+    login: (credentials: { email: string; password: string }) => Promise<LoginResponse>;
+    error: string | null;
+    clearError: () => void;
+  };
   const [message, setMessage] = useState('');
+  const { showToast } = useToast();
   
   // Get the flow type from URL params
-  const { flow = 'signup', email = '' } = useLocalSearchParams<{
+  const { flow = 'signup', email: paramEmail = '' } = useLocalSearchParams<{
     flow?: OtpFlowType;
     email?: string;
   }>();
+  
+  // Get email from params or AsyncStorage
+  const [email, setEmail] = useState<string>(paramEmail as string);
+  
+  useEffect(() => {
+    const getEmail = async () => {
+      if (!paramEmail) {
+        const savedEmail = await AsyncStorage.getItem('verificationEmail');
+        if (savedEmail) {
+          setEmail(savedEmail);
+        }
+      } else {
+        setEmail(paramEmail as string);
+      }
+    };
+    getEmail();
+  }, [paramEmail]);
 
   // Clear any previous errors when component mounts
   useEffect(() => {
@@ -27,60 +68,66 @@ export default function OtpScreen() {
   // Show error alert if there's an error
   useEffect(() => {
     if (error) {
-      Alert.alert('Verification Failed', error);
+      showToast(error, 'error');
       clearError();
     }
   }, [error]);
 
   const handleCodeFilled = async (code: string) => {
     if (!email) {
-      Alert.alert('Error', 'Email is required for OTP verification');
+      showToast('Email is required for OTP verification', 'error');
       return;
     }
 
-    setLoading(true);
-    
     try {
-      console.log('Verifying OTP for email:', email, 'Flow:', flow);
-      
-      // Determine the purpose based on flow
+      setLoading(true);
       const purpose = flow === 'forgotPassword' ? 'password_reset' : 'email_verification';
-      
-      const result = await verifyOtp({ 
-        email, 
-        otp: code, 
-        purpose 
-      });
-      
-      console.log('OTP verified successfully', result);
-      
-      // Handle navigation based on flow type
-      switch (flow) {
-        case 'forgotPassword':
-          console.log('Navigating to new password screen with email and OTP');
-          router.push({
-            pathname: '/(auth)/newPassword',
-            params: { 
-              email,
-              otp: code // Pass the OTP code to the new password screen
-            }
-          });
-          break;
+      const response = await verifyOtp({ email, otp: code, purpose });
+
+      if (response.success) {
+        // If this was an email verification, clear the stored email
+        if (flow === 'email_verification') {
+          await AsyncStorage.removeItem('verificationEmail');
           
-        case 'changeEmail':
-          // Handle email change verification
-          router.back();
-          break;
+          // Try to log in the user automatically
+          try {
+            // const loginResponse = await login({ email, password: '' });
+            // if (loginResponse?.user) {
+              showToast('Email verified successfully!', 'success');
+              router.replace('/(auth)/login');
+              return;
+            // }
+          } catch (loginError) {
+            console.log('Auto-login after verification failed, redirecting to login', loginError);
+          }
           
-        case 'signup':
-        default:
-          // For signup, user should be authenticated after email verification
-          router.replace('/(patient)/(tabs)/home'); // or wherever authenticated users should go
-          break;
+          // If auto-login failed, redirect to login
+          showToast('Email verified successfully! Please login.', 'success');
+          router.replace('/(auth)/login');
+          return;
+        }
+
+        // Handle other flows
+        switch (flow) {
+          case 'forgotPassword':
+            router.push({
+              pathname: '/(auth)/newPassword',
+              params: { email, otp: code }
+            });
+            break;
+            
+          case 'signup':
+          default:
+            showToast('Email verified successfully! Please login.', 'success');
+            router.replace('/(auth)/login');
+            break;
+        }
       }
-    } catch (error) {
-      console.error('OTP verification failed:', error);
-      Alert.alert('Error', 'Failed to verify OTP. Please try again.');
+    } catch (error: any) {
+      console.error('OTP verification error:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to verify OTP. Please try again.';
+      showToast(errorMessage, 'error');
+      
       // Clear the OTP input on error
       if (otpRef.current) {
         otpRef.current.clear();
@@ -97,7 +144,7 @@ export default function OtpScreen() {
     }
     
     if (!email) {
-      Alert.alert('Error', 'Email is required to resend OTP');
+      showToast('Email is required to resend OTP', 'error');
       return;
     }
     
@@ -106,10 +153,11 @@ export default function OtpScreen() {
       const purpose = flow === 'forgotPassword' ? 'password_reset' : 'email_verification';
       
       await resendOtp({ email, purpose });
+      showToast(flow === 'forgotPassword' ? 'New password reset OTP sent to your email' : 'New verification OTP sent to your email', 'success');
       setMessage(flow === 'forgotPassword' ? 'New password reset OTP sent to your email' : 'New verification OTP sent to your email');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to resend OTP:', error);
-      Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+      showToast('Failed to resend OTP. Please try again.', 'error');
     }
   };
 
@@ -154,7 +202,7 @@ export default function OtpScreen() {
             containerClassName="flex-1"
           />
         </View>
-        <Text className="text-center text-gray-500 mt-4">{message}</Text>
+        {/* <Text className="text-center font-sans-semibold text-[16px] text-secondary mt-4">{message}</Text> */}
         
       </KeyboardAvoidingView>
     </SafeAreaView>

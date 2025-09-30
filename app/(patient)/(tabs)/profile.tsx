@@ -12,6 +12,7 @@ import React, { useEffect, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/context/authContext'
+import { router } from 'expo-router'
 
 const Profile = () => {
   const [logoutModalVisible, setLogoutModalVisible] = useState(false)
@@ -34,9 +35,9 @@ const Profile = () => {
   }, [user])
 
   const menuItems = [
-    { icon: 'person-outline', title: 'Profile Settings', chevron: true },
+    { icon: 'person-outline', title: 'Security Settings', chevron: true, action: () => router.push('/(patient)/(pages)/security') },
     { icon: 'card-outline', title: 'Payment Method', chevron: true },
-    { icon: 'moon-outline', title: 'Dark Mode', chevron: true },
+    { icon: 'moon-outline', title: 'Theme Settings', chevron: true },
     { icon: 'time-outline', title: 'Medical History', chevron: true },
     { icon: 'people-outline', title: 'Family Doctors', chevron: true },
     { icon: 'help-circle-outline', title: 'Help and Support', chevron: true },
@@ -66,28 +67,35 @@ const Profile = () => {
     return <Text>No user found</Text>;
   }
 
+  const fullName = `${user.firstName} ${user.lastName}`.trim();
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
+      <View className="p-4 flex-row items-center">
+        {/* <TouchableOpacity onPress={() => router.back()} className="bg-white rounded-full p-2 shadow-sm">
+          <Ionicons name="chevron-back" size={20} color="#374151" />
+        </TouchableOpacity> */}
+        <Text className="text-xl flex-1 text-center mr-8 font-sans-semibold">My Profile</Text>
+      </View>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         
         {/* User Profile Section */}
         <View className="bg-white mx-4 mt-6 rounded-2xl px-5 py-6">
-          <TouchableOpacity className="flex-row items-center justify-between">
+          <TouchableOpacity onPress={() => router.push('/(patient)/(pages)/profile')} className="flex-row items-center justify-between">
             <View className="flex-row items-center">
-              {user?.photo ? (
                 <Image
-                  source={{ uri: user.photo }}
+                  source={{ uri: user.profileImage?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'U')}&background=67A9AF&color=fff` }}
                   className="w-14 h-14 rounded-full"
                 />
-              ) : (
+              {/* ) : (
                 <View className="w-14 h-14 bg-primary rounded-full items-center justify-center">
                   <Text className="text-lg text-white font-sans-bold">
                     {user?.firstName?.[0]}
                     {user?.lastName?.[0]}
                   </Text>
                 </View>
-              )}
+              )} */}
               <View className="ml-4 flex-1">
                 <Text className="text-lg font-semibold font-sans text-gray-900">
                   {user ? `${user.firstName} ${user.lastName}` : "Guest"}

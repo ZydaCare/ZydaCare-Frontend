@@ -17,8 +17,10 @@ export default function App() {
             // User is logged in, redirect to appropriate dashboard
             if (user.role === 'doctor') {
               router.replace('/(doctor)/(tabs)/home');
-            } else {
+            } else if (user.role === 'patient') {
               router.replace('/(patient)/(tabs)/home');
+            } else if (user.role === 'admin') {
+              router.replace('/(admin)/(tabs)/home');
             }
           } else {
             // User is not logged in, redirect to welcome screen

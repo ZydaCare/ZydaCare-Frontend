@@ -1,4 +1,5 @@
 import { Images } from '@/assets/Images';
+import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/authContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -29,15 +30,13 @@ export default function NewPassword() {
     const [error, setError] = useState('');
     const { resetPassword, clearError } = useAuth();
     const { email, otp } = useLocalSearchParams<{ email?: string; otp?: string }>();
+    const { showToast } = useToast();
 
     useEffect(() => {
         clearError();
         if (!email || !otp) {
-            Alert.alert(
-                'Error',
-                'Missing required information. Please start the password reset process again.',
-                [{ text: 'OK', onPress: () => router.replace('/(auth)/forgotPassword') }]
-            );
+            showToast('Missing required information. Please start the password reset process again.', 'error');
+            router.replace('/(auth)/forgotPassword');
         }
     }, []);
 
@@ -68,7 +67,7 @@ export default function NewPassword() {
             return;
         }
         if (!email || !otp) {
-            setError('Missing required information. Please try again.');
+            showToast('Missing required information. Please try again.', 'error');
             return;
         }
 
@@ -87,26 +86,14 @@ export default function NewPassword() {
             console.error('Reset password error:', error);
             const errorMessage = error?.message || 'Failed to reset password. Please try again.';
             setError(errorMessage);
+            showToast(errorMessage, 'error');
             
             if (errorMessage.toLowerCase().includes('invalid otp') ||
                 errorMessage.toLowerCase().includes('expired')) {
-                Alert.alert(
-                    'OTP Error', 
-                    'Your OTP is invalid or has expired. Please request a new one.', 
-                    [
-                        { 
-                            text: 'OK', 
-                            onPress: () => router.replace('/(auth)/forgotPassword') 
-                        }
-                    ]
-                );
+                showToast('Your OTP is invalid or has expired. Please request a new one.', 'error');
+                router.replace('/(auth)/forgotPassword');
             } else {
-                // Show a more user-friendly error message
-                Alert.alert(
-                    'Error',
-                    errorMessage,
-                    [{ text: 'OK' }]
-                );
+                showToast(errorMessage, 'error');
             }
         } finally {
             setLoading(false);

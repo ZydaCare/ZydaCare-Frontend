@@ -1,6 +1,7 @@
 import '../global.css'
 import '@/assets/fonts';
 import { AuthProvider } from '@/context/authContext';
+import { ToastProvider } from '@/components/ui/Toast';
 import * as Font from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -25,6 +26,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(patient)" />
       <Stack.Screen name="(doctor)" />
+      <Stack.Screen name="(admin)" />
     </Stack>
   );
 }
@@ -32,7 +34,9 @@ function RootLayoutNav() {
 function AppContent() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <ToastProvider>
+        <RootLayoutNav />
+      </ToastProvider>
     </AuthProvider>
   );
 }

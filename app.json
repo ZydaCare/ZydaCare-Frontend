@@ -3,40 +3,86 @@
     "name": "ZydaCare",
     "slug": "ZydaCare",
     "version": "1.0.0",
+    "owner": "zydacare",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "zydacare",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#67A9AF"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.nd_jephthah.ZydaCare"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png",
+      "favicon": "./assets/images/LogoIcon.png",
       "bundler": "metro"
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#67A9AF",
+          "mode": "production"
+        }
+      ],
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow ZydaCare to access your camera",
+          "microphonePermission": "Allow ZydaCare to access your microphone",
+          "recordAudioAndroid": true
+        }
+      ],
+      "expo-web-browser",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow ZydaCare to access your microphone."
+        }
+      ],
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow ZydaCare to access your photos"
+        }
+      ],
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#fff",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#fff"
           }
         }
       ],
@@ -46,6 +92,18 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ae9be269-7798-4ac3-ab78-1bf98ec03d52"
+      }
+    },
+    "notification": {
+      "icon": "./assets/images/icon.png",
+      "color": "#67A9AF",
+      "androidMode": "default",
+      "androidCollapsedTitle": "New notification from ZydaCare"
     }
   }
 }

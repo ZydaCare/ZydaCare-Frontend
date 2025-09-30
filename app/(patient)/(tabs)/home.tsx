@@ -1,8 +1,9 @@
 import { View, Text, StatusBar, TextInput, ScrollView, TouchableOpacity } from 'react-native'
-import React from 'react'
+import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Navbar from '@/components/Navbar'
 import { Ionicons } from '@expo/vector-icons'
+import { router } from 'expo-router'
 
 const categories = [
   { id: 1, name: 'General Doctor', icon: 'medkit-outline' },
@@ -14,20 +15,31 @@ const categories = [
   { id: 7, name: 'Ophthalmologist', icon: 'eye-outline' },
   { id: 8, name: 'Dermatologist', icon: 'sparkles-outline' },
   { id: 9, name: 'Neurologist', icon: 'fitness-outline' },
-  { id: 10, name: 'Orthopedic', icon: 'body-outline' }, 
-  { id: 11, name: 'ENT Specialist', icon: 'ear-outline' }, 
-  { id: 12, name: 'Gynecologist', icon: 'woman-outline' }, 
-  { id: 13, name: 'Urologist', icon: 'male-female-outline' }, 
-  { id: 14, name: 'Nutritionist', icon: 'restaurant-outline' }, 
-  { id: 15, name: 'Psychologist', icon: 'happy-outline' }, 
-  { id: 16, name: 'Pediatrician', icon: 'happy-outline' }, 
+  { id: 10, name: 'Orthopedic', icon: 'body-outline' },
+  { id: 11, name: 'ENT Specialist', icon: 'ear-outline' },
+  { id: 12, name: 'Gynecologist', icon: 'woman-outline' },
+  { id: 13, name: 'Urologist', icon: 'male-female-outline' },
+  { id: 14, name: 'Nutritionist', icon: 'restaurant-outline' },
+  { id: 15, name: 'Psychologist', icon: 'happy-outline' },
+  { id: 16, name: 'Pediatrician', icon: 'happy-outline' },
   { id: 17, name: 'Pulmonologist', icon: 'pulse-outline' },
-  { id: 18, name: 'Radiologist', icon: 'radio-outline' }, 
-  { id: 19, name: 'Oncologist', icon: 'flame-outline' }, 
-  { id: 20, name: 'Nephrologist', icon: 'water-outline' }, 
+  { id: 18, name: 'Radiologist', icon: 'radio-outline' },
+  { id: 19, name: 'Oncologist', icon: 'flame-outline' },
+  { id: 20, name: 'Nephrologist', icon: 'water-outline' },
 ]
 
 const Home = () => {
+  const [homeSearch, setHomeSearch] = useState('')
+
+  const handleSearch = () => {
+    if (homeSearch.trim() !== '') {
+      router.push({
+        pathname: '/search',
+        params: { query: homeSearch }, // ✅ pass query to search screen
+      })
+    }
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -38,11 +50,17 @@ const Home = () => {
         <View className="py-4 px-4 mt-3">
           <View className="flex-row items-center justify-between w-full h-14 px-3 bg-white rounded-full border border-gray-200">
             <TextInput
-              className="flex-1 ml-2 font-sans-normal"
+              className="flex-1 ml-2 font-sans text-gray-800"
               placeholder="Search doctors, specialists, hospitals....."
               placeholderTextColor="#B4B4B4"
+              value={homeSearch}
+              onChangeText={setHomeSearch}
+              onSubmitEditing={handleSearch} // press Enter
+              returnKeyType="search"
             />
-            <Ionicons name="search" size={20} color="#D65C1E" />
+            <TouchableOpacity onPress={handleSearch}>
+              <Ionicons name="search" size={20} color="#D65C1E" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -58,6 +76,7 @@ const Home = () => {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+
           contentContainerStyle={{ paddingHorizontal: 12 }}
         >
           <View className="flex-col">
