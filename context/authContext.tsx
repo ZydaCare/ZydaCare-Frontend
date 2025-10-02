@@ -16,6 +16,8 @@ interface AuthContextType extends AuthState {
     getMe: () => Promise<void>;
     clearError: () => void;
     checkAuthState: () => Promise<void>;
+    updateProfile: (data: Partial<User>) => Promise<User>;
+    updatePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message?: string; token?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -451,6 +453,95 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAuthState(prev => ({ ...prev, error: null }));
     };
 
+    const updateProfile = async (data: Partial<User>) => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const response = await fetch(`${BASE_URL}/auth/update-profile`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to update profile');
+            }
+
+            const responseData = await response.json();
+            const updatedUser = responseData.data || responseData;
+            
+            // Update the user in the auth state
+            setAuthState(prev => ({
+                ...prev,
+                user: prev.user ? { ...prev.user, ...updatedUser } : updatedUser,
+                isAuthenticated: true,
+            }));
+
+            // Update AsyncStorage
+            if (updatedUser) {
+                await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+
+            return updatedUser;
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            throw error;
+        }
+    };
+
+    const updatePassword = async (currentPassword: string, newPassword: string) => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const response = await fetch(`${BASE_URL}/auth/change-password`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ currentPassword, newPassword }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to update password');
+            }
+
+            // Update the token in storage and state if a new one was returned
+            if (data.token) {
+                await AsyncStorage.setItem('token', data.token);
+                setAuthState(prev => ({
+                    ...prev,
+                    token: data.token,
+                }));
+            }
+
+            return { success: true, message: data.message, token: data.token };
+        } catch (error) {
+            console.error('Update password error:', error);
+            const errorMessage = error instanceof Error 
+                ? error.message 
+                : typeof error === 'object' && error !== null && 'message' in error
+                    ? String(error.message)
+                    : 'Failed to update password';
+            return { 
+                success: false, 
+                message: errorMessage
+            };
+        }
+    };
+
     const contextValue: AuthContextType = {
         ...authState,
         login,
@@ -463,6 +554,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         getMe,
         clearError,
         checkAuthState,
+        updateProfile,
+        updatePassword,
     };
 
     return (

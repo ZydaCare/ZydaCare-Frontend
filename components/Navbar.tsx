@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons'
 import { useAuth } from '@/context/authContext'
 import { User } from '@/types/User';
+import { router } from 'expo-router';
 
 export default function Navbar() {
     const { user, getMe } = useAuth();
@@ -35,7 +36,7 @@ export default function Navbar() {
             </TouchableOpacity>
 
             <View className='flex-row items-center gap-4'>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/(patient)/(pages)/profile')}>
                     <Image source={{ uri: profile?.profileImage?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'U')}&background=67A9AF&color=fff&font-family=Inter-Regular` }} className='w-10 h-10 rounded-full' />
                 </TouchableOpacity>
                 <TouchableOpacity>

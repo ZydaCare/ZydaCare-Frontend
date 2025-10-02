@@ -4,8 +4,8 @@ import { View, Text } from "react-native";
 
 export default function RootLayout() {
     return (
-        <Tabs 
-            screenOptions={{ 
+        <Tabs
+            screenOptions={{
                 headerShown: false,
                 tabBarStyle: {
                     backgroundColor: '#f8fafc',
@@ -30,11 +30,11 @@ export default function RootLayout() {
                 },
             }}
         >
-            <Tabs.Screen 
-                name="home" 
+            <Tabs.Screen
+                name="home"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
-                        <View style={{ 
+                        <View style={{
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
@@ -52,10 +52,10 @@ export default function RootLayout() {
                                 shadowRadius: 8,
                                 elevation: focused ? 8 : 0,
                             }}>
-                                <Ionicons 
-                                    name={focused ? "home" : "home-outline"} 
-                                    size={24} 
-                                    color={focused ? 'white' : color} 
+                                <Ionicons
+                                    name={focused ? "home" : "home-outline"}
+                                    size={24}
+                                    color={focused ? 'white' : color}
                                 />
                             </View>
                             {focused && (
@@ -71,11 +71,11 @@ export default function RootLayout() {
                     ),
                 }}
             />
-            <Tabs.Screen 
-                name="appointment" 
+            <Tabs.Screen
+                name="appointment"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
-                        <View style={{ 
+                        <View style={{
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
@@ -93,10 +93,10 @@ export default function RootLayout() {
                                 shadowRadius: 8,
                                 elevation: focused ? 8 : 0,
                             }}>
-                                <Ionicons 
-                                    name={focused ? "calendar" : "calendar-outline"} 
-                                    size={24} 
-                                    color={focused ? 'white' : color} 
+                                <Ionicons
+                                    name={focused ? "calendar" : "calendar-outline"}
+                                    size={24}
+                                    color={focused ? 'white' : color}
                                 />
                             </View>
                             {focused && (
@@ -112,32 +112,33 @@ export default function RootLayout() {
                     ),
                 }}
             />
-            <Tabs.Screen 
-                name="health" 
+            <Tabs.Screen
+                name="health"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
-                        <View style={{ 
+                        <View style={{
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
                             <View style={{
-                                width: 50,
-                                height: 50,
+                                width: focused ? 55 : 50,
+                                height: focused ? 55 : 50,
                                 backgroundColor: focused ? '#67A9AF' : 'transparent',
-                                borderRadius: 15,
+                                borderRadius: focused ? 30 : 15,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 marginBottom: 2,
-                                shadowColor: '#67A9AF',
+                                shadowColor: focused ? '#67A9AF' : 'transparent',
                                 shadowOffset: { width: 0, height: 6 },
                                 shadowOpacity: 0.4,
                                 shadowRadius: 12,
-                                elevation: focused ? 8 : 0,
+                                elevation: focused ? 12 : 0,
+                                marginTop: focused ? -10 : 0,
                             }}>
-                                <Ionicons 
-                                    name={focused ? "heart" : "heart-outline"} 
-                                    size={24} 
-                                    color={focused ? 'white' : color} 
+                                <Ionicons
+                                    name={focused ? "heart" : "heart-outline"}
+                                    size={focused ? 28 : 24}
+                                    color={focused ? 'white' : color}
                                 />
                             </View>
                             {focused && (
@@ -146,18 +147,19 @@ export default function RootLayout() {
                                     height: 8,
                                     backgroundColor: '#67A9AF',
                                     borderRadius: 4,
-                                    marginTop: 2,
+                                    marginTop: focused ? 6 : 2,
                                 }} />
                             )}
                         </View>
                     ),
                 }}
             />
-            {/* <Tabs.Screen 
-                name="chat" 
+
+            <Tabs.Screen
+                name="support"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
-                        <View style={{ 
+                        <View style={{
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
@@ -175,10 +177,10 @@ export default function RootLayout() {
                                 shadowRadius: 8,
                                 elevation: focused ? 8 : 0,
                             }}>
-                                <Ionicons 
-                                    name={focused ? "chatbubble" : "chatbubble-outline"} 
-                                    size={24} 
-                                    color={focused ? 'white' : color} 
+                                <Ionicons
+                                    name={focused ? "chatbubble" : "chatbubble-outline"}
+                                    size={24}
+                                    color={focused ? 'white' : color}
                                 />
                             </View>
                             {focused && (
@@ -193,12 +195,12 @@ export default function RootLayout() {
                         </View>
                     ),
                 }}
-            /> */}
-            <Tabs.Screen 
-                name="profile" 
+            />
+            <Tabs.Screen
+                name="profile"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
-                        <View style={{ 
+                        <View style={{
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
@@ -216,10 +218,10 @@ export default function RootLayout() {
                                 shadowRadius: 8,
                                 elevation: focused ? 8 : 0,
                             }}>
-                                <Ionicons 
-                                    name={focused ? "person" : "person-outline"} 
-                                    size={24} 
-                                    color={focused ? 'white' : color} 
+                                <Ionicons
+                                    name={focused ? "person" : "person-outline"}
+                                    size={24}
+                                    color={focused ? 'white' : color}
                                 />
                             </View>
                             {focused && (

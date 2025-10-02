@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, StatusBar, Alert, ActivityIndicator, SafeAreaView, Modal, Pressable } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, SafeAreaView, Modal } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/context/authContext';
 import { useToast } from '@/components/ui/Toast';
 import { uploadProfilePicture, deleteAccount } from '../../../api/patient/user';
-import { AuthState, User } from '@/types/User';
+import { User } from '@/types/User';
 import { ImageSourcePropType } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProfileScreen() {
     const { user, token, logout, getMe } = useAuth();
@@ -160,7 +159,7 @@ export default function ProfileScreen() {
                 <View className='bg-white px-4 rounded-[10px] shadow-lg'>
                     <View className="">
                         {/* Birthday */}
-                        <TouchableOpacity className="flex-row items-center px-4 py-4 border-b border-gray-100">
+                        <TouchableOpacity onPress={() => router.push('/edit-birthday')} className="flex-row items-center px-4 py-4 border-b border-gray-100">
                             <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-4">
                                 <Feather name="gift" size={20} color="#000" />
                             </View>
@@ -173,7 +172,7 @@ export default function ProfileScreen() {
                         </TouchableOpacity>
 
                         {/* Phone */}
-                        <TouchableOpacity className="flex-row items-center px-4 py-4 border-b border-gray-100">
+                        <TouchableOpacity onPress={() => router.push('/edit-phone')} className="flex-row items-center px-4 py-4 border-b border-gray-100">
                             <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-4">
                                 <Feather name="phone" size={20} color="#000" />
                             </View>
@@ -187,20 +186,24 @@ export default function ProfileScreen() {
                                 <Feather name="mail" size={20} color="#000" />
                             </View>
                             <Text className="flex-1 text-gray-900 text-base font-sans">{profile?.email}</Text>
-                            <Feather name="chevron-right" size={20} color="#9CA3AF" />
+                            {/* <Feather name="chevron-right" size={20} color="#9CA3AF" /> */}
                         </TouchableOpacity>
 
                         {/* Country */}
-                        <TouchableOpacity className="flex-row items-center px-4 py-4 border-b border-gray-100">
+                        <TouchableOpacity onPress={() => router.push('/edit-country')} className="flex-row items-center px-4 py-4 border-b border-gray-100">
                             <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-4">
                                 <Feather name="globe" size={20} color="#000" />
                             </View>
-                            <Text className="flex-1 text-gray-900 text-base font-sans">{profile?.country || 'Location'}</Text>
+                            <Text className="flex-1 text-gray-900 text-base font-sans">
+                                {[profile?.country, profile?.state, profile?.city, profile?.address, profile?.zipCode]
+                                    .filter(Boolean)
+                                    .join(' ') || 'Location'}
+                            </Text>
                             <Feather name="chevron-right" size={20} color="#9CA3AF" />
                         </TouchableOpacity>
 
                         {/* KYC */}
-                        <TouchableOpacity className="flex-row items-center px-4 py-4">
+                        <TouchableOpacity onPress={() => router.push('/kyc-verification')} className="flex-row items-center px-4 py-4">
                             <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-4">
                                 <Feather name="shield" size={20} color="#000" />
                             </View>
