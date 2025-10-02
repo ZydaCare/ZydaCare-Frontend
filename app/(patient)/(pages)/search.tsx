@@ -1,4 +1,6 @@
 import { Images } from '@/assets/Images';
+import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/context/authContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
@@ -14,6 +16,9 @@ import {
 } from 'react-native';
 
 export default function DoctorSearchScreen() {
+    const { user } = useAuth();
+    const { showToast } = useToast();
+
     const doctors = [
         {
             id: 1,
