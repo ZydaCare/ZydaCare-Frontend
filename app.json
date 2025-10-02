@@ -11,7 +11,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nd_jephthah.ZydaCare",
+      "bundleIdentifier": "com.ndjephthah.zydacare",
       "icon": "./assets/images/icon.png",
       "config": {
         "googleMapsApiKey": "YOUR_GOOGLE_MAPS_IOS_API_KEY"

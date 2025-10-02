@@ -650,12 +650,8 @@ export default function Search() {
                                 {/* Action Buttons */}
                                 <View className="flex-row gap-3 mb-3">
                                     <TouchableOpacity className="flex-1 bg-primary py-3 rounded-xl flex-row items-center justify-center gap-2">
-                                        <Ionicons name="videocam" size={20} color="#fff" />
-                                        <Text className="text-white font-sans-semibold">Video Call</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity className="flex-1 bg-white border-2 border-primary py-3 rounded-xl flex-row items-center justify-center gap-2">
-                                        <Ionicons name="call" size={20} color="#67A9AF" />
-                                        <Text className="text-primary font-sans-semibold">Call Now</Text>
+                                        <Ionicons name="calendar" size={20} color="#fff" />
+                                        <Text className="text-white font-sans-semibold">Book Appointment</Text>
                                     </TouchableOpacity>
                                 </View>
 
