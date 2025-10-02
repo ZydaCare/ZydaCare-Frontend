@@ -11,7 +11,17 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "icon": "./assets/images/icon.png"
+      "bundleIdentifier": "com.nd_jephthah.ZydaCare",
+      "icon": "./assets/images/icon.png",
+      "config": {
+        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_IOS_API_KEY"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to show nearby doctors and medical facilities.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location to show nearby doctors and medical facilities.",
+        "NSLocationAlwaysUsageDescription": "This app uses your location to show nearby doctors and medical facilities.",
+        "UIBackgroundModes": ["location"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +30,16 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.nd_jephthah.ZydaCare"
+      "package": "com.nd_jephthah.ZydaCare",
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -28,6 +47,16 @@
       "bundler": "metro"
     },
     "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "locationAlwaysPermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
       "expo-router",
       [
         "expo-notifications",

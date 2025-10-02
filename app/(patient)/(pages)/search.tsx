@@ -3,7 +3,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/authContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
     Image,
     SafeAreaView,
@@ -13,11 +13,33 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Animated,
+    Dimensions,
 } from 'react-native';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 
-export default function DoctorSearchScreen() {
+const { height } = Dimensions.get('window');
+
+export default function Search() {
     const { user } = useAuth();
     const { showToast } = useToast();
+    const params = useLocalSearchParams();
+
+    const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+    const [searchQuery, setSearchQuery] = useState<string>(params.query as string || '');
+    const [selectedCategory, setSelectedCategory] = useState<string>('General');
+    const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
+    const [isScanning, setIsScanning] = useState(false);
+    const [userLocation] = useState({
+        latitude: 6.5244,
+        longitude: 3.3792,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+    });
+
+    const bottomSheetAnim = useRef(new Animated.Value(height)).current;
+    const scanningAnim = useRef(new Animated.Value(0)).current;
+    const mapRef = useRef<MapView>(null);
 
     const doctors = [
         {
@@ -30,17 +52,25 @@ export default function DoctorSearchScreen() {
             price: 'N5,000',
             rating: 4.8,
             image: Images.doctor,
+            latitude: 6.5244,
+            longitude: 3.3792,
+            distance: '2.3 km',
+            availability: 'Available now',
         },
         {
             id: 2,
             name: 'Dr Mary John',
             speciality: 'Dentist',
             category: 'Dentist',
-            hospital: null, // no hospital
+            hospital: 'Private Practice',
             experience: '5 years experience',
             price: 'N7,000',
             rating: 4.6,
             image: Images.doctor,
+            latitude: 6.5344,
+            longitude: 3.3892,
+            distance: '3.5 km',
+            availability: 'Available in 30 mins',
         },
         {
             id: 3,
@@ -52,17 +82,25 @@ export default function DoctorSearchScreen() {
             price: 'N15,000',
             rating: 4.9,
             image: Images.doctor,
+            latitude: 6.5144,
+            longitude: 3.3692,
+            distance: '4.1 km',
+            availability: 'Available today',
         },
         {
             id: 4,
             name: 'Dr Clara Okafor',
             speciality: 'Pediatrician',
             category: 'Pediatrician',
-            hospital: null,
+            hospital: 'Children\'s Clinic',
             experience: '6 years experience',
             price: 'N10,000',
             rating: 4.7,
             image: Images.doctor,
+            latitude: 6.5444,
+            longitude: 3.3992,
+            distance: '1.8 km',
+            availability: 'Available now',
         },
         {
             id: 5,
@@ -74,226 +112,25 @@ export default function DoctorSearchScreen() {
             price: 'N8,000',
             rating: 4.5,
             image: Images.doctor,
+            latitude: 6.5044,
+            longitude: 3.3592,
+            distance: '5.2 km',
+            availability: 'Available in 1 hour',
         },
         {
             id: 6,
             name: 'Dr Ifeanyi Okoro',
             speciality: 'Cardiologist',
             category: 'Cardiologist',
-            hospital: null,
+            hospital: 'Lagos University Teaching Hospital',
             experience: '12 years experience',
             price: 'N20,000',
             rating: 4.9,
             image: Images.doctor,
-        },
-        {
-            id: 7,
-            name: 'Dr Lola Bamidele',
-            speciality: 'Gynecologist',
-            category: 'Gynecologist',
-            hospital: null,
-            experience: '9 years experience',
-            price: 'N18,000',
-            rating: 4.8,
-            image: Images.doctor,
-        },
-        {
-            id: 8,
-            name: 'Dr Chinedu Umeh',
-            speciality: 'Neurologist',
-            category: 'Neurologist',
-            hospital: 'Lagoon Hospital',
-            experience: '15 years experience',
-            price: 'N25,000',
-            rating: 5.0,
-            image: Images.doctor,
-        },
-        {
-            id: 9,
-            name: 'Dr Aisha Suleiman',
-            speciality: 'Psychiatrist',
-            category: 'Psychiatrist',
-            hospital: null,
-            experience: '7 years experience',
-            price: 'N12,000',
-            rating: 4.6,
-            image: Images.doctor,
-        },
-        {
-            id: 10,
-            name: 'Dr Daniel Chukwu',
-            speciality: 'Orthopedic Surgeon',
-            category: 'Orthopedics',
-            hospital: 'Nnamdi Azikiwe University Teaching Hospital',
-            experience: '11 years experience',
-            price: 'N22,000',
-            rating: 4.9,
-            image: Images.doctor,
-        },
-        {
-            id: 11,
-            name: 'Dr Fatima Lawal',
-            speciality: 'Pulmonologist',
-            category: 'Pulmonology',
-            hospital: 'Lagoon Hospital',
-            experience: '10 years experience',
-            price: 'N16,000',
-            rating: 4.7,
-            image: Images.doctor,
-        },
-        {
-            id: 12,
-            name: 'Dr Grace Olamide',
-            speciality: 'Endocrinologist',
-            category: 'Endocrinology',
-            hospital: 'Lagoon Hospital',
-            experience: '13 years experience',
-            price: 'N19,000',
-            rating: 4.8,
-            image: Images.doctor,
-        },
-        {
-            id: 13,
-            name: 'Dr Peter Adeyemi',
-            speciality: 'Ophthalmologist',
-            category: 'Ophthalmology',
-            hospital: null,
-            experience: '9 years experience',
-            price: 'N14,000',
-            rating: 4.6,
-            image: Images.doctor,
-        },
-        {
-            id: 14,
-            name: 'Dr Francis Okafor',
-            speciality: 'ENT Specialist',
-            category: 'ENT',
-            hospital: null,
-            experience: '8 years experience',
-            price: 'N12,000',
-            rating: 4.7,
-            image: Images.doctor,
-        },
-        {
-            id: 15,
-            name: 'Dr Vivian Ajayi',
-            speciality: 'Oncologist',
-            category: 'Oncology',
-            hospital: null,
-            experience: '14 years experience',
-            price: 'N30,000',
-            rating: 5.0,
-            image: Images.doctor,
-        },
-        {
-            id: 16,
-            name: 'Dr Musa Ganiyu',
-            speciality: 'Rheumatologist',
-            category: 'Rheumatology',
-            hospital: null,
-            experience: '7 years experience',
-            price: 'N17,000',
-            rating: 4.5,
-            image: Images.doctor,
-        },
-        {
-            id: 17,
-            name: 'Dr Amarachi Obi',
-            speciality: 'Hematologist',
-            category: 'Hematology',
-            hospital: 'Covenant Hospital',
-            experience: '6 years experience',
-            price: 'N13,000',
-            rating: 4.6,
-            image: Images.doctor,
-        },
-        {
-            id: 18,
-            name: 'Dr Funke Alade',
-            speciality: 'Nephrologist',
-            category: 'Nephrology',
-            hospital: 'Makaranta Hospital',
-            experience: '12 years experience',
-            price: 'N21,000',
-            rating: 4.8,
-            image: Images.doctor,
-        },
-        {
-            id: 19,
-            name: 'Dr Chika Obioma',
-            speciality: 'Radiologist',
-            category: 'Radiology',
-            hospital: 'Jubilee Hospital',
-            experience: '10 years experience',
-            price: 'N18,000',
-            rating: 4.7,
-            image: Images.doctor,
-        },
-        {
-            id: 20,
-            name: 'Dr Jane Efe',
-            speciality: 'Neonatologist',
-            category: 'Pediatrics',
-            hospital: null,
-            experience: '9 years experience',
-            price: 'N15,000',
-            rating: 4.9,
-            image: Images.doctor,
-        },
-        {
-            id: 21,
-            name: 'Dr Kelvin Musa',
-            speciality: 'General Practitioner',
-            category: 'General',
-            hospital: null,
-            experience: '4 years experience',
-            price: 'N6,000',
-            rating: 4.4,
-            image: Images.doctor,
-        },
-        {
-            id: 22,
-            name: 'Dr Sophia Ade',
-            speciality: 'Pediatrician',
-            category: 'Pediatrician',
-            hospital: null,
-            experience: '11 years experience',
-            price: 'N13,000',
-            rating: 4.8,
-            image: Images.doctor,
-        },
-        {
-            id: 23,
-            name: 'Dr Henry Udo',
-            speciality: 'Dentist',
-            category: 'Dentist',
-            hospital: null,
-            experience: '6 years experience',
-            price: 'N9,000',
-            rating: 4.7,
-            image: Images.doctor,
-        },
-        {
-            id: 24,
-            name: 'Dr Ngozi Ebuka',
-            speciality: 'Gynecologist',
-            category: 'Gynecologist',
-            hospital: null,
-            experience: '10 years experience',
-            price: 'N20,000',
-            rating: 4.9,
-            image: Images.doctor,
-        },
-        {
-            id: 25,
-            name: 'Dr Collins Duru',
-            speciality: 'Neurologist',
-            category: 'Neurologist',
-            hospital: null,
-            experience: '8 years experience',
-            price: 'N23,000',
-            rating: 4.7,
-            image: Images.doctor,
+            latitude: 6.5544,
+            longitude: 3.4092,
+            distance: '6.8 km',
+            availability: 'Available now',
         },
     ];
 
@@ -306,23 +143,7 @@ export default function DoctorSearchScreen() {
         { id: 6, title: 'Cardiologist', icon: 'heart-circle' },
         { id: 7, title: 'Gynecologist', icon: 'female' },
         { id: 8, title: 'Neurologist', icon: 'fitness' },
-        { id: 9, title: 'Psychiatrist', icon: 'medkit' },
-        { id: 10, title: 'Orthopedic', icon: 'walk' },
-        { id: 11, title: 'Radiologist', icon: 'scan' },
-        { id: 12, title: 'Oncologist', icon: 'nuclear' },
-        { id: 13, title: 'ENT Specialist', icon: 'ear' },
-        { id: 14, title: 'Urologist', icon: 'male' },
-        { id: 15, title: 'Nephrologist', icon: 'water' },
-        { id: 16, title: 'Endocrinologist', icon: 'thermometer' },
-        { id: 17, title: 'Ophthalmologist', icon: 'eye' },
-        { id: 18, title: 'Rheumatologist', icon: 'hand-left' },
-        { id: 19, title: 'Physiotherapist', icon: 'fitness' },
-        { id: 20, title: 'Nutritionist', icon: 'nutrition' },
     ];
-
-    const [selectedCategory, setSelectedCategory] = useState<string>('General');
-    const params = useLocalSearchParams()
-    const [searchQuery, setSearchQuery] = useState<string>(params.query as string || '')
 
     const renderStars = (rating: number) => (
         <View className="flex-row items-center">
@@ -331,36 +152,142 @@ export default function DoctorSearchScreen() {
         </View>
     );
 
+    const filteredDoctors = React.useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        
+        // In map view, only show doctors that match the search query
+        if (viewMode === 'map') {
+            if (query === '') return [];
+            
+            return doctors.filter(doctor => 
+                doctor.name.toLowerCase().includes(query) ||
+                doctor.speciality.toLowerCase().includes(query) ||
+                doctor.category.toLowerCase().includes(query) ||
+                (doctor.hospital && doctor.hospital.toLowerCase().includes(query))
+            );
+        }
+        
+        // In list view, filter by category or search query
+        if (query !== '') {
+            return doctors.filter(doctor => 
+                doctor.name.toLowerCase().includes(query) ||
+                doctor.speciality.toLowerCase().includes(query) ||
+                doctor.category.toLowerCase().includes(query) ||
+                (doctor.hospital && doctor.hospital.toLowerCase().includes(query))
+            );
+        }
+        
+        // Default: filter by selected category
+        return doctors.filter(doctor => doctor.category === selectedCategory);
+    }, [searchQuery, selectedCategory, viewMode]);
+
+    // Scanning animation
+    useEffect(() => {
+        if (isScanning) {
+            Animated.loop(
+                Animated.timing(scanningAnim, {
+                    toValue: 1,
+                    duration: 2000,
+                    useNativeDriver: true,
+                })
+            ).start();
+        } else {
+            scanningAnim.setValue(0);
+        }
+    }, [isScanning]);
+
+    // Bottom sheet animation
+    const showBottomSheet = () => {
+        Animated.spring(bottomSheetAnim, {
+            toValue: height * 0.5,
+            useNativeDriver: false,
+            tension: 50,
+            friction: 8,
+        }).start();
+    };
+
+    const hideBottomSheet = () => {
+        Animated.spring(bottomSheetAnim, {
+            toValue: height,
+            useNativeDriver: false,
+        }).start();
+    };
+
+    // Handle map search and recommendation
+    useEffect(() => {
+        if (viewMode === 'map') {
+            if (searchQuery.trim() !== '') {
+                setIsScanning(true);
+                setSelectedDoctor(null);
+                hideBottomSheet();
+
+                // Simulate scanning for 2 seconds
+                const timer = setTimeout(() => {
+                    setIsScanning(false);
+                    const matchingDoctors = doctors.filter(doctor => 
+                        doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        doctor.speciality.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        (doctor.hospital && doctor.hospital.toLowerCase().includes(searchQuery.toLowerCase()))
+                    );
+
+                    if (matchingDoctors.length > 0) {
+                        const recommendedDoctor = matchingDoctors[0];
+                        setSelectedDoctor(recommendedDoctor);
+                        showBottomSheet();
+
+                        // Animate to doctor location
+                        mapRef.current?.animateToRegion({
+                            latitude: recommendedDoctor.latitude,
+                            longitude: recommendedDoctor.longitude,
+                            latitudeDelta: 0.05,
+                            longitudeDelta: 0.05,
+                        }, 1000);
+                    }
+                }, 2000);
+
+                return () => clearTimeout(timer);
+            } else {
+                // Clear selection when search is empty
+                setSelectedDoctor(null);
+                hideBottomSheet();
+            }
+        }
+    }, [searchQuery, viewMode]);
+
+    const handleDoctorMarkerPress = (doctor: any) => {
+        setSelectedDoctor(doctor);
+        showBottomSheet();
+        mapRef.current?.animateToRegion({
+            latitude: doctor.latitude,
+            longitude: doctor.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+        }, 500);
+    };
+
     const DoctorCard = ({ doctor }: { doctor: any }) => (
         <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm mx-2">
             <View className="flex-row">
                 <Image
-                    source={doctor.image}
+                    source={Images.doctor}
                     className="w-28 h-28 rounded-xl"
                     resizeMode="cover"
                 />
-
                 <View className="flex-1 ml-4">
                     <View className="flex-row items-center justify-between mb-1">
                         <Text className="text-lg font-sans-semibold text-gray-900">{doctor.name}</Text>
                         {renderStars(doctor.rating)}
                     </View>
-
                     <Text className="text-gray-600 font-sans text-sm mb-1">{doctor.speciality}</Text>
-
-                    {/* ✅ Only show hospital if it exists */}
                     {doctor.hospital && (
                         <Text className="text-gray-500 font-sans text-xs mb-1">{doctor.hospital}</Text>
                     )}
-
                     <Text className="text-gray-400 font-sans text-xs mb-3">{doctor.experience}</Text>
-
                     <View className="flex-row items-center justify-between">
                         <View>
                             <Text className="text-secondary font-sans-bold text-base">{doctor.price}</Text>
                             <Text className="text-gray-500 font-sans text-xs">Per Consultation</Text>
                         </View>
-
                         <TouchableOpacity className="bg-primary px-6 py-2 rounded-lg">
                             <Text className="text-white font-sans-medium text-sm">Consult now</Text>
                         </TouchableOpacity>
@@ -370,131 +297,382 @@ export default function DoctorSearchScreen() {
         </View>
     );
 
-    // 🔹 Updated filtering logic
-    const filteredDoctors = doctors.filter((doctor) => {
-        const query = searchQuery.toLowerCase();
-
-        const matchesSearch =
-            doctor.name.toLowerCase().includes(query) ||
-            doctor.speciality.toLowerCase().includes(query) ||
-            doctor.category.toLowerCase().includes(query) ||
-            (doctor.hospital && doctor.hospital.toLowerCase().includes(query));
-
-        if (searchQuery.trim() !== '') {
-            return matchesSearch; // ✅ ignore category when searching
-        } else {
-            return doctor.category === selectedCategory; // ✅ normal category filter
-        }
-    });
-
     return (
-        <SafeAreaView className="flex-1 bg-gray-50 p-4">
+        <SafeAreaView className="flex-1 bg-gray-50">
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
             {/* Header */}
-            <View className="flex-row items-center gap-3">
-                <TouchableOpacity onPress={() => router.back()} className="bg-white rounded-full p-2 shadow-sm">
-                    <Ionicons name="chevron-back" size={20} color="#374151" />
-                </TouchableOpacity>
+            <View className="bg-white px-4 py-3">
+                <View className="flex-row items-center gap-3 mb-3">
+                    <TouchableOpacity onPress={() => router.back()} className="bg-white rounded-full p-2 shadow-sm">
+                        <Ionicons name="chevron-back" size={20} color="#374151" />
+                    </TouchableOpacity>
+                    <View className="flex-1 flex-row items-center bg-gray-100 rounded-full px-4 py-2">
+                        <TextInput
+                            className="flex-1 text-gray-800 text-sm font-sans-medium"
+                            placeholder="Search doctors, specialists, hospitals..."
+                            placeholderTextColor="#9CA3AF"
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                        />
+                        <Ionicons name="search" size={18} color="#D65C1E" />
+                    </View>
+                </View>
 
-                {/* Search Bar */}
-                <View className="flex-1 flex-row items-center bg-white rounded-full px-4 py-1 shadow-sm">
-                    <TextInput
-                        className="flex-1 text-gray-800 text-sm font-sans-medium"
-                        placeholder="Search doctors, specialists, hospitals..."
-                        placeholderTextColor="#9CA3AF"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
-                    <Ionicons name="search" size={18} color="#D65C1E" />
+                {/* View Mode Toggle */}
+                <View className="flex-row gap-2">
+                    <TouchableOpacity
+                        onPress={() => setViewMode('list')}
+                        className={`flex-1 py-2 px-4 rounded-full flex-row items-center justify-center gap-2 ${
+                            viewMode === 'list' ? 'bg-primary' : 'bg-gray-100'
+                        }`}
+                    >
+                        <Ionicons name="list" size={16} color={viewMode === 'list' ? '#fff' : '#6B7280'} />
+                        <Text className={`text-sm font-sans-medium ${viewMode === 'list' ? 'text-white' : 'text-gray-600'}`}>
+                            List View
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => setViewMode('map')}
+                        className={`flex-1 py-2 px-4 rounded-full flex-row items-center justify-center gap-2 ${
+                            viewMode === 'map' ? 'bg-primary' : 'bg-gray-100'
+                        }`}
+                    >
+                        <Ionicons name="map" size={16} color={viewMode === 'map' ? '#fff' : '#6B7280'} />
+                        <Text className={`text-sm font-sans-medium ${viewMode === 'map' ? 'text-white' : 'text-gray-600'}`}>
+                            Map View
+                        </Text>
+                    </TouchableOpacity>
                 </View>
             </View>
 
-            <ScrollView
-                className="flex-1"
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingTop: 24 }}
-            >
-                {/* Categories */}
-                <Text className="text-lg font-sans-semibold text-gray-900 mb-4 px-4">Categories</Text>
+            {viewMode === 'list' ? (
                 <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    className="mb-6"
-                    contentContainerStyle={{ paddingHorizontal: 16 }}
+                    className="flex-1"
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingTop: 16 }}
                 >
-                    {categories.map((category) => (
-                        <TouchableOpacity
-                            key={category.id}
-                            onPress={() => {
-                                setSelectedCategory(category.title);
-                                setSearchQuery(''); // ✅ reset search when category changes
-                            }}
-                            className={`flex-row items-center px-6 py-3 rounded-xl mr-3 ${selectedCategory === category.title
-                                ? 'bg-[#67A9AF33]/20 border border-[#67A9AF33]/20'
-                                : 'bg-white border border-gray-200'
+                    {/* Categories */}
+                    <Text className="text-lg font-sans-semibold text-gray-900 mb-4 px-4">Categories</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        className="mb-6"
+                        contentContainerStyle={{ paddingHorizontal: 16 }}
+                    >
+                        {categories.map((category) => (
+                            <TouchableOpacity
+                                key={category.id}
+                                onPress={() => {
+                                    setSelectedCategory(category.title);
+                                    setSearchQuery('');
+                                }}
+                                className={`flex-row items-center px-6 py-3 rounded-xl mr-3 ${
+                                    selectedCategory === category.title
+                                        ? 'bg-[#67A9AF33]/20 border border-[#67A9AF33]/20'
+                                        : 'bg-white border border-gray-200'
                                 }`}
-                        >
-                            <Ionicons
-                                name={category.icon}
-                                size={16}
-                                color={selectedCategory === category.title ? '#67A9AF' : '#6B7280'}
-                            />
-                            <Text
-                                className={`ml-2 text-sm font-sans-medium ${selectedCategory === category.title
-                                    ? 'text-[#67A9AF]'
-                                    : 'text-gray-600'
-                                    }`}
                             >
-                                {category.title}
+                                <Ionicons
+                                    name={category.icon as any}
+                                    size={16}
+                                    color={selectedCategory === category.title ? '#67A9AF' : '#6B7280'}
+                                />
+                                <Text
+                                    className={`ml-2 text-sm font-sans-medium ${
+                                        selectedCategory === category.title ? 'text-[#67A9AF]' : 'text-gray-600'
+                                    }`}
+                                >
+                                    {category.title}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Doctor Cards */}
+                    {filteredDoctors.length > 0 ? (
+                        filteredDoctors.map((doctor) => <DoctorCard key={doctor.id} doctor={doctor} />)
+                    ) : (
+                        <View className="items-center justify-center mt-20">
+                            <Ionicons name="search-outline" size={50} color="#9CA3AF" />
+                            <Text className="text-gray-500 font-sans-medium mt-4 text-base">
+                                No results found
                             </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-
-                {/* Doctor Cards */}
-                {filteredDoctors.length > 0 ? (
-                    filteredDoctors.map((doctor) => <DoctorCard key={doctor.id} doctor={doctor} />)
-                ) : searchQuery.trim() !== '' ? (
-                    // 🔹 Empty search results
-                    <View className="items-center justify-center mt-20">
-                        <Ionicons name="search-outline" size={50} color="#9CA3AF" />
-                        <Text className="text-gray-500 font-sans-medium mt-4 text-base">
-                            No results found for "{searchQuery}"
-                        </Text>
-                        <Text className="text-gray-400 font-sans text-sm mt-2">
-                            Try searching with another name, specialist, or hospital
-                        </Text>
-                    </View>
-                ) : (
-                    // 🔹 Empty category results
-                    <View className="items-center justify-center mt-20">
-                        <Ionicons name="medkit-outline" size={50} color="#9CA3AF" />
-                        <Text className="text-gray-500 font-sans-medium mt-4 text-base">
-                            No doctors available in {selectedCategory}
-                        </Text>
-                        <Text className="text-gray-400 font-sans text-sm mt-2">
-                            Try these categories instead
-                        </Text>
-
-                        <View className="flex-row mt-3">
-                            {categories
-                                .filter(c => doctors.some(d => d.category === c.title)) // categories with doctors
-                                .slice(0, 3) // suggest top 3
-                                .map(c => (
-                                    <TouchableOpacity
-                                        key={c.id}
-                                        onPress={() => setSelectedCategory(c.title)}
-                                        className="px-6 py-2 bg-primary rounded-full mx-1"
-                                    >
-                                        <Text className="text-white font-sans text-sm">{c.title}</Text>
-                                    </TouchableOpacity>
-                                ))}
                         </View>
-                    </View>
-                )}
-                <View className="h-8" />
-            </ScrollView>
+                    )}
+                    <View className="h-8" />
+                </ScrollView>
+            ) : (
+                <View className="flex-1 relative">
+                    {/* Map View with Custom Styling */}
+                    <MapView
+                        ref={mapRef}
+                        style={{ flex: 1 }}
+                        initialRegion={userLocation}
+                        showsUserLocation
+                        showsMyLocationButton={false}
+                        showsCompass={false}
+                        showsScale={false}
+                        customMapStyle={[
+                            {
+                                "featureType": "all",
+                                "elementType": "geometry",
+                                "stylers": [{ "color": "#f5f5f5" }]
+                            },
+                            {
+                                "featureType": "water",
+                                "elementType": "geometry",
+                                "stylers": [{ "color": "#c9e6ea" }]
+                            },
+                            {
+                                "featureType": "water",
+                                "elementType": "labels.text.fill",
+                                "stylers": [{ "color": "#67a9af" }]
+                            },
+                            {
+                                "featureType": "road",
+                                "elementType": "geometry",
+                                "stylers": [{ "color": "#ffffff" }]
+                            },
+                            {
+                                "featureType": "road",
+                                "elementType": "geometry.stroke",
+                                "stylers": [{ "color": "#e0e0e0" }]
+                            },
+                            {
+                                "featureType": "poi",
+                                "elementType": "geometry",
+                                "stylers": [{ "color": "#eeeeee" }]
+                            },
+                            {
+                                "featureType": "poi.park",
+                                "elementType": "geometry",
+                                "stylers": [{ "color": "#e5f5e0" }]
+                            }
+                        ]}
+                    >
+
+                        {/* Doctor Markers */}
+                        {filteredDoctors.map((doctor) => (
+                            <Marker
+                                key={doctor.id}
+                                coordinate={{
+                                    latitude: doctor.latitude,
+                                    longitude: doctor.longitude,
+                                }}
+                                onPress={() => handleDoctorMarkerPress(doctor)}
+                            >
+                                <View className="items-center">
+                                    <View
+                                        className={`w-12 h-12 rounded-full items-center justify-center ${
+                                            selectedDoctor?.id === doctor.id ? 'bg-secondary' : 'bg-primary'
+                                        }`}
+                                        style={{ borderWidth: 3, borderColor: '#fff' }}
+                                    >
+                                        <Image
+                                            source={Images.doctor}
+                                            className="w-full h-full rounded-full"
+                                            resizeMode="cover"
+                                        />
+                                    </View>
+                                    <View className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
+                                </View>
+                            </Marker>
+                        ))}
+                    </MapView>
+
+                    {/* Scanning Overlay */}
+                    {isScanning && (
+                        <View className="absolute inset-0 items-center justify-center bg-black/20">
+                            <View className="bg-white px-6 py-4 rounded-2xl shadow-xl items-center">
+                                <Animated.View
+                                    style={{
+                                        transform: [
+                                            {
+                                                rotate: scanningAnim.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: ['0deg', '360deg'],
+                                                }),
+                                            },
+                                        ],
+                                    }}
+                                >
+                                    <Ionicons name="scan" size={40} color="#67A9AF" />
+                                </Animated.View>
+                                <Text className="font-sans-semibold text-gray-800 mt-3">Scanning for doctors...</Text>
+                                <Text className="font-sans text-sm text-gray-500 mt-1">Finding the best match for you</Text>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Empty State - No Search */}
+                    {/* {!isScanning && searchQuery.trim() === '' && (
+                        <View className="absolute inset-0 items-center justify-center bg-white/95">
+                            <View className="items-center px-6">
+                                <View className="bg-primary/10 p-6 rounded-full mb-4">
+                                    <Ionicons name="search" size={60} color="#67A9AF" />
+                                </View>
+                                <Text className="font-sans-bold text-xl text-gray-800 mb-2">Find Doctors Near You</Text>
+                                <Text className="font-sans text-gray-500 text-center mb-6">
+                                    Search for doctors by name, specialty, or hospital to see them on the map
+                                </Text>
+                                <View className="flex-row flex-wrap justify-center gap-2">
+                                    <View className="bg-primary/10 px-3 py-1 rounded-full">
+                                        <Text className="text-primary font-sans-medium text-xs">Cardiologist</Text>
+                                    </View>
+                                    <View className="bg-primary/10 px-3 py-1 rounded-full">
+                                        <Text className="text-primary font-sans-medium text-xs">Dentist</Text>
+                                    </View>
+                                    <View className="bg-primary/10 px-3 py-1 rounded-full">
+                                        <Text className="text-primary font-sans-medium text-xs">Pediatrician</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
+                    )} */}
+
+                    {/* No Results State */}
+                    {!isScanning && searchQuery.trim() !== '' && filteredDoctors.length === 0 && (
+                        <View className="absolute inset-0 items-center justify-center bg-white/95">
+                            <View className="items-center px-6">
+                                <View className="bg-gray-100 p-6 rounded-full mb-4">
+                                    <Ionicons name="sad-outline" size={60} color="#9CA3AF" />
+                                </View>
+                                <Text className="font-sans-bold text-xl text-gray-800 mb-2">No Doctors Found</Text>
+                                <Text className="font-sans text-gray-500 text-center mb-4">
+                                    We couldn't find any doctors matching "{searchQuery}"
+                                </Text>
+                                <TouchableOpacity 
+                                    onPress={() => setSearchQuery('')}
+                                    className="bg-primary px-6 py-3 rounded-full"
+                                >
+                                    <Text className="text-white font-sans-semibold">Clear Search</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Results Count */}
+                    {!isScanning && filteredDoctors.length > 0 && (
+                        <View className="absolute top-4 left-4 bg-white px-4 py-2 rounded-full shadow-lg flex-row items-center">
+                            <View className="w-2 h-2 bg-primary rounded-full mr-2" />
+                            <Text className="text-sm font-sans-medium">
+                                <Text className="text-primary font-sans-bold">{filteredDoctors.length}</Text> {filteredDoctors.length === 1 ? 'doctor' : 'doctors'} nearby
+                            </Text>
+                        </View>
+                    )}
+
+                    {/* My Location Button */}
+                    <TouchableOpacity
+                        className="absolute top-4 right-4 bg-white p-3 rounded-full shadow-lg"
+                        onPress={() => {
+                            mapRef.current?.animateToRegion(userLocation, 1000);
+                        }}
+                    >
+                        <Ionicons name="navigate" size={20} color="#67A9AF" />
+                    </TouchableOpacity>
+
+                    {/* Bottom Sheet */}
+                    {selectedDoctor && (
+                        <Animated.View
+                            style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: bottomSheetAnim.interpolate({
+                                    inputRange: [0, height],
+                                    outputRange: [height, 0],
+                                }),
+                            }}
+                            className="bg-white rounded-t-3xl shadow-2xl"
+                        >
+                            {/* Handle */}
+                            <View className="items-center pt-3 pb-2">
+                                <View className="w-12 h-1 bg-gray-300 rounded-full" />
+                            </View>
+
+                            <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
+                                {/* Recommended Badge */}
+                                <View className="items-center mb-3">
+                                    <View className="bg-secondary px-4 py-1 rounded-full">
+                                        <Text className="text-white text-xs font-sans-semibold">🎯 Recommended for you</Text>
+                                    </View>
+                                </View>
+
+                                {/* Doctor Info */}
+                                <View className="flex-row gap-4 mb-4">
+                                    <Image
+                                        source={selectedDoctor.image}
+                                        className="w-20 h-20 rounded-xl"
+                                        resizeMode="cover"
+                                    />
+                                    <View className="flex-1">
+                                        <Text className="font-sans-bold text-lg">{selectedDoctor.name}</Text>
+                                        <Text className="text-gray-600 font-sans text-sm">{selectedDoctor.speciality}</Text>
+                                        <Text className="text-gray-500 font-sans text-xs">{selectedDoctor.hospital}</Text>
+                                        <View className="flex-row items-center gap-3 mt-2">
+                                            {renderStars(selectedDoctor.rating)}
+                                            <View className="flex-row items-center gap-1">
+                                                <Ionicons name="location" size={12} color="#6B7280" />
+                                                <Text className="text-xs font-sans text-gray-500">{selectedDoctor.distance}</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Info Cards */}
+                                <View className="flex-row gap-3 mb-4">
+                                    <View className="flex-1 bg-blue-50 p-3 rounded-xl">
+                                        <Text className="text-gray-600 font-sans text-xs mb-1">Experience</Text>
+                                        <Text className="font-sans-semibold text-sm">{selectedDoctor.experience}</Text>
+                                    </View>
+                                    <View className="flex-1 bg-green-50 p-3 rounded-xl">
+                                        <Text className="text-gray-600 font-sans text-xs mb-1">Availability</Text>
+                                        <Text className="font-sans-semibold text-sm text-green-600">{selectedDoctor.availability}</Text>
+                                    </View>
+                                </View>
+
+                                {/* Consultation Fee */}
+                                <View className="bg-orange-50 p-4 rounded-xl mb-4">
+                                    <View className="flex-row items-center justify-between">
+                                        <View>
+                                            <Text className="text-gray-600 font-sans text-xs mb-1">Consultation Fee</Text>
+                                            <Text className="font-sans-bold text-2xl text-secondary">{selectedDoctor.price}</Text>
+                                        </View>
+                                        <View>
+                                            <Text className="text-xs font-sans text-gray-500 text-right">Per Session</Text>
+                                            <Text className="text-xs font-sans-medium text-green-600 mt-1">✓ Insurance accepted</Text>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Action Buttons */}
+                                <View className="flex-row gap-3 mb-3">
+                                    <TouchableOpacity className="flex-1 bg-primary py-3 rounded-xl flex-row items-center justify-center gap-2">
+                                        <Ionicons name="videocam" size={20} color="#fff" />
+                                        <Text className="text-white font-sans-semibold">Video Call</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity className="flex-1 bg-white border-2 border-primary py-3 rounded-xl flex-row items-center justify-center gap-2">
+                                        <Ionicons name="call" size={20} color="#67A9AF" />
+                                        <Text className="text-primary font-sans-semibold">Call Now</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setSelectedDoctor(null);
+                                        hideBottomSheet();
+                                    }}
+                                    className="bg-gray-100 py-3 rounded-xl mb-4"
+                                >
+                                    <Text className="text-gray-600 font-sans-medium text-center">View Other Doctors</Text>
+                                </TouchableOpacity>
+                            </ScrollView>
+                        </Animated.View>
+                    )}
+                </View>
+            )}
         </SafeAreaView>
     );
 }
