@@ -12,6 +12,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ndjephthah.zydacare",
+      "usesIcloudStorage": true,
+      "buildNumber": "1.0.0",
       "icon": "./assets/images/icon.png",
       "config": {
         "googleMapsApiKey": "YOUR_GOOGLE_MAPS_IOS_API_KEY"
@@ -20,7 +22,11 @@
         "NSLocationWhenInUseUsageDescription": "This app uses your location to show nearby doctors and medical facilities.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location to show nearby doctors and medical facilities.",
         "NSLocationAlwaysUsageDescription": "This app uses your location to show nearby doctors and medical facilities.",
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": ["location"],
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDisplayName": "ZydaCare",
+        "CFBundleShortVersionString": "1.0.0",
+        "CFBundleVersion": "1"
       }
     },
     "android": {
@@ -28,25 +34,39 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#67A9AF"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.nd_jephthah.ZydaCare",
+      "versionCode": 1,
+      "package": "com.ndjephthah.zydacare",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET"
+      ],
       "config": {
         "googleMaps": {
           "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
         }
-      },
-      "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
-      ]
+      }
     },
     "web": {
       "output": "static",
       "favicon": "./assets/images/LogoIcon.png",
       "bundler": "metro"
     },
+    "updates": {
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/ae9be269-7798-4ac3-ab78-1bf98ec03d52"
+    },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
       [
         "expo-location",
         {
@@ -95,6 +115,12 @@
         {
           "supportsBackgroundPlayback": true,
           "supportsPictureInPicture": true
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
         }
       ],
       [

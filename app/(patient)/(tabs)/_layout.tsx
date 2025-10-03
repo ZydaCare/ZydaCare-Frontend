@@ -1,6 +1,6 @@
-import { Tabs } from "expo-router";
+import { router, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View, Text } from "react-native";
+import { View } from "react-native";
 
 export default function RootLayout() {
     return (

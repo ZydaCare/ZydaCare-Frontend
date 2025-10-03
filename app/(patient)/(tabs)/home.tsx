@@ -176,7 +176,7 @@ const Home = () => {
                   variant="outline"
                   size="sm"
                   leftIcon={<MaterialIcons name="medical-services" size={20} color="#67A9AF" />}
-                  onPress={() => router.push('/')}
+                  onPress={() => router.push('/(patient)/(pages)/apply-doctor')}
                   textClassName="font-sans-semibold text-md"
                   className="border-primary"
                 >

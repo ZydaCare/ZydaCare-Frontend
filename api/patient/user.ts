@@ -2,6 +2,21 @@ import axios from 'axios';
 import { BASE_URL } from '@/config';
 import { User } from '@/types/User';
 
+
+export interface DoctorApplicationStatus {
+  status: 'not_submitted' | 'pending' | 'approved' | 'rejected';
+  reviewNotes?: string;
+  reviewedAt?: string;
+  canApply?: boolean;
+  canReapply?: boolean;
+  isPending?: boolean;
+  isApproved?: boolean;
+  isRejected?: boolean;
+  isDoctor?: boolean;
+  message?: string;
+  createdAt?: string;
+}
+
 export const getProfile = async (token: string): Promise<User> => {
   const response = await axios.get(`${BASE_URL}/auth/me`, {
     headers: {
@@ -148,5 +163,62 @@ export const submitKYCDocuments = async (
       success: false, 
       message: error.message || 'Failed to submit KYC documents'
     };
+  }
+};
+
+export const applyToBecomeDoctor = async (formData: FormData, token: string) => {
+  try {    
+    const response = await axios.post(
+      `${BASE_URL}/doctors/apply`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`,
+        },
+        // Increase timeout for large file uploads
+        timeout: 120000, // 2 minutes
+        // Track upload progress if needed
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / (progressEvent.total || 1)
+          );
+          console.log(`Upload Progress: ${percentCompleted}%`);
+          // You can call a callback here to update UI with progress
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      // Handle specific error responses
+      if (error.response) {
+        // Server responded with error
+        const errorMessage = error.response.data?.message || 'Failed to submit application';
+        throw new Error(errorMessage);
+      } else if (error.request) {
+        // Request made but no response
+        throw new Error('No response from server. Please check your connection.');
+      }
+    }
+    throw new Error('An unexpected error occurred. Please try again.');
+  }
+};
+
+
+export const getDoctorApplicationStatus = async (token: string): Promise<DoctorApplicationStatus> => {
+  try {
+    const response = await axios.get(`${BASE_URL}/doctors/application-status`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch application status');
+    }
+    throw new Error('An unexpected error occurred');
   }
 };

@@ -13,6 +13,7 @@ export default function Layout() {
             <Stack.Screen name="change-password" options={{ headerShown: false }} />
             <Stack.Screen name="supportChat" options={{ headerShown: false }} />
             <Stack.Screen name="help" options={{ headerShown: false }} />
+            <Stack.Screen name="apply-doctor" options={{ headerShown: false }} />
         </Stack>
     );
 }
