@@ -17,6 +17,9 @@ export interface DoctorApplicationStatus {
   createdAt?: string;
 }
 
+/**
+ * Get profile
+ */
 export const getProfile = async (token: string): Promise<User> => {
   const response = await axios.get(`${BASE_URL}/auth/me`, {
     headers: {
@@ -26,6 +29,9 @@ export const getProfile = async (token: string): Promise<User> => {
   return response.data.data;
 };
 
+/**
+ * Upload profile picture
+ */
 export const uploadProfilePicture = async (token: string, uri: string, type: string): Promise<User> => {
   const formData = new FormData();
   formData.append('file', {
@@ -48,6 +54,9 @@ export const uploadProfilePicture = async (token: string, uri: string, type: str
   return response.data.data;
 };
 
+/**
+ * Delete account
+ */
 export const deleteAccount = async (token: string): Promise<{ success: boolean; message: string }> => {
   const response = await axios.delete(`${BASE_URL}/auth/delete-account`, {
     headers: {
@@ -64,6 +73,9 @@ export interface KYCStatus {
   reviewedAt?: string;
 }
 
+/**
+ * Get KYC status
+ */
 export const getKYCStatus = async (token: string): Promise<KYCStatus> => {
   const response = await axios.get(`${BASE_URL}/auth/kyc/status`, {
     headers: {
@@ -85,6 +97,9 @@ interface SubmitKYCResponse {
   data?: any;
 }
 
+/**
+ * Submit KYC documents
+ */
 export const submitKYCDocuments = async (
   token: string,
   documentType: string,
@@ -166,6 +181,9 @@ export const submitKYCDocuments = async (
   }
 };
 
+/**
+ * Apply to become a doctor
+ */
 export const applyToBecomeDoctor = async (formData: FormData, token: string) => {
   try {    
     const response = await axios.post(
@@ -207,6 +225,9 @@ export const applyToBecomeDoctor = async (formData: FormData, token: string) => 
 };
 
 
+/**
+ * Get doctor application status
+ */
 export const getDoctorApplicationStatus = async (token: string): Promise<DoctorApplicationStatus> => {
   try {
     const response = await axios.get(`${BASE_URL}/doctors/application-status`, {
@@ -220,5 +241,21 @@ export const getDoctorApplicationStatus = async (token: string): Promise<DoctorA
       throw new Error(error.response?.data?.message || 'Failed to fetch application status');
     }
     throw new Error('An unexpected error occurred');
+  }
+};
+
+/**
+ * Get all approved doctors (for patients)
+ */
+export const getAllDoctors = async (token: string) => {
+  try {
+      const response = await axios.get(`${BASE_URL}/auth/doctors`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+  } catch (error: any) {
+      throw error.response?.data || { success: false, message: 'Failed to fetch doctors' };
   }
 };
