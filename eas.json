@@ -12,8 +12,7 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug",
-        "buildProfile": "preview"
+        "gradleCommand": ":app:assembleDebug"
       }
     },
     "production": {
@@ -26,8 +25,5 @@
   },
   "submit": {
     "production": {}
-  },
-  "eas": {
-    "projectId": "ae9be269-7798-4ac3-ab78-1bf98ec03d52"
   }
 }
