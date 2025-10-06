@@ -54,6 +54,10 @@
       "favicon": "./assets/images/LogoIcon.png",
       "bundler": "metro"
     },
+    "updates": {
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/ae9be269-7798-4ac3-ab78-1bf98ec03d52"
+    },
     "plugins": [
       [
         "expo-build-properties",
