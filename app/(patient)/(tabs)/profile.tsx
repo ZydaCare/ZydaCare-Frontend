@@ -9,7 +9,10 @@ import {
   ActivityIndicator
 } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons';
+import { Ionicons as Icons } from '@expo/vector-icons';
+
+type IconName = keyof typeof Icons.glyphMap;
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/context/authContext'
 import { router } from 'expo-router'
@@ -34,14 +37,60 @@ const Profile = () => {
     fetchProfile()
   }, [user])
 
-  const menuItems = [
-    { icon: 'person-outline', title: 'Security Settings', chevron: true, action: () => router.push('/(patient)/(pages)/security') },
-    { icon: 'card-outline', title: 'Payment Method', chevron: true },
-    { icon: 'moon-outline', title: 'Theme Settings', chevron: true },
-    { icon: 'time-outline', title: 'Medical History', chevron: true },
-    { icon: 'people-outline', title: 'Family Doctors', chevron: true },
-    { icon: 'help-circle-outline', title: 'Help and Support', chevron: true },
-    { icon: 'help-outline', title: 'Faq', chevron: true },
+  const menuItems: {
+    icon: IconName;
+    title: string;
+    chevron: boolean;
+    action?: () => void;
+  }[] = [
+    { 
+      icon: 'person-outline', 
+      title: 'Security Settings', 
+      chevron: true, 
+      action: () => router.push('/(patient)/(pages)/security') 
+    },
+    // { 
+    //   icon: 'medkit-outline', 
+    //   title: 'Health Profile', 
+    //   chevron: true, 
+    //   action: () => router.push('/(patient)/(pages)/health-profile/healthProfile') 
+    // },
+    { 
+      icon: 'medical-outline', 
+      title: 'Health Profile', 
+      chevron: true,
+      action: () => router.push('/(patient)/(pages)/health-profile/healthProfile') 
+    },
+    { 
+      icon: 'folder-outline', 
+      title: 'Medical History', 
+      chevron: true,
+      action: () => router.push('/(patient)/(pages)/medical-history/records')
+    },
+    { 
+      icon: 'people-outline', 
+      title: 'Apply to be a Doctor', 
+      chevron: true,
+      action: () => router.push('/(patient)/(pages)/apply-doctor') 
+    },
+    { 
+      icon: 'shield-outline', 
+      title: 'KYC Verification', 
+      chevron: true ,
+      action: () => router.push('/(patient)/(pages)/kyc-verification')
+    },
+    { 
+      icon: 'chatbubble-ellipses-outline', 
+      title: 'Help and Support', 
+      chevron: true, 
+      action: () => router.push('/(patient)/(pages)/help') 
+    },
+    { 
+      icon: 'help-circle-outline', 
+      title: 'Faq', 
+      chevron: true, 
+      action: () => router.push('/(patient)/(pages)/faq') 
+    },
     {
       icon: 'log-out-outline',
       title: 'Log out',

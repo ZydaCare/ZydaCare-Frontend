@@ -1,217 +1,53 @@
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Images } from '@/assets/Images';
 import { useAuth } from '@/context/authContext';
+import axios from 'axios';
+import { BASE_URL } from '@/config';
 
-// Mock doctor database
-const doctorsDatabase = [
-  {
-    id: 1,
-    name: "Dr. Adebayo Okonkwo",
-    specialty: "General Practitioner",
-    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop",
-    experience: 12,
-    consultationFee: 8000,
-    location: "Victoria Island, Lagos",
-    rating: 4.8,
-    availableToday: true,
-    qualifications: "MBBS, FMCP",
-    about: "Experienced in treating common ailments, preventive care, and health management."
-  },
-  {
-    id: 2,
-    name: "Dr. Chioma Nwosu",
-    specialty: "Pediatrician",
-    image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400&h=400&fit=crop",
-    experience: 8,
-    consultationFee: 10000,
-    location: "Lekki, Lagos",
-    rating: 4.9,
-    availableToday: true,
-    qualifications: "MBBS, MSc Pediatrics",
-    about: "Specialized in child health, vaccinations, and developmental monitoring."
-  },
-  {
-    id: 3,
-    name: "Dr. Ibrahim Yusuf",
-    specialty: "Dermatologist",
-    image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&h=400&fit=crop",
-    experience: 10,
-    consultationFee: 12000,
-    location: "Ikeja, Lagos",
-    rating: 4.7,
-    availableToday: false,
-    qualifications: "MBBS, Derm Specialist",
-    about: "Expert in skin conditions, acne treatment, and cosmetic dermatology."
-  },
-  {
-    id: 4,
-    name: "Dr. Fatima Abdullahi",
-    specialty: "Cardiologist",
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop",
-    experience: 15,
-    consultationFee: 15000,
-    location: "Ikoyi, Lagos",
-    rating: 4.9,
-    availableToday: true,
-    qualifications: "MBBS, FWACP (Cardiology)",
-    about: "Specialized in heart health, hypertension, and cardiovascular diseases."
-  },
-  {
-    id: 5,
-    name: "Dr. Oluwaseun Adeyemi",
-    specialty: "Gastroenterologist",
-    image: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=400&h=400&fit=crop",
-    experience: 9,
-    consultationFee: 13000,
-    location: "Surulere, Lagos",
-    rating: 4.6,
-    availableToday: true,
-    qualifications: "MBBS, FMCP (Gastro)",
-    about: "Expert in digestive system disorders, stomach issues, and liver health."
-  }
-];
+interface Doctor {
+  id: string;
+  name: string;
+  specialty: string;
+  image: string;
+  experience: number;
+  consultationFee: number;
+  location: string;
+  rating: number;
+  totalReviews: number;
+  availableToday: boolean;
+  qualifications: string;
+  about: string;
+  email?: string;
+  phone?: string;
+}
 
-// Enhanced AI Response Logic with conversational flow
-const getAIResponse = (userMessage:any, conversationHistory:any) => {
-  const message = userMessage.toLowerCase();
-  const lastMessage = conversationHistory[conversationHistory.length - 1];
-  
-  // Symptom-to-specialty mapping
-  const symptomKeywords = {
-    fever: ['General Practitioner'],
-    headache: ['General Practitioner'],
-    cough: ['General Practitioner'],
-    "sore throat": ['General Practitioner'],
-    cold: ['General Practitioner'],
-    flu: ['General Practitioner'],
-    "stomach ache": ['Gastroenterologist', 'General Practitioner'],
-    "stomach pain": ['Gastroenterologist', 'General Practitioner'],
-    diarrhea: ['Gastroenterologist', 'General Practitioner'],
-    vomiting: ['Gastroenterologist', 'General Practitioner'],
-    nausea: ['Gastroenterologist', 'General Practitioner'],
-    "chest pain": ['Cardiologist', 'General Practitioner'],
-    palpitations: ['Cardiologist'],
-    "high blood pressure": ['Cardiologist'],
-    hypertension: ['Cardiologist'],
-    "heart": ['Cardiologist'],
-    rash: ['Dermatologist'],
-    acne: ['Dermatologist'],
-    itching: ['Dermatologist'],
-    "skin problem": ['Dermatologist'],
-    eczema: ['Dermatologist'],
-    "skin rash": ['Dermatologist'],
-    child: ['Pediatrician'],
-    baby: ['Pediatrician'],
-    toddler: ['Pediatrician'],
-    infant: ['Pediatrician'],
-    diabetes: ['General Practitioner', 'Cardiologist'],
-    "back pain": ['General Practitioner'],
-    fatigue: ['General Practitioner'],
-    tired: ['General Practitioner'],
-    weakness: ['General Practitioner']
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  doctors?: Doctor[];
+  recommendDoctors?: boolean;
+  askFollowUp?: boolean;
+}
+
+interface APIResponse {
+  success: boolean;
+  data?: {
+    message: string;
+    recommendDoctors: boolean;
+    doctors: Doctor[];
+    specialties: string[];
+    metadata: {
+      tokensUsed: number;
+      timestamp: string;
+    };
   };
+  message?: string;
+}
 
-  // Detect symptoms and find matching specialty
-  let detectedSpecialties = new Set();
-  let detectedSymptoms = [];
-  
-  for (const [symptom, specialties] of Object.entries(symptomKeywords)) {
-    if (message.includes(symptom)) {
-      detectedSymptoms.push(symptom);
-      specialties.forEach(s => detectedSpecialties.add(s));
-    }
-  }
-
-  // Greeting responses
-  if (message.match(/^(hi|hello|hey|good morning|good afternoon|good evening|greetings)/)) {
-    return {
-      text: "Hello! How are you feeling today? I'm here to help with any health concerns you might have. Feel free to describe your symptoms in detail, and I'll do my best to provide helpful guidance.",
-      doctors: [],
-      askFollowUp: false
-    };
-  }
-
-  // Thank you responses
-  if (message.match(/(thank|thanks|appreciate)/)) {
-    return {
-      text: "You're welcome! Is there anything else you'd like to know about your symptoms or general health? I'm here to help!",
-      doctors: [],
-      askFollowUp: false
-    };
-  }
-
-  // Follow-up questions about duration
-  if (message.match(/how long|duration|since when|started/i) && lastMessage?.role === 'assistant' && lastMessage?.askFollowUp) {
-    return {
-      text: "Understanding the duration helps determine the severity. If symptoms persist beyond a few days or worsen, it's important to seek medical attention. Would you like me to recommend a doctor who can properly assess your condition?",
-      doctors: [],
-      askFollowUp: false
-    };
-  }
-
-  // If symptoms detected - provide detailed conversational help
-  if (detectedSymptoms.length > 0) {
-    const specialtyList = Array.from(detectedSpecialties);
-    const recommendedDoctors = doctorsDatabase.filter(doc => 
-      specialtyList.includes(doc.specialty)
-    );
-
-    let responseText = "";
-
-    // Specific conversational advice based on symptoms
-    if (detectedSymptoms.some(s => ['fever', 'cough', 'sore throat', 'cold', 'flu'].includes(s))) {
-      responseText = `I understand you're experiencing ${detectedSymptoms.filter(s => ['fever', 'cough', 'sore throat', 'cold', 'flu'].includes(s)).join(' and ')}. This is quite common, especially during weather changes.\n\nHere's what I recommend:\n\n💧 **Stay Hydrated**: Drink plenty of water, warm tea with honey, or warm lemon water. This helps thin mucus and soothes your throat.\n\n🛏️ **Rest Well**: Your body needs energy to fight off the infection. Try to get 7-9 hours of sleep.\n\n🌡️ **Monitor Temperature**: If you have a fever above 38.5°C (101.3°F) that persists for more than 3 days, you should see a doctor.\n\n🍲 **Eat Light**: Chicken soup, fruits rich in Vitamin C (oranges, guava), and easily digestible foods.\n\n⚠️ **Red Flags**: Seek immediate medical attention if you experience difficulty breathing, persistent high fever, or chest pain.\n\nHow long have you been experiencing these symptoms? This will help me assess whether you need to see a doctor urgently.`;
-      
-    } else if (detectedSymptoms.some(s => ['stomach ache', 'stomach pain', 'diarrhea', 'vomiting', 'nausea'].includes(s))) {
-      responseText = `I'm sorry to hear you're dealing with ${detectedSymptoms.filter(s => ['stomach ache', 'stomach pain', 'diarrhea', 'vomiting', 'nausea'].includes(s)).join(' and ')}. Digestive issues can be really uncomfortable.\n\nLet me help you manage this:\n\n💧 **Hydration is Critical**: With diarrhea or vomiting, you lose fluids quickly. Drink ORS (Oral Rehydration Solution) or make your own: 6 teaspoons of sugar + 1/2 teaspoon of salt in 1 liter of clean water.\n\n🥘 **BRAT Diet**: Stick to Bananas, Rice, Applesauce, and Toast. These are gentle on your stomach.\n\n🚫 **Avoid These**: Spicy foods, dairy products, caffeine, alcohol, and fatty foods until you feel better.\n\n🍵 **Natural Remedies**: Ginger tea can help with nausea. Peppermint tea can soothe stomach cramps.\n\n⏰ **When to Worry**: If you notice blood in stool, severe abdominal pain, symptoms lasting more than 48 hours, signs of dehydration (dark urine, dizziness), or high fever - see a doctor immediately.\n\nHave you eaten anything unusual in the last 24 hours? Food poisoning is a common cause of these symptoms.`;
-      
-    } else if (detectedSymptoms.some(s => ['chest pain', 'palpitations', 'heart'].includes(s))) {
-      responseText = `⚠️ I notice you mentioned ${detectedSymptoms.filter(s => ['chest pain', 'palpitations', 'heart'].includes(s)).join(' and ')}. This is something we should take seriously.\n\n**Important**: If you're experiencing severe chest pain, pain radiating to your arm or jaw, difficulty breathing, or excessive sweating, please call emergency services or go to the nearest hospital immediately. These could be signs of a heart attack.\n\nIf it's mild discomfort:\n\n😌 **Stay Calm**: Anxiety can make heart palpitations worse. Try deep breathing exercises.\n\n🧘 **Reduce Triggers**: Avoid caffeine, alcohol, and strenuous activity until you're evaluated.\n\n📝 **Track Symptoms**: Note when it happens, what you were doing, and how long it lasts.\n\nGiven the sensitive nature of cardiac symptoms, I strongly recommend seeing a cardiologist or general practitioner as soon as possible for proper evaluation. They may need to run an ECG or other tests.\n\nWould you like me to recommend a doctor who can see you today?`;
-      
-    } else if (detectedSymptoms.some(s => ['rash', 'acne', 'itching', 'skin problem', 'eczema', 'skin rash'].includes(s))) {
-      responseText = `I see you're dealing with ${detectedSymptoms.filter(s => ['rash', 'acne', 'itching', 'skin problem', 'eczema', 'skin rash'].includes(s)).join(' and ')}. Skin issues can be frustrating, but there's usually a solution.\n\nHere's what can help:\n\n🧼 **Keep It Clean**: Wash the affected area gently with mild, unscented soap. Pat dry, don't rub.\n\n❄️ **Cool Compress**: For itching or inflammation, apply a cool, damp cloth for 15-20 minutes.\n\n🚫 **Don't Scratch**: I know it's hard, but scratching makes it worse and can cause infection. Keep nails short.\n\n🧴 **Moisturize**: Use fragrance-free, hypoallergenic lotion. For eczema, apply while skin is still damp.\n\n🔍 **Identify Triggers**: New detergent? Different soap? Certain foods? Stress? Keep track of what might be causing it.\n\n⚠️ **See a Doctor If**: The rash spreads quickly, shows signs of infection (pus, warmth, fever), is extremely painful, or doesn't improve in a week.\n\nSkin conditions often need visual examination for proper diagnosis. A dermatologist can provide targeted treatment and rule out conditions like allergies, infections, or chronic skin conditions.\n\nWould you like to see a dermatologist? I can recommend experienced ones in your area.`;
-      
-    } else if (detectedSymptoms.some(s => ['headache'].includes(s))) {
-      responseText = `Headaches can really disrupt your day. Let me help you find some relief.\n\nHere's what you can try:\n\n💧 **Hydrate**: Dehydration is a common headache trigger. Drink 2-3 glasses of water.\n\n😴 **Rest in Dark Room**: Light sensitivity often accompanies headaches. Lie down in a quiet, dark room.\n\n❄️ **Cold/Warm Compress**: Cold pack on forehead or warm compress on neck and shoulders can help.\n\n☕ **Caffeine (Moderate)**: A small amount of caffeine can help some headaches, but don't overdo it.\n\n💆 **Gentle Massage**: Massage temples, neck, and shoulders in circular motions.\n\n⚠️ **Warning Signs**: If you have sudden severe headache (worst of your life), headache with fever and stiff neck, vision changes, confusion, or if headaches are becoming more frequent/severe - see a doctor immediately.\n\nHeadaches can be caused by stress, poor posture, eye strain, lack of sleep, or underlying conditions. If this is recurring, a doctor can help identify the root cause.\n\nAre these headaches happening frequently? Or is this a one-time thing?`;
-      
-    } else if (detectedSymptoms.some(s => ['child', 'baby', 'toddler', 'infant'].includes(s))) {
-      responseText = `I understand your concern about your child. Children need special attention and care.\n\n👶 **Important for Children**:\n\n• Children can deteriorate quickly, so it's important to monitor them closely\n• Keep them hydrated with small, frequent sips of water or breast milk\n• Watch for signs of dehydration: dry lips, no tears when crying, fewer wet diapers\n• Monitor temperature regularly\n• Ensure they're resting adequately\n\n⚠️ **Seek Immediate Care If**:\n• High fever (above 38°C for babies under 3 months, above 39°C for older children)\n• Difficulty breathing or rapid breathing\n• Unusual drowsiness or difficulty waking\n• Refusing to drink or eat\n• Severe vomiting or diarrhea\n• Rash with fever\n• Any symptom that worries you as a parent\n\n**Trust your instincts** - if something feels wrong, it's always better to have a pediatrician check.\n\nI highly recommend consulting with a pediatrician who specializes in children's health. They're trained to handle pediatric cases with the right approach.\n\nWould you like me to recommend a pediatrician who can see your child soon?`;
-    } else {
-      responseText = `Thank you for sharing your symptoms (${detectedSymptoms.join(', ')}). I want to provide you with the best possible guidance.\n\nBased on what you've described, it would be beneficial to consult with a healthcare professional who can:\n\n✓ Conduct a proper physical examination\n✓ Review your complete medical history\n✓ Run necessary tests if needed\n✓ Provide a definitive diagnosis\n✓ Prescribe appropriate treatment\n\nIn the meantime, make sure to rest, stay hydrated, and avoid anything that seems to worsen your symptoms.\n\nI can connect you with qualified doctors who specialize in treating these conditions.`;
-    }
-
-    // Only add doctor recommendations after providing detailed advice
-    if (recommendedDoctors.length > 0) {
-      responseText += `\n\n**Available Doctors:**\nI've found ${recommendedDoctors.length} qualified ${specialtyList.join('/')} specialists who can help you. You can review their profiles below and book an appointment with the one that suits you best.`;
-    }
-
-    return {
-      text: responseText,
-      doctors: recommendedDoctors.slice(0, 3),
-      askFollowUp: true
-    };
-  }
-
-  // General health queries without specific symptoms
-  if (message.match(/(help|advice|what should i do|guidance|sick|not feeling well|unwell)/)) {
-    return {
-      text: "I'm here to help! To provide you with the most accurate guidance, could you please tell me:\n\n• What specific symptoms are you experiencing?\n• When did they start?\n• How severe are they (mild, moderate, severe)?\n• Have you tried anything to relieve them?\n\nThe more details you provide, the better I can assist you. Don't worry, take your time to describe what you're feeling.",
-      doctors: [],
-      askFollowUp: false
-    };
-  }
-
-  // General health query
-  return {
-    text: "I want to make sure I understand your concern correctly so I can provide the best guidance. Could you describe your symptoms in a bit more detail?\n\nFor example:\n• What exactly are you feeling? (pain, discomfort, unusual sensation)\n• Where do you feel it?\n• How long have you been experiencing this?\n• Is it constant or does it come and go?\n\nThis information will help me give you more specific and helpful advice.",
-    doctors: [],
-    askFollowUp: false
-  };
-};
-
-const DoctorCard = ({ doctor, onBook }:any) => {
+const DoctorCard = ({ doctor, onBook }: { doctor: Doctor; onBook: (doctor: Doctor) => void }) => {
   return (
     <View className="bg-white border border-gray-200 rounded-xl p-4 mb-3 shadow-sm">
       <View className="flex-row gap-3">
@@ -233,6 +69,9 @@ const DoctorCard = ({ doctor, onBook }:any) => {
               <Ionicons name="star" size={12} color="#FCD34D" />
               <Text className="text-xs font-sans text-gray-600">{doctor.rating}</Text>
             </View>
+            {doctor.totalReviews > 0 && (
+              <Text className="text-xs font-sans text-gray-500">({doctor.totalReviews})</Text>
+            )}
           </View>
         </View>
       </View>
@@ -270,10 +109,26 @@ const DoctorCard = ({ doctor, onBook }:any) => {
   );
 };
 
+const TypingIndicator = () => (
+  <View className="flex-row mb-4 justify-start">
+    <View className="w-8 h-8 bg-primary rounded-full items-center justify-center mr-2">
+      <Ionicons name="chatbubble" size={18} color="white" />
+    </View>
+    <View className="bg-white px-4 py-3 rounded-2xl border border-gray-200 shadow-sm">
+      <View className="flex-row gap-1">
+        <View className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ opacity: 0.4 }} />
+        <View className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ opacity: 0.6 }} />
+        <View className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ opacity: 0.8 }} />
+      </View>
+    </View>
+  </View>
+);
+
 const Health = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth(); // Make sure your auth context provides token
   const fullName = `${user?.firstName} ${user?.lastName}`.trim();
-  const [messages, setMessages] = useState([
+  
+  const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
       content: `Hello ${user?.firstName}! 👋\n\nI'm your ZydaCare AI Health Assistant. Think of me as your first point of contact for health concerns - I'm here to:\n\n• Listen to your symptoms\n• Provide helpful health guidance\n• Recommend appropriate specialists\n• Answer your health questions\n\nHow are you feeling today? Tell me what's bothering you, and let's figure out the best way to help you feel better.`,
@@ -281,46 +136,155 @@ const Health = () => {
       doctors: []
     }
   ]);
+  
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const scrollViewRef = useRef(null);
+  const [error, setError] = useState<string | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  // Clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
-    const userMessage = {
+  const getAIResponse = async (conversationHistory: Message[]): Promise<void> => {
+    try {
+      setIsTyping(true);
+      setError(null);
+
+      // Prepare messages for API (only send role and content)
+      const apiMessages = conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      console.log('Sending request to:', `${BASE_URL}/health-ai/chat`);
+      console.log('Message count:', apiMessages.length);
+
+      // Make API call
+      const response = await axios.post<APIResponse>(
+        `${BASE_URL}/health-ai/chat`,
+        { messages: apiMessages },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // Use your auth token
+          },
+          timeout: 30000 // 30 second timeout
+        }
+      );
+
+      console.log('API Response:', response.data);
+
+      if (response.data.success && response.data.data) {
+        const { message, doctors, recommendDoctors } = response.data.data;
+
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: message,
+          timestamp: new Date(),
+          doctors: doctors || [],
+          recommendDoctors: recommendDoctors
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+      } else {
+        throw new Error(response.data.message || 'Failed to get AI response');
+      }
+
+    } catch (err: any) {
+      console.error('Error getting AI response:', err);
+      
+      let errorMessage = "I'm having trouble processing your request. ";
+      
+      if (err.response) {
+        // Server responded with error
+        console.error('Server Error:', err.response.data);
+        errorMessage += err.response.data.message || 'Please try again.';
+      } else if (err.request) {
+        // Request made but no response
+        console.error('Network Error:', err.request);
+        errorMessage += 'Please check your internet connection.';
+      } else {
+        // Something else happened
+        console.error('Error:', err.message);
+        errorMessage += 'Please try again.';
+      }
+
+      setError(errorMessage);
+
+      // Show fallback message
+      const fallbackMessage: Message = {
+        role: 'assistant',
+        content: `${errorMessage}\n\nWould you like to browse our available doctors directly? I can help you find the right specialist for your needs.`,
+        timestamp: new Date(),
+        doctors: [],
+        recommendDoctors: false
+      };
+
+      setMessages(prev => [...prev, fallbackMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || isTyping) return;
+
+    const userMessage: Message = {
       role: 'user',
-      content: input,
+      content: input.trim(),
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    // Update messages with user message
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput('');
-    setIsTyping(true);
 
-    // Simulate AI thinking delay
-    setTimeout(() => {
-      const aiResponse = getAIResponse(userMessage.content, messages);
-      const assistantMessage = {
-        role: 'assistant',
-        content: aiResponse.text,
-        timestamp: new Date(),
-        doctors: aiResponse.doctors || [],
-        askFollowUp: aiResponse.askFollowUp
-      };
-      
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsTyping(false);
-    }, 2000);
+    // Get AI response
+    await getAIResponse(updatedMessages);
   };
 
-  const handleBookAppointment = (doctor:any) => {
-    alert(`Booking appointment with ${doctor.name}.\n\nIn the actual app, this would navigate to the booking screen.`);
-    // In production: navigation.navigate('BookAppointment', { doctor });
+  const handleBookAppointment = (doctor: Doctor) => {
+    Alert.alert(
+      'Book Appointment',
+      `Would you like to book an appointment with ${doctor.name}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Book Now',
+          onPress: () => {
+            // TODO: Navigate to booking screen
+            console.log('Booking appointment with:', doctor);
+            Alert.alert('Success', `Proceeding to book appointment with ${doctor.name}`);
+            // In production: navigation.navigate('BookAppointment', { doctorId: doctor.id });
+          }
+        }
+      ]
+    );
+  };
+
+  const handleQuickAction = async (action: string) => {
+    const quickMessages: { [key: string]: string } = {
+      'general': "I need a general health checkup",
+      'emergency': "I need urgent medical attention",
+      'followup': "I need help with understanding my symptoms"
+    };
+
+    if (quickMessages[action]) {
+      setInput(quickMessages[action]);
+    }
   };
 
   return (
@@ -330,14 +294,57 @@ const Health = () => {
       style={{ backgroundColor: '#F0FDFA' }}
     >
       {/* Header */}
-      <View className="bg-white border-b border-gray-200 px-4 py-2 pt-4 shadow-sm">
+      <View className="bg-white border-b border-gray-200 px-4 py-2 pt-12 shadow-sm">
         <View className="flex-row items-center gap-3">
           <Image source={Images.LogoIcon} className="w-14 h-14" />
-          <View>
+          <View className="flex-1">
             <Text className="text-xl font-sans-semibold text-gray-900">AI Health Assistant</Text>
             <Text className="text-sm font-sans text-gray-600">Powered by ZydaCare</Text>
           </View>
+          <View className="items-center">
+            <View className="w-2 h-2 bg-green-500 rounded-full" />
+            <Text className="text-xs font-sans text-gray-500 mt-1">Online</Text>
+          </View>
         </View>
+
+        {/* Error Banner */}
+        {error && (
+          <View className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 flex-row items-start gap-2">
+            <Ionicons name="alert-circle" size={20} color="#EF4444" />
+            <Text className="flex-1 text-sm font-sans text-red-700">{error}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Quick Actions */}
+      <View className="bg-white border-b border-gray-100 px-4 py-3">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View className="flex-row gap-2">
+            <TouchableOpacity 
+              onPress={() => handleQuickAction('general')}
+              className="bg-primary/10 px-4 py-2 rounded-full flex-row items-center gap-2"
+            >
+              <Ionicons name="medical" size={16} color="#67A9AF" />
+              <Text className="text-primary font-sans-medium text-sm">General Checkup</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => handleQuickAction('emergency')}
+              className="bg-red-50 px-4 py-2 rounded-full flex-row items-center gap-2"
+            >
+              <Ionicons name="alert-circle" size={16} color="#EF4444" />
+              <Text className="text-red-600 font-sans-medium text-sm">Emergency</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => handleQuickAction('followup')}
+              className="bg-blue-50 px-4 py-2 rounded-full flex-row items-center gap-2"
+            >
+              <Ionicons name="help-circle" size={16} color="#3B82F6" />
+              <Text className="text-blue-600 font-sans-medium text-sm">Need Help</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </View>
 
       {/* Messages Container */}
@@ -368,8 +375,12 @@ const Health = () => {
                 </Text>
               </View>
               
+              {/* Doctor Cards */}
               {message.doctors && message.doctors.length > 0 && (
                 <View className="w-full mt-3">
+                  <Text className="text-sm font-sans-semibold text-gray-700 mb-2">
+                    Recommended Doctors ({message.doctors.length})
+                  </Text>
                   {message.doctors.map(doctor => (
                     <DoctorCard 
                       key={doctor.id} 
@@ -396,20 +407,7 @@ const Health = () => {
           </View>
         ))}
 
-        {isTyping && (
-          <View className="flex-row mb-4 justify-start">
-            <View className="w-8 h-8 bg-primary rounded-full items-center justify-center mr-2">
-              <Ionicons name="chatbubble" size={18} color="white" />
-            </View>
-            <View className="bg-white px-4 py-3 rounded-2xl border border-gray-200 shadow-sm">
-              <View className="flex-row gap-1">
-                <View className="w-2 h-2 bg-gray-400 rounded-full" style={{ opacity: 0.4 }} />
-                <View className="w-2 h-2 bg-gray-400 rounded-full" style={{ opacity: 0.6 }} />
-                <View className="w-2 h-2 bg-gray-400 rounded-full" style={{ opacity: 0.8 }} />
-              </View>
-            </View>
-          </View>
-        )}
+        {isTyping && <TypingIndicator />}
       </ScrollView>
 
       {/* Input Area */}
@@ -424,18 +422,28 @@ const Health = () => {
             maxLength={500}
             className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-sm font-sans bg-gray-50"
             style={{ maxHeight: 100 }}
+            editable={!isTyping}
+            onSubmitEditing={handleSend}
           />
           <TouchableOpacity
             onPress={handleSend}
             disabled={!input.trim() || isTyping}
-            className={`p-3 rounded-xl ${(!input.trim() || isTyping) ? 'bg-gray-300' : 'bg-primary active:bg-primary'}`}
+            className={`p-3 rounded-xl ${(!input.trim() || isTyping) ? 'bg-gray-300' : 'bg-primary active:bg-primary/80'}`}
           >
-            <Ionicons name="send" size={20} color="white" />
+            {isTyping ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Ionicons name="send" size={20} color="white" />
+            )}
           </TouchableOpacity>
         </View>
-        <Text className="text-xs font-sans text-gray-500 text-center mt-2">
-          This AI provides general guidance. Always consult a healthcare professional.
-        </Text>
+        
+        <View className="flex-row items-center justify-center mt-2 gap-1">
+          <Ionicons name="shield-checkmark" size={12} color="#6B7280" />
+          <Text className="text-xs font-sans text-gray-500 text-center">
+            Secure & confidential. AI provides guidance, not medical diagnosis.
+          </Text>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );

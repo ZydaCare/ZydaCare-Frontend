@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-export default function RootLayout() {
+export default function PatientRootLayout() {
     return (
         <Stack>
             <Stack.Screen name="(tabs)" options={{ title: 'Patient Tabs', headerShown: false }} />

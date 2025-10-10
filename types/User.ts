@@ -11,6 +11,7 @@ export interface User {
   profileImage: ProfileImage;
   dob: Date;
   phone: string;
+  gender: string;
   country: string;
   state: string;
   city: string;

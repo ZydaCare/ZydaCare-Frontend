@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-export default function Layout() {
+export default function PatientPageLayout() {
     return (
         <Stack>
             <Stack.Screen name="search" options={{ headerShown: false }} />
@@ -14,6 +14,17 @@ export default function Layout() {
             <Stack.Screen name="supportChat" options={{ headerShown: false }} />
             <Stack.Screen name="help" options={{ headerShown: false }} />
             <Stack.Screen name="apply-doctor" options={{ headerShown: false }} />
+            <Stack.Screen name="doctor/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="appointment/book" options={{ headerShown: false }} />
+            <Stack.Screen name="appointment/pay" options={{ headerShown: false }} />
+            <Stack.Screen name="appointment/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="appointment/pay-success" options={{ headerShown: false }} />
+            <Stack.Screen name="faq/index" options={{ headerShown: false }} />
+            <Stack.Screen name="faq/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="medical-history/records" options={{ headerShown: false }} />
+            <Stack.Screen name="medical-history/add" options={{ headerShown: false }} />
+            <Stack.Screen name="medical-history/edit/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="health-profile/healthProfile" options={{ headerShown: false }} />
         </Stack>
     );
 }

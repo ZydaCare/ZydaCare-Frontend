@@ -288,7 +288,7 @@ export default function Login() {
                             <View className="mb-4">
                                 <Text className="text-gray-700 text-sm font-sans-medium mb-2">Email</Text>
                                 <TextInput
-                                    className="w-full h-12 px-4 bg-white rounded-lg border border-gray-200"
+                                    className="w-full h-12 px-4 text-gray-700 font-sans-medium bg-white rounded-lg border border-gray-200"
                                     placeholder="Enter your username"
                                     placeholderTextColor="#9ca3af"
                                     value={email}
@@ -303,7 +303,7 @@ export default function Login() {
                                 <Text className="text-gray-700 text-sm font-sans-medium mb-2">Password</Text>
                                 <View className="relative">
                                     <TextInput
-                                        className="w-full h-12 px-4 pr-12 bg-white rounded-lg border border-gray-200 text-gray-700"
+                                        className="w-full h-12 px-4 pr-12 bg-white rounded-lg border border-gray-200 text-gray-700 font-sans-medium"
                                         placeholder="Enter your password"
                                         placeholderTextColor="#9ca3af"
                                         value={password}

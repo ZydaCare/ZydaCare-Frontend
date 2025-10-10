@@ -195,9 +195,9 @@ export default function ProfileScreen() {
                                 <Feather name="globe" size={20} color="#000" />
                             </View>
                             <Text className="flex-1 text-gray-900 text-base font-sans">
-                                {[profile?.country, profile?.state, profile?.city, profile?.address, profile?.zipCode]
+                                {[profile?.address, profile?.city, profile?.state, profile?.country, profile?.zipCode]
                                     .filter(Boolean)
-                                    .join(' ') || 'Location'}
+                                    .join(', ') || 'Location'}
                             </Text>
                             <Feather name="chevron-right" size={20} color="#9CA3AF" />
                         </TouchableOpacity>

@@ -259,3 +259,19 @@ export const getAllDoctors = async (token: string) => {
       throw error.response?.data || { success: false, message: 'Failed to fetch doctors' };
   }
 };
+
+/**
+ * Get doctor details by ID (for patients)
+ */
+export const getDoctorDetails = async (doctorId: string, token: string) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/auth/doctors/${doctorId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { success: false, message: 'Failed to fetch doctor details' };
+  }
+};

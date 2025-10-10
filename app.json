@@ -7,6 +7,10 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "zydacare",
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -15,14 +19,13 @@
       "usesIcloudStorage": true,
       "buildNumber": "1.0.0",
       "icon": "./assets/images/icon.png",
-      "config": {
-        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_IOS_API_KEY"
-      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app uses your location to show nearby doctors and medical facilities.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location to show nearby doctors and medical facilities.",
         "NSLocationAlwaysUsageDescription": "This app uses your location to show nearby doctors and medical facilities.",
-        "UIBackgroundModes": ["location"],
+        "UIBackgroundModes": [
+          "location"
+        ],
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDisplayName": "ZydaCare",
         "CFBundleShortVersionString": "1.0.0",
@@ -30,6 +33,25 @@
       }
     },
     "android": {
+      "androidStatusBar": {
+        "backgroundColor": "#67A9AF",
+        "barStyle": "light-content"
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "zydacare",
+              "host": "*"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#67A9AF"
@@ -42,12 +64,7 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "INTERNET"
-      ],
-      "config": {
-        "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
-        }
-      }
+      ]
     },
     "web": {
       "output": "static",
@@ -83,6 +100,7 @@
         {
           "icon": "./assets/images/icon.png",
           "color": "#67A9AF",
+          "sounds": ["./assets/notification-sound.mp3"],
           "mode": "production"
         }
       ],

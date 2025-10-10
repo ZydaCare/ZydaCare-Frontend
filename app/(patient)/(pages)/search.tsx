@@ -1,9 +1,21 @@
+import { getAllDoctors } from '@/api/patient/user';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/authContext';
-import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState, useRef, useEffect } from 'react';
 import {
+    filterDoctors,
+    sortDoctorsByAvailability,
+    sortDoctorsByDistance,
+    transformDoctorData,
+    TransformedDoctor,
+} from '@/utils/getDoctorUtils';
+import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Animated,
+    Dimensions,
     Image,
     SafeAreaView,
     ScrollView,
@@ -12,20 +24,9 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    Animated,
-    Dimensions,
-    ActivityIndicator,
+    PanResponder
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import { getAllDoctors } from '@/api/patient/user';
-import * as Location from 'expo-location';
-import {
-    transformDoctorData,
-    filterDoctors,
-    sortDoctorsByDistance,
-    sortDoctorsByAvailability,
-    TransformedDoctor,
-} from '@/utils/getDoctorUtils';
+import { WebView } from 'react-native-webview';
 
 const { height } = Dimensions.get('window');
 
@@ -50,10 +51,11 @@ export default function Search() {
         longitudeDelta: 0.0421,
     });
     const [locationPermission, setLocationPermission] = useState(false);
+    const [mapReady, setMapReady] = useState(false);
 
     const bottomSheetAnim = useRef(new Animated.Value(height)).current;
     const scanningAnim = useRef(new Animated.Value(0)).current;
-    const mapRef = useRef<MapView>(null);
+    const webViewRef = useRef<WebView>(null);
 
     // Request location permission and get user's current location
     useEffect(() => {
@@ -91,16 +93,22 @@ export default function Search() {
     // Transform doctors when raw data or location changes
     useEffect(() => {
         if (rawDoctors.length > 0) {
-            const transformed = rawDoctors.map(doctor =>
-                transformDoctorData(
+            const transformed = rawDoctors.map(doctor => {
+                console.log('Raw doctor:', doctor.fullName);
+                console.log('Raw coordinates:', doctor.profile?.location?.coordinates);
+
+                const result = transformDoctorData(
                     doctor,
                     userLocation.latitude,
-                    userLocation.longitude,
-                    doctor?.profileImage?.url
-                )
-            );
-            // Sort by distance by default
+                    userLocation.longitude
+                );
+
+                console.log('Transformed:', result.fullName, result.latitude, result.longitude);
+                return result;
+            });
+
             setTransformedDoctors(sortDoctorsByDistance(transformed));
+            console.log('Total transformed doctors:', transformed.length);
         }
     }, [rawDoctors, userLocation]);
 
@@ -126,7 +134,7 @@ export default function Search() {
     };
 
     const categories = [
-        { id: 0, title: 'All', icon: 'apps' },
+        { id: 0, title: 'All', icon: 'medical' },
         { id: 1, title: 'General', icon: 'person' },
         { id: 2, title: 'Dentist', icon: 'medkit' },
         { id: 3, title: 'Surgeon', icon: 'cut' },
@@ -166,7 +174,7 @@ export default function Search() {
     // Bottom sheet animation
     const showBottomSheet = () => {
         Animated.spring(bottomSheetAnim, {
-            toValue: height * 0.5,
+            toValue: height * 0.46,
             useNativeDriver: false,
             tension: 50,
             friction: 8,
@@ -180,68 +188,169 @@ export default function Search() {
         }).start();
     };
 
+    const panY = useRef(new Animated.Value(0)).current;
+
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gestureState) => {
+                return Math.abs(gestureState.dy) > 5;
+            },
+            onPanResponderMove: (_, gestureState) => {
+                if (gestureState.dy > 0) {
+                    panY.setValue(gestureState.dy);
+                }
+            },
+            onPanResponderRelease: (_, gestureState) => {
+                if (gestureState.dy > 100) {
+                    setSelectedDoctor(null);
+                    hideBottomSheet();
+                    panY.setValue(0);
+                } else {
+                    Animated.spring(panY, {
+                        toValue: 0,
+                        useNativeDriver: false,
+                    }).start();
+                }
+            },
+        })
+    ).current;
+
+    // Update map when doctors or user location changes
+    useEffect(() => {
+        if (mapReady && viewMode === 'map' && filteredDoctors.length > 0) {
+            console.log('Updating map with doctors:', filteredDoctors.length);
+            updateMapMarkers();
+        }
+    }, [filteredDoctors, userLocation, mapReady, viewMode]);
+
+    const updateMapMarkers = () => {
+        const doctors = filteredDoctors.map(doc => {
+            console.log('Mapping doctor:', doc.fullName, doc.latitude, doc.longitude);
+            return {
+                id: doc._id,
+                lat: doc.latitude,
+                lng: doc.longitude,
+                name: doc.fullName,
+                title: doc.title,
+                specialty: doc.speciality,
+                image: doc.profileImage?.url || null,
+                rating: doc.rating,
+                distance: doc.distance,
+                available: doc.availabilityStatus.isAvailable
+            };
+        });
+
+        const data = {
+            userLat: userLocation.latitude,
+            userLng: userLocation.longitude,
+            doctors: doctors
+        };
+
+        console.log('Sending to map:', JSON.stringify(data, null, 2));
+        webViewRef.current?.postMessage(JSON.stringify({ type: 'updateMarkers', data }));
+    };
+
     // Handle map search and recommendation
     useEffect(() => {
-        if (viewMode === 'map') {
-            if (searchQuery.trim() !== '') {
-                setIsScanning(true);
-                setSelectedDoctor(null);
-                hideBottomSheet();
+        if (viewMode === 'map' && searchQuery.trim() !== '') {
+            setIsScanning(true);
+            setSelectedDoctor(null);
+            hideBottomSheet();
 
-                const timer = setTimeout(() => {
-                    setIsScanning(false);
-                    const matchingDoctors = filteredDoctors;
+            const timer = setTimeout(() => {
+                setIsScanning(false);
+                const matchingDoctors = filteredDoctors;
 
-                    if (matchingDoctors.length > 0) {
-                        // Sort by availability, then distance
-                        const sortedDoctors = sortDoctorsByAvailability(matchingDoctors);
-                        const recommendedDoctor = sortedDoctors[0];
-                        setSelectedDoctor(recommendedDoctor);
-                        showBottomSheet();
+                if (matchingDoctors.length > 0) {
+                    const sortedDoctors = sortDoctorsByAvailability(matchingDoctors);
+                    const recommendedDoctor = sortedDoctors[0];
+                    setSelectedDoctor(recommendedDoctor);
+                    showBottomSheet();
 
-                        // Animate to doctor location
-                        mapRef.current?.animateToRegion({
-                            latitude: recommendedDoctor.latitude,
-                            longitude: recommendedDoctor.longitude,
-                            latitudeDelta: 0.05,
-                            longitudeDelta: 0.05,
-                        }, 1000);
-                    }
-                }, 2000);
+                    // Animate to doctor location
+                    webViewRef.current?.postMessage(JSON.stringify({
+                        type: 'flyTo',
+                        data: {
+                            lat: recommendedDoctor.latitude,
+                            lng: recommendedDoctor.longitude,
+                            zoom: 15
+                        }
+                    }));
+                }
+            }, 2000);
 
-                return () => clearTimeout(timer);
-            } else {
-                setSelectedDoctor(null);
-                hideBottomSheet();
-            }
+            return () => clearTimeout(timer);
+        } else if (viewMode === 'map' && searchQuery.trim() === '') {
+            setSelectedDoctor(null);
+            hideBottomSheet();
         }
     }, [searchQuery, viewMode, filteredDoctors]);
 
-    const handleDoctorMarkerPress = (doctor: TransformedDoctor) => {
-        setSelectedDoctor(doctor);
-        showBottomSheet();
-        mapRef.current?.animateToRegion({
-            latitude: doctor.latitude,
-            longitude: doctor.longitude,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-        }, 500);
+    const handleDoctorMarkerPress = (doctorId: string) => {
+        const doctor = filteredDoctors.find(d => d._id === doctorId);
+        if (doctor) {
+            setSelectedDoctor(doctor);
+            showBottomSheet();
+            webViewRef.current?.postMessage(JSON.stringify({
+                type: 'flyTo',
+                data: {
+                    lat: doctor.latitude,
+                    lng: doctor.longitude,
+                    zoom: 15
+                }
+            }));
+        }
+    };
+
+    const centerMapOnUser = () => {
+        webViewRef.current?.postMessage(JSON.stringify({
+            type: 'flyTo',
+            data: {
+                lat: userLocation.latitude,
+                lng: userLocation.longitude,
+                zoom: 13
+            }
+        }));
+    };
+
+    const ViewDoctorProfile = () => {
+        if (selectedDoctor) {
+            router.push({
+                pathname: '/doctor/[id]',
+                params: { id: selectedDoctor._id }
+            });
+        }
+    };
+
+    const handleBookAppointment = () => {
+        if (selectedDoctor) {
+            router.push({
+                pathname: '/appointment/book',
+                params: { doctorId: selectedDoctor._id },
+            });
+        }
     };
 
     const DoctorCard = ({ doctor }: { doctor: TransformedDoctor }) => (
         <TouchableOpacity
             onPress={() => {
-                // Navigate to doctor details
-                // router.push(`/doctor/${doctor._id}`);
+                router.push(`/(patient)/(pages)/doctor/${doctor._id}`);
             }}
             className="bg-white rounded-2xl p-4 mb-4 shadow-sm mx-2"
         >
             <View className="flex-row">
-                <Image
-                    source={{ uri: doctor.profileImage?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.fullName || 'U')}&background=67A9AF&color=fff` }}
-                    className="w-28 h-28 rounded-xl"
-                    resizeMode="cover"
-                />
+                {doctor.profileImage ? (
+                    <Image
+                        source={{ uri: doctor.profileImage?.url }}
+                        className="w-28 h-28 rounded-xl"
+                        resizeMode="cover"
+                    />
+                ) : (
+                    <View className="w-28 h-28 rounded-xl items-center justify-center bg-primary/10">
+                        <Ionicons name="person" size={40} color='#67A9AF' />
+                    </View>
+                )}
                 <View className="flex-1 ml-4">
                     <View className="flex-row items-center justify-between mb-1">
                         <Text className="text-lg font-sans-semibold text-gray-900" numberOfLines={1}>
@@ -257,7 +366,6 @@ export default function Search() {
                     )}
                     <Text className="text-gray-400 font-sans text-xs mb-1">{doctor.yearsOfExperience} years experience</Text>
 
-                    {/* Distance and Availability */}
                     <View className="flex-row items-center gap-3 mb-2">
                         <View className="flex-row items-center gap-1">
                             <Ionicons name="location" size={12} color="#6B7280" />
@@ -274,10 +382,10 @@ export default function Search() {
 
                     <View className="flex-row items-center justify-between">
                         <View>
-                            <Text className="text-secondary font-sans-bold text-base">₦{doctor.consultationFee}</Text>
+                            <Text className="text-secondary font-sans-bold text-base">{doctor.consultationFee}</Text>
                             <Text className="text-gray-500 font-sans text-xs">Per Consultation</Text>
                         </View>
-                        <TouchableOpacity className="bg-primary px-6 py-2 rounded-lg">
+                        <TouchableOpacity className="bg-primary px-6 py-2 rounded-lg" onPress={handleBookAppointment}>
                             <Text className="text-white font-sans-medium text-sm">Consult now</Text>
                         </TouchableOpacity>
                     </View>
@@ -286,11 +394,257 @@ export default function Search() {
         </TouchableOpacity>
     );
 
+    // HTML content for the map
+    const mapHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <style>
+            body { margin: 0; padding: 0; }
+            #map { width: 100%; height: 100vh; }
+            
+            /* Doctor marker with profile image */
+            .custom-marker {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                border: 3px solid white;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+                overflow: hidden;
+                position: relative;
+                background: #67A9AF;
+            }
+            
+            /* Profile image styling */
+            .marker-image {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+            
+            /* Default icon when no image */
+            .marker-icon {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(135deg, #67A9AF 0%, #5a969c 100%);
+                color: white;
+                font-size: 24px;
+            }
+            
+            /* Availability status indicator */
+            .status-indicator {
+                position: absolute;
+                top: -3px;
+                right: -3px;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                border: 3px solid white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                z-index: 10;
+            }
+            
+            .available { 
+                background: #10b981;
+                animation: pulse 2s infinite;
+            }
+            
+            .unavailable { 
+                background: #f59e0b;
+            }
+            
+            /* Pulse animation for available doctors */
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.6; }
+            }
+            
+            /* User location marker */
+            .custom-user-marker {
+                animation: userPulse 2s infinite;
+            }
+            
+            @keyframes userPulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+                100% { transform: scale(1); }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="map"></div>
+        <script>
+            let map;
+            let userMarker = null;
+            let doctorMarkers = [];
+            let isMapReady = false;
+
+            // Initialize map
+            function initMap() {
+                console.log('Initializing map...');
+                map = L.map('map', {
+                    zoomControl: false,
+                    attributionControl: false
+                }).setView([6.5244, 3.3792], 13);
+
+                // Add OpenStreetMap tiles
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+
+                // Wait for tiles to load
+                map.whenReady(function() {
+                    console.log('Map is ready!');
+                    isMapReady = true;
+                    sendMessageToRN({ type: 'mapReady' });
+                });
+            }
+
+            // Send message to React Native
+            function sendMessageToRN(message) {
+                const msgString = JSON.stringify(message);
+                console.log('Sending to RN:', msgString);
+                
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(msgString);
+                }
+            }
+
+            // Handle messages from React Native
+            function handleMessage(data) {
+                console.log('Received message:', data);
+                
+                try {
+                    const message = typeof data === 'string' ? JSON.parse(data) : data;
+                    console.log('Parsed message:', message.type);
+                    
+                    if (message.type === 'updateMarkers') {
+                        console.log('Updating markers with data:', message.data);
+                        updateMarkers(message.data);
+                    } else if (message.type === 'flyTo') {
+                        console.log('Flying to:', message.data);
+                        map.flyTo([message.data.lat, message.data.lng], message.data.zoom || 13, {
+                            duration: 1
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error handling message:', e);
+                }
+            }
+
+            // Listen for messages
+            window.addEventListener('message', function(event) {
+                handleMessage(event.data);
+            });
+
+            document.addEventListener('message', function(event) {
+                handleMessage(event.data);
+            });
+
+            function updateMarkers(data) {
+                console.log('updateMarkers called with:', data);
+                console.log('Doctors count:', data.doctors ? data.doctors.length : 0);
+                
+                if (!isMapReady) {
+                    console.log('Map not ready yet, skipping marker update');
+                    return;
+                }
+
+                // Update user location
+                if (userMarker) {
+                    map.removeLayer(userMarker);
+                }
+                
+                const userIcon = L.divIcon({
+                    className: 'custom-user-marker',
+                    html: '<div style="width: 20px; height: 20px; background: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                userMarker = L.marker([data.userLat, data.userLng], { icon: userIcon }).addTo(map);
+                console.log('User marker added at:', data.userLat, data.userLng);
+                
+                // Clear existing doctor markers
+                doctorMarkers.forEach(marker => {
+                    map.removeLayer(marker);
+                });
+                doctorMarkers = [];
+                
+                // Add doctor markers
+                if (data.doctors && data.doctors.length > 0) {
+                    console.log('Adding', data.doctors.length, 'doctor markers');
+                    
+                    data.doctors.forEach((doctor, index) => {
+                        console.log(\`Adding doctor \${index + 1}:\`, doctor.name, 'at', doctor.lat, doctor.lng);
+                        
+                        const markerHTML = doctor.image 
+                            ? \`<div class="custom-marker">
+                                 <img src="\${doctor.image}" class="marker-image" onerror="this.parentElement.innerHTML='<div class=\\"marker-icon\\">👨‍⚕️</div>'" />
+                                 <div class="status-indicator \${doctor.available ? 'available' : 'unavailable'}"></div>
+                               </div>\`
+                            : \`<div class="custom-marker">
+                                 <div class="marker-icon">👨‍⚕️</div>
+                                 <div class="status-indicator \${doctor.available ? 'available' : 'unavailable'}"></div>
+                               </div>\`;
+                        
+                        const icon = L.divIcon({
+                            className: 'custom-doctor-marker',
+                            html: markerHTML,
+                            iconSize: [48, 48],
+                            iconAnchor: [24, 24]
+                        });
+                        
+                        const marker = L.marker([doctor.lat, doctor.lng], { icon })
+                            .addTo(map)
+                            .on('click', function() {
+                                console.log('Marker clicked:', doctor.id);
+                                sendMessageToRN({
+                                    type: 'markerClick',
+                                    doctorId: doctor.id
+                                });
+                            });
+                        
+                        doctorMarkers.push(marker);
+                    });
+                    
+                    console.log('Total markers added:', doctorMarkers.length);
+                    
+                    // Fit bounds to show all markers
+                    const bounds = L.latLngBounds(
+                        data.doctors.map(d => [d.lat, d.lng])
+                    );
+                    bounds.extend([data.userLat, data.userLng]);
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                    console.log('Map bounds fitted');
+                } else {
+                    console.log('No doctors to display');
+                    // Just center on user
+                    map.setView([data.userLat, data.userLng], 13);
+                }
+            }
+
+            // Initialize when page loads
+            initMap();
+            console.log('Map initialization started');
+        </script>
+    </body>
+    </html>
+    `;
+
     if (loading) {
         return (
             <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
                 <ActivityIndicator size="large" color="#67A9AF" />
-                <Text className="text-gray-600 font-sans-medium mt-4">Loading doctors...</Text>
+                <Text className="text-gray-600 font-sans-medium mt-4">Searching for doctors...</Text>
             </SafeAreaView>
         );
     }
@@ -398,53 +752,43 @@ export default function Search() {
                 </ScrollView>
             ) : (
                 <View className="flex-1 relative">
-                    {/* Map View with Custom Styling */}
-                    <MapView
-                        ref={mapRef}
+                    {/* OpenStreetMap View */}
+                    <WebView
+                        ref={webViewRef}
+                        source={{ html: mapHTML }}
                         style={{ flex: 1 }}
-                        initialRegion={userLocation}
-                        showsUserLocation
-                        showsMyLocationButton={false}
-                        showsCompass={false}
-                        showsScale={false}
-                        customMapStyle={[
-                            { featureType: "all", elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-                            { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9e6ea" }] },
-                            { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#67a9af" }] },
-                            { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-                            { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#e0e0e0" }] },
-                            { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
-                            { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5f5e0" }] }
-                        ]}
-                    >
-
-                        {/* Doctor Markers */}
-                        {filteredDoctors.map((doctor) => (
-                            <Marker
-                                key={doctor._id}
-                                coordinate={{
-                                    latitude: doctor.latitude,
-                                    longitude: doctor.longitude,
-                                }}
-                                onPress={() => handleDoctorMarkerPress(doctor)}
-                            >
-                                <View className="items-center">
-                                    <View
-                                        className={`w-12 h-12 rounded-full items-center justify-center ${selectedDoctor?._id === doctor._id ? 'bg-secondary' : 'bg-primary'
-                                            }`}
-                                        style={{ borderWidth: 3, borderColor: '#fff' }}
-                                    >
-                                        <Image
-                                            source={{ uri: doctor.profileImage?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.fullName || 'U')}&background=67A9AF&color=fff` }}
-                                            className="w-full h-full rounded-full"
-                                            resizeMode="cover"
-                                        />
-                                    </View>
-                                    <View className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
-                                </View>
-                            </Marker>
-                        ))}
-                    </MapView>
+                        javaScriptEnabled={true}
+                        domStorageEnabled={true}
+                        startInLoadingState={true}
+                        renderLoading={() => (
+                            <View className="flex-1 items-center justify-center bg-gray-100">
+                                <ActivityIndicator size="large" color="#67A9AF" />
+                                <Text className="text-gray-600 font-sans-medium mt-4">Loading map...</Text>
+                            </View>
+                        )}
+                        onMessage={(event) => {
+                            try {
+                                const message = JSON.parse(event.nativeEvent.data);
+                                console.log('Message from WebView:', message);
+                                
+                                if (message.type === 'markerClick') {
+                                    handleDoctorMarkerPress(message.doctorId);
+                                } else if (message.type === 'mapReady') {
+                                    console.log('Map is ready, updating markers...');
+                                    setMapReady(true);
+                                }
+                            } catch (e) {
+                                console.error('Error parsing message from WebView:', e);
+                            }
+                        }}
+                        onError={(syntheticEvent) => {
+                            const { nativeEvent } = syntheticEvent;
+                            console.error('WebView error:', nativeEvent);
+                        }}
+                        onLoad={() => {
+                            console.log('WebView loaded');
+                        }}
+                    />
 
                     {/* Scanning Overlay */}
                     {isScanning && (
@@ -469,32 +813,6 @@ export default function Search() {
                             </View>
                         </View>
                     )}
-
-                    {/* Empty State - No Search */}
-                    {/* {!isScanning && searchQuery.trim() === '' && (
-                        <View className="absolute inset-0 items-center justify-center bg-white/95">
-                            <View className="items-center px-6">
-                                <View className="bg-primary/10 p-6 rounded-full mb-4">
-                                    <Ionicons name="search" size={60} color="#67A9AF" />
-                                </View>
-                                <Text className="font-sans-bold text-xl text-gray-800 mb-2">Find Doctors Near You</Text>
-                                <Text className="font-sans text-gray-500 text-center mb-6">
-                                    Search for doctors by name, specialty, or hospital to see them on the map
-                                </Text>
-                                <View className="flex-row flex-wrap justify-center gap-2">
-                                    <View className="bg-primary/10 px-3 py-1 rounded-full">
-                                        <Text className="text-primary font-sans-medium text-xs">Cardiologist</Text>
-                                    </View>
-                                    <View className="bg-primary/10 px-3 py-1 rounded-full">
-                                        <Text className="text-primary font-sans-medium text-xs">Dentist</Text>
-                                    </View>
-                                    <View className="bg-primary/10 px-3 py-1 rounded-full">
-                                        <Text className="text-primary font-sans-medium text-xs">Pediatrician</Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
-                    )} */}
 
                     {/* No Results State */}
                     {!isScanning && searchQuery.trim() !== '' && filteredDoctors.length === 0 && (
@@ -530,12 +848,35 @@ export default function Search() {
                     {/* My Location Button */}
                     <TouchableOpacity
                         className="absolute top-4 right-4 bg-white p-3 rounded-full shadow-lg"
-                        onPress={() => {
-                            mapRef.current?.animateToRegion(userLocation, 1000);
-                        }}
+                        onPress={centerMapOnUser}
                     >
                         <Ionicons name="navigate" size={20} color="#67A9AF" />
                     </TouchableOpacity>
+
+                    {/* Debug Button - Remove after testing */}
+                    {/* {__DEV__ && (
+                        <TouchableOpacity
+                            className="absolute top-16 right-4 bg-red-500 p-3 rounded-full shadow-lg"
+                            onPress={() => {
+                                console.log('=== DEBUG INFO ===');
+                                console.log('Map Ready:', mapReady);
+                                console.log('View Mode:', viewMode);
+                                console.log('Filtered Doctors:', filteredDoctors.length);
+                                console.log('First Doctor:', filteredDoctors[0]);
+                                console.log('User Location:', userLocation);
+                                console.log('==================');
+                                
+                                // Force update markers
+                                if (mapReady) {
+                                    updateMapMarkers();
+                                }
+                                
+                                showToast(`Doctors: ${filteredDoctors.length}, Map Ready: ${mapReady}`, 'info');
+                            }}
+                        >
+                            <Ionicons name="bug" size={20} color="#fff" />
+                        </TouchableOpacity>
+                    )} */}
 
                     {/* Bottom Sheet */}
                     {selectedDoctor && (
@@ -549,11 +890,12 @@ export default function Search() {
                                     inputRange: [0, height],
                                     outputRange: [height, 0],
                                 }),
+                                transform: [{ translateY: panY }],
                             }}
                             className="bg-white rounded-t-3xl shadow-2xl"
                         >
-                            {/* Handle */}
-                            <View className="items-center pt-3 pb-2">
+                            {/* Top Handle */}
+                            <View className="items-center pt-3 pb-2" {...panResponder.panHandlers}>
                                 <View className="w-12 h-1 bg-gray-300 rounded-full" />
                             </View>
 
@@ -567,21 +909,52 @@ export default function Search() {
 
                                 {/* Doctor Info */}
                                 <View className="flex-row gap-4 mb-4">
-                                    <Image
-                                        source={{ uri: selectedDoctor.profileImage?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedDoctor.fullName || 'U')}&background=67A9AF&color=fff` }}
-                                        className="w-20 h-20 rounded-xl"
-                                        resizeMode="cover"
-                                    />
+                                    {selectedDoctor.profileImage ? (
+                                        <Image
+                                            source={{ uri: selectedDoctor.profileImage?.url }}
+                                            className="w-20 h-20 rounded-xl"
+                                            resizeMode="cover"
+                                        />
+                                    ) : (
+                                        <View className="w-32 h-32 rounded-xl items-center justify-center bg-primary/10">
+                                            <Ionicons name="person" size={65} color='#67A9AF' />
+                                        </View>
+                                    )}
                                     <View className="flex-1">
                                         <Text className="font-sans-bold text-lg">{selectedDoctor.title}{selectedDoctor.fullName}</Text>
-                                        <Text className="text-gray-600 font-sans text-sm">{selectedDoctor.speciality}</Text>
-                                        <Text className="text-gray-500 font-sans text-xs">{selectedDoctor.workHospitalName}</Text>
-                                        <View className="flex-row items-center gap-3 mt-2">
+                                        <View className='flex-row items-center justify-between'>
+                                            <Text className="text-gray-600 font-sans text-sm">{selectedDoctor.speciality}</Text>
+                                            <View className='bg-primary/80 px-3 py-1 w-[60px] rounded-full'>
+                                                <Text className="text-white text-sm font-sans text-center text-sm">{selectedDoctor.gender}</Text>
+                                            </View>
+                                        </View>
+                                        {selectedDoctor.workHospitalName && (
+                                            <Text className="text-gray-500 font-sans text-xs mb-2">{selectedDoctor.workHospitalName}</Text>
+                                        )}
+                                        <View className="flex-row items-center gap-3">
                                             {renderStars(selectedDoctor.rating || 0)}
                                             <View className="flex-row items-center gap-1">
                                                 <Ionicons name="location" size={12} color="#6B7280" />
                                                 <Text className="text-xs font-sans text-gray-500">{selectedDoctor.distance}</Text>
                                             </View>
+                                        </View>
+
+                                        <View className="flex-row mt-4 justify-start gap-2 w-full">
+                                            {selectedDoctor.isAvailableForOnlineConsultations && (
+                                                <View className="px-3 py-1.5 rounded-full bg-blue-50">
+                                                    <Text className="text-xs font-sans-medium text-blue-700">Video Call</Text>
+                                                </View>
+                                            )}
+                                            {selectedDoctor.isAvailableForHomeVisits && (
+                                                <View className="px-3 py-1.5 rounded-full bg-purple-50">
+                                                    <Text className="text-xs font-sans-medium text-purple-700">Home Visit</Text>
+                                                </View>
+                                            )}
+                                            {selectedDoctor?.isAvailableForInPersonConsultations && (
+                                                <View className="px-3 py-1.5 rounded-full bg-purple-50">
+                                                    <Text className="text-xs font-sans-medium text-purple-700">In Person</Text>
+                                                </View>
+                                            )}
                                         </View>
                                     </View>
                                 </View>
@@ -592,9 +965,9 @@ export default function Search() {
                                         <Text className="text-gray-600 font-sans text-xs mb-1">Experience</Text>
                                         <Text className="font-sans-semibold text-sm">{selectedDoctor.yearsOfExperience} years Experience</Text>
                                     </View>
-                                    <View className="flex-1 bg-green-50 p-3 rounded-xl">
+                                    <View className={`flex-1 bg-green-50 p-3 rounded-xl ${selectedDoctor.availability === 'Available' ? 'bg-green-50' : 'bg-red-50'}`}>
                                         <Text className="text-gray-600 font-sans text-xs mb-1">Availability</Text>
-                                        <Text className="font-sans-semibold text-sm text-green-600">{selectedDoctor.availability}</Text>
+                                        <Text className={`font-sans-semibold text-sm ${selectedDoctor.availability === 'Available' ? 'text-green-600' : 'text-red-600'}`}>{selectedDoctor.availability}</Text>
                                     </View>
                                 </View>
 
@@ -614,9 +987,13 @@ export default function Search() {
 
                                 {/* Action Buttons */}
                                 <View className="flex-row gap-3 mb-3">
-                                    <TouchableOpacity className="flex-1 bg-primary py-3 rounded-xl flex-row items-center justify-center gap-2">
+                                    <TouchableOpacity onPress={handleBookAppointment} className="flex-1 bg-primary py-3 rounded-xl flex-row items-center justify-center gap-2">
                                         <Ionicons name="calendar" size={20} color="#fff" />
                                         <Text className="text-white font-sans-semibold">Book Appointment</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={ViewDoctorProfile} className="flex-1 border border-primary py-3 rounded-xl flex-row items-center justify-center gap-2">
+                                        <Ionicons name="person" size={20} color="#67A9AF" />
+                                        <Text className="text-primary font-sans-semibold">View Profile</Text>
                                     </TouchableOpacity>
                                 </View>
 
@@ -625,7 +1002,7 @@ export default function Search() {
                                         setSelectedDoctor(null);
                                         hideBottomSheet();
                                     }}
-                                    className="bg-gray-100 py-3 rounded-xl mb-4"
+                                    className="bg-gray-100 py-4 rounded-xl mb-4"
                                 >
                                     <Text className="text-gray-600 font-sans-medium text-center">View Other Doctors</Text>
                                 </TouchableOpacity>
