@@ -29,6 +29,7 @@
     "expo-camera": "~17.0.8",
     "expo-constants": "~18.0.9",
     "expo-dev-client": "~6.0.14",
+    "expo-dev-menu": "7.0.14",
     "expo-device": "^8.0.9",
     "expo-document-picker": "~14.0.7",
     "expo-font": "~14.0.8",
@@ -75,5 +76,8 @@
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "resolutions": {
+    "expo-dev-menu": "7.0.14"
+  }
 }

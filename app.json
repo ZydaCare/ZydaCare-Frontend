@@ -32,7 +32,13 @@
         "CFBundleVersion": "1"
       }
     },
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#67A9AF"
+    },
     "androidStatusBar": {
+      "sounds": ["./assets/notifications/sound.wav"],
       "backgroundColor": "#67A9AF",
       "barStyle": "light-content",
       "translucent": false
@@ -99,8 +105,7 @@
       [
         "expo-notifications",
         {
-          "sounds": ["./assets/notifications/sound.wav"],
-          "icon": "./assets/images/notification-icon.png",
+          "icon": "./assets/images/icon.png",
           "color": "#67A9AF",
           "mode": "production",
           "defaultNotificationChannel": "default",
@@ -156,9 +161,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#fff",
+          "backgroundColor": "#ffffff",
           "dark": {
-            "backgroundColor": "#fff"
+            "backgroundColor": "#ffffff"
           }
         }
       ],
