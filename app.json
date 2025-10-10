@@ -33,15 +33,13 @@
       }
     },
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/Logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#67A9AF"
     },
     "androidStatusBar": {
-      "sounds": ["./assets/notifications/sound.wav"],
       "backgroundColor": "#67A9AF",
-      "barStyle": "light-content",
-      "translucent": false
+      "barStyle": "light-content"
     },
     "android": {
       "intentFilters": [
