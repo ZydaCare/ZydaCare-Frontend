@@ -32,11 +32,12 @@
         "CFBundleVersion": "1"
       }
     },
+    "androidStatusBar": {
+      "backgroundColor": "#67A9AF",
+      "barStyle": "light-content",
+      "translucent": false
+    },
     "android": {
-      "androidStatusBar": {
-        "backgroundColor": "#67A9AF",
-        "barStyle": "light-content"
-      },
       "intentFilters": [
         {
           "action": "VIEW",
@@ -98,10 +99,12 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "sounds": ["./assets/notifications/sound.wav"],
+          "icon": "./assets/images/notification-icon.png",
           "color": "#67A9AF",
-          "sounds": ["./assets/notification-sound.mp3"],
-          "mode": "production"
+          "mode": "production",
+          "defaultNotificationChannel": "default",
+          "defaultNotificationColor": "#67A9AF"
         }
       ],
       "expo-dev-client",
