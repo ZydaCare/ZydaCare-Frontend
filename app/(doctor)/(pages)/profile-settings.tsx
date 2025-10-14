@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/context/authContext';
 import { DoctorProfile } from '@/types/Doctor';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '@/config';
@@ -13,7 +12,7 @@ import { useToast } from '@/components/ui/Toast';
 
 type Section = 'personal' | 'professional' | 'education' | 'experience' | 'bank';
 
-const ProfileSettings = () => {
+export default function ProfileSettings() {
   const router = useRouter();
   const { doctorProfile, updateDoctorProfile, user, getDoctorProfile } = useAuth();
   const [activeSection, setActiveSection] = useState<Section>('personal');
@@ -331,7 +330,7 @@ const ProfileSettings = () => {
     <View style={{ gap: 16 }}>
       {/* Profile Image Card */}
       <View className="bg-primary/10 rounded-xl p-5 items-center border border-primary/20">
-        <Text className="text-gray-600 text-xs font-semibold mb-3">PROFILE PHOTO</Text>
+        <Text className="text-gray-600 text-xs font-sans-semibold mb-3">PROFILE PHOTO</Text>
         
         <TouchableOpacity onPress={handleImagePick} className="relative" activeOpacity={0.8}>
           {formData.profile?.profileImage?.url ? (
@@ -364,21 +363,21 @@ const ProfileSettings = () => {
             <Ionicons name="camera" size={16} color="white" />
           </View>
         </TouchableOpacity>
-        <Text className="text-gray-500 text-xs mt-3 text-center">
+        <Text className="text-gray-500 font-sans text-xs mt-3 text-center">
           Tap to update photo
         </Text>
       </View>
 
       {/* Title Field */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Professional Title <Text className="text-red-500">*</Text>
         </Text>
         <View className="bg-white rounded-lg border border-gray-200">
           <Picker
             selectedValue={formData.profile?.title}
             onValueChange={(value) => handleInputChange('profile.title', value)}
-            style={{ height: 50 }}
+            style={{ height: 50, color: 'gray', fontSize: 12, fontFamily: 'Inter_400Regular' }}
           >
             <Picker.Item label="Dr. (Doctor)" value="Dr." />
             <Picker.Item label="Prof. (Professor)" value="Prof." />
@@ -391,13 +390,13 @@ const ProfileSettings = () => {
 
       {/* Full Name Field */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Full Name <Text className="text-red-500">*</Text>
         </Text>
         <View className="flex-row items-center bg-white rounded-lg border border-gray-200 px-3">
           <Ionicons name="person-outline" size={18} color="#67A9AF" />
           <TextInput
-            className="flex-1 py-3 px-3 text-gray-800 text-sm"
+            className="flex-1 py-3 px-3 text-gray-800 text-sm font-sans-medium"
             value={formData.fullName}
             onChangeText={(text) => handleInputChange('fullName', text)}
             placeholder="Enter your full name"
@@ -408,13 +407,13 @@ const ProfileSettings = () => {
 
       {/* Email Field */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Email Address
         </Text>
         <View className="flex-row items-center bg-gray-50 rounded-lg border border-gray-200 px-3">
           <Ionicons name="mail-outline" size={18} color="#9CA3AF" />
           <TextInput
-            className="flex-1 py-3 px-3 text-gray-500 text-sm"
+            className="flex-1 py-3 px-3 text-gray-500 font-sans-medium text-sm"
             value={formData.email}
             editable={false}
             placeholder="Email address"
@@ -423,19 +422,19 @@ const ProfileSettings = () => {
         </View>
         <View className="flex-row items-center mt-1 ml-1">
           <Ionicons name="lock-closed" size={10} color="#9CA3AF" />
-          <Text className="text-xs text-gray-500 ml-1">Email cannot be changed</Text>
+          <Text className="text-xs text-gray-500 font-sans-medium ml-1">Email cannot be changed</Text>
         </View>
       </View>
 
       {/* Phone Number Field */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Phone Number <Text className="text-red-500">*</Text>
         </Text>
         <View className="flex-row items-center bg-white rounded-lg border border-gray-200 px-3">
           <Ionicons name="call-outline" size={18} color="#67A9AF" />
           <TextInput
-            className="flex-1 py-3 px-3 text-gray-800 text-sm"
+            className="flex-1 py-3 px-3 text-gray-800 text-sm font-sans-medium"
             value={formData.phoneNumber}
             onChangeText={(text) => handleInputChange('phoneNumber', text)}
             placeholder="Enter phone number"
@@ -447,14 +446,15 @@ const ProfileSettings = () => {
 
       {/* Gender Field */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Gender <Text className="text-red-500">*</Text>
         </Text>
         <View className="bg-white rounded-lg border border-gray-200">
           <Picker
             selectedValue={formData.profile?.gender}
             onValueChange={(value) => handleInputChange('profile.gender', value)}
-            style={{ height: 50 }}
+            style={{ height: 50, color: 'gray', fontSize: 12 }}
+            className='font-sans-medium'
           >
             <Picker.Item label="Male" value="Male" />
             <Picker.Item label="Female" value="Female" />
@@ -466,13 +466,13 @@ const ProfileSettings = () => {
 
       {/* Contact Address */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Contact Address <Text className="text-red-500">*</Text>
         </Text>
         <View className="flex-row items-start bg-white rounded-lg border border-gray-200 px-3">
           <Ionicons name="location-outline" size={18} color="#67A9AF" style={{ marginTop: 12 }} />
           <TextInput
-            className="flex-1 py-3 px-3 text-gray-800 text-sm"
+            className="flex-1 py-3 px-3 text-gray-800 text-sm font-sans-medium"
             value={formData.contactAddress}
             onChangeText={(text) => handleInputChange('contactAddress', text)}
             placeholder="Enter your contact address"
@@ -489,13 +489,13 @@ const ProfileSettings = () => {
     <View style={{ gap: 16 }}>
       {/* Specialty Field */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Medical Specialty <Text className="text-red-500">*</Text>
         </Text>
         <View className="flex-row items-center bg-white rounded-lg border border-gray-200 px-3">
           <Ionicons name="medical-outline" size={18} color="#67A9AF" />
           <TextInput
-            className="flex-1 py-3 px-3 text-gray-800 text-sm"
+            className="flex-1 py-3 px-3 text-gray-800 font-sans-medium text-sm"
             value={formData.speciality}
             onChangeText={(text) => handleInputChange('speciality', text)}
             placeholder="e.g., Cardiology, Pediatrics"
@@ -506,13 +506,13 @@ const ProfileSettings = () => {
 
       {/* Years of Experience Field */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Years of Experience <Text className="text-red-500">*</Text>
         </Text>
         <View className="flex-row items-center bg-white rounded-lg border border-gray-200 px-3">
           <Ionicons name="time-outline" size={18} color="#67A9AF" />
           <TextInput
-            className="flex-1 py-3 px-3 text-gray-800 text-sm"
+            className="flex-1 py-3 px-3 text-gray-800 text-sm font-sans-medium"
             value={formData.profile?.yearsOfExperience?.toString()}
             onChangeText={(text) => handleInputChange('profile.yearsOfExperience', parseInt(text) || 0)}
             placeholder="Enter years of experience"
@@ -524,12 +524,12 @@ const ProfileSettings = () => {
 
       {/* Professional Summary Field */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Professional Summary
         </Text>
         <View className="bg-white rounded-lg border border-gray-200 px-3">
           <TextInput
-            className="py-3 text-gray-800 text-sm"
+            className="py-3 text-gray-800 text-sm font-sans-medium"
             style={{ minHeight: 100, textAlignVertical: 'top' }}
             value={formData.profile?.professionalSummary}
             onChangeText={(text) => handleInputChange('profile.professionalSummary', text)}
@@ -539,7 +539,7 @@ const ProfileSettings = () => {
             numberOfLines={5}
           />
         </View>
-        <Text className="text-xs text-gray-500 mt-1 ml-1">
+        <Text className="text-xs text-gray-500 font-sans mt-1 ml-1">
           Help patients understand your experience
         </Text>
       </View>
@@ -551,20 +551,20 @@ const ProfileSettings = () => {
             <Ionicons name="cash-outline" size={16} color="white" />
           </View>
           <View>
-            <Text className="text-sm font-bold text-gray-800">Consultation Fees</Text>
-            <Text className="text-xs text-gray-600">Set your rates</Text>
+            <Text className="text-sm font-sans-bold text-gray-800">Consultation Fees</Text>
+            <Text className="text-xs text-gray-600 font-sans">Set your rates</Text>
           </View>
         </View>
 
         {/* In-Person Fee */}
         <View className="mb-3">
-          <Text className="text-sm font-medium text-gray-700 mb-1.5">
+          <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
             In-Person <Text className="text-red-500">*</Text>
           </Text>
           <View className="flex-row items-center bg-white rounded-lg border border-gray-200 px-3">
-            <Text className="text-gray-600 font-semibold text-sm">₦</Text>
+            <Text className="text-gray-600 font-sans-semibold text-sm">₦</Text>
             <TextInput
-              className="flex-1 py-3 px-3 text-gray-800 text-sm font-medium"
+              className="flex-1 py-3 px-3 text-gray-800 text-sm font-sans-medium"
               value={formData.profile?.consultationFees?.inPerson?.toString()}
               onChangeText={(text) => handleInputChange('profile.consultationFees', {
                 ...formData.profile?.consultationFees,
@@ -579,13 +579,13 @@ const ProfileSettings = () => {
 
         {/* Video Consultation Fee */}
         <View className="mb-3">
-          <Text className="text-sm font-medium text-gray-700 mb-1.5">
+          <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
             Video Consultation
           </Text>
           <View className="flex-row items-center bg-white rounded-lg border border-gray-200 px-3">
-            <Text className="text-gray-600 font-semibold text-sm">₦</Text>
+            <Text className="text-gray-600 font-sans-semibold text-sm">₦</Text>
             <TextInput
-              className="flex-1 py-3 px-3 text-gray-800 text-sm font-medium"
+              className="flex-1 py-3 px-3 text-gray-800 text-sm font-sans-medium"
               value={formData.profile?.consultationFees?.video?.toString()}
               onChangeText={(text) => handleInputChange('profile.consultationFees', {
                 ...formData.profile?.consultationFees,
@@ -600,13 +600,13 @@ const ProfileSettings = () => {
 
         {/* Home Visit Fee */}
         <View>
-          <Text className="text-sm font-medium text-gray-700 mb-1.5">
+          <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
             Home Visit
           </Text>
           <View className="flex-row items-center bg-white rounded-lg border border-gray-200 px-3">
-            <Text className="text-gray-600 font-semibold text-sm">₦</Text>
+            <Text className="text-gray-600 font-sans-semibold text-sm">₦</Text>
             <TextInput
-              className="flex-1 py-3 px-3 text-gray-800 text-sm font-medium"
+              className="flex-1 py-3 px-3 text-gray-800 text-sm font-sans-medium"
               value={formData.profile?.consultationFees?.homeVisit?.toString()}
               onChangeText={(text) => handleInputChange('profile.consultationFees', {
                 ...formData.profile?.consultationFees,
@@ -621,7 +621,7 @@ const ProfileSettings = () => {
 
         <View className="flex-row items-center mt-2 bg-blue-50 p-2 rounded-lg">
           <Ionicons name="information-circle" size={14} color="#3B82F6" />
-          <Text className="text-xs text-blue-700 ml-1.5 flex-1">
+          <Text className="text-xs text-blue-700 font-sans ml-1.5 flex-1">
             All amounts in Nigerian Naira (NGN)
           </Text>
         </View>
@@ -631,22 +631,22 @@ const ProfileSettings = () => {
 
   const renderEducation = () => (
     <View style={{ gap: 16 }}>
-      <View className="bg-blue-50 rounded-lg p-3 flex-row items-start">
+      <View className="bg-blue-50 rounded-lg p-3 flex-row items-center">
         <Ionicons name="information-circle" size={18} color="#3B82F6" />
-        <Text className="text-xs text-blue-700 ml-2 flex-1">
+        <Text className="text-xs text-blue-700 font-sans ml-2 flex-1">
           Add your educational qualifications to help patients trust your expertise
         </Text>
       </View>
 
       {/* Medical School */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Medical School <Text className="text-red-500">*</Text>
         </Text>
         <View className="flex-row items-center bg-white rounded-lg border border-gray-200 px-3">
           <Ionicons name="school-outline" size={18} color="#67A9AF" />
           <TextInput
-            className="flex-1 py-3 px-3 text-gray-800 text-sm"
+            className="flex-1 py-3 px-3 text-gray-800 font-sans-medium text-sm"
             value={formData.educationDetails?.medicalSchool}
             onChangeText={(text) => handleInputChange('educationDetails.medicalSchool', text)}
             placeholder="Enter medical school name"
@@ -657,13 +657,13 @@ const ProfileSettings = () => {
 
       {/* Degree */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Degree Obtained <Text className="text-red-500">*</Text>
         </Text>
         <View className="flex-row items-center bg-white rounded-lg border border-gray-200 px-3">
           <Ionicons name="ribbon-outline" size={18} color="#67A9AF" />
           <TextInput
-            className="flex-1 py-3 px-3 text-gray-800 text-sm"
+            className="flex-1 py-3 px-3 text-gray-800 font-sans-medium text-sm"
             value={formData.educationDetails?.degree}
             onChangeText={(text) => handleInputChange('educationDetails.degree', text)}
             placeholder="e.g., MBBS, MD, DO"
@@ -674,13 +674,13 @@ const ProfileSettings = () => {
 
       {/* Graduation Year */}
       <View>
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">
+        <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">
           Graduation Year <Text className="text-red-500">*</Text>
         </Text>
         <View className="flex-row items-center bg-white rounded-lg border border-gray-200 px-3">
           <Ionicons name="calendar-outline" size={18} color="#67A9AF" />
           <TextInput
-            className="flex-1 py-3 px-3 text-gray-800 text-sm"
+            className="flex-1 py-3 px-3 text-gray-800 font-sans-medium text-sm"
             value={formData.educationDetails?.graduationYear?.toString()}
             onChangeText={(text) => handleInputChange('educationDetails.graduationYear', parseInt(text) || new Date().getFullYear())}
             placeholder="Enter graduation year"
@@ -694,9 +694,9 @@ const ProfileSettings = () => {
       <View className="bg-gray-50 rounded-lg p-4 border border-gray-200">
         <View className="flex-row items-center mb-2">
           <Ionicons name="document-outline" size={20} color="#67A9AF" />
-          <Text className="text-sm font-medium text-gray-700 ml-2">Certificate Upload</Text>
+          <Text className="text-sm font-sans-medium text-gray-700 ml-2">Certificate Upload</Text>
         </View>
-        <Text className="text-xs text-gray-600 mb-3">
+        <Text className="text-xs text-gray-600 font-sans mb-3">
           Upload your medical degree certificate for verification
         </Text>
         <TouchableOpacity 
@@ -704,8 +704,8 @@ const ProfileSettings = () => {
           activeOpacity={0.7}
         >
           <Ionicons name="cloud-upload-outline" size={32} color="#67A9AF" />
-          <Text className="text-sm text-gray-600 mt-2">Tap to upload certificate</Text>
-          <Text className="text-xs text-gray-400 mt-1">PDF or Image (Max 5MB)</Text>
+          <Text className="text-sm text-gray-600 font-sans mt-2">Tap to upload certificate</Text>
+          <Text className="text-xs text-gray-400 font-sans mt-1">PDF or Image (Max 5MB)</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -713,9 +713,9 @@ const ProfileSettings = () => {
 
   const renderExperience = () => (
     <View style={{ gap: 16 }}>
-      <View className="bg-blue-50 rounded-lg p-3 flex-row items-start">
+      <View className="bg-blue-50 rounded-lg p-3 flex-row items-center">
         <Ionicons name="information-circle" size={18} color="#3B82F6" />
-        <Text className="text-xs text-blue-700 ml-2 flex-1">
+        <Text className="text-xs text-blue-700 font-sans-medium ml-2 flex-1">
           Add your work experience to showcase your professional journey
         </Text>
       </View>
@@ -724,7 +724,7 @@ const ProfileSettings = () => {
       {(formData.profile?.experience || []).map((exp, index) => (
         <View key={index} className="bg-white rounded-lg border border-gray-200 p-4">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-sm font-bold text-gray-800">Experience {index + 1}</Text>
+            <Text className="text-sm font-sans-bold text-gray-800">Experience {index + 1}</Text>
             <TouchableOpacity onPress={() => removeExperience(index)}>
               <Ionicons name="trash-outline" size={20} color="#EF4444" />
             </TouchableOpacity>
@@ -732,11 +732,11 @@ const ProfileSettings = () => {
 
           {/* Position */}
           <View className="mb-3">
-            <Text className="text-sm font-medium text-gray-700 mb-1.5">Position</Text>
+            <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">Position</Text>
             <View className="flex-row items-center bg-gray-50 rounded-lg border border-gray-200 px-3">
               <Ionicons name="briefcase-outline" size={16} color="#67A9AF" />
               <TextInput
-                className="flex-1 py-2.5 px-3 text-gray-800 text-sm"
+                className="flex-1 py-2.5 px-3 text-gray-800 text-sm font-sans-medium"
                 value={exp.position}
                 onChangeText={(text) => updateExperience(index, 'position', text)}
                 placeholder="e.g., Consultant Cardiologist"
@@ -747,11 +747,11 @@ const ProfileSettings = () => {
 
           {/* Hospital */}
           <View className="mb-3">
-            <Text className="text-sm font-medium text-gray-700 mb-1.5">Hospital/Clinic</Text>
+            <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">Hospital/Clinic</Text>
             <View className="flex-row items-center bg-gray-50 rounded-lg border border-gray-200 px-3">
               <Ionicons name="business-outline" size={16} color="#67A9AF" />
               <TextInput
-                className="flex-1 py-2.5 px-3 text-gray-800 text-sm"
+                className="flex-1 py-2.5 px-3 text-gray-800 text-sm font-sans-medium"
                 value={exp.hospital}
                 onChangeText={(text) => updateExperience(index, 'hospital', text)}
                 placeholder="e.g., General Hospital Lagos"
@@ -762,10 +762,10 @@ const ProfileSettings = () => {
 
           {/* Description */}
           <View className="mb-3">
-            <Text className="text-sm font-medium text-gray-700 mb-1.5">Description</Text>
+            <Text className="text-sm font-sans-medium text-gray-700 mb-1.5">Description</Text>
             <View className="bg-gray-50 rounded-lg border border-gray-200 px-3">
               <TextInput
-                className="py-2.5 text-gray-800 text-sm"
+                className="py-2.5 text-gray-800 text-sm font-sans-medium"
                 style={{ minHeight: 70, textAlignVertical: 'top' }}
                 value={exp.description}
                 onChangeText={(text) => updateExperience(index, 'description', text)}
@@ -786,7 +786,7 @@ const ProfileSettings = () => {
             <View className={`w-5 h-5 rounded border-2 items-center justify-center ${exp.isCurrent ? 'bg-primary border-primary' : 'border-gray-300'}`}>
               {exp.isCurrent && <Ionicons name="checkmark" size={14} color="white" />}
             </View>
-            <Text className="text-sm text-gray-700 ml-2">I currently work here</Text>
+            <Text className="text-sm text-gray-700 font-sans ml-2">I currently work here</Text>
           </TouchableOpacity>
         </View>
       ))}
@@ -798,7 +798,7 @@ const ProfileSettings = () => {
         activeOpacity={0.7}
       >
         <Ionicons name="add-circle-outline" size={32} color="#67A9AF" />
-        <Text className="text-sm font-medium text-primary mt-2">Add Experience</Text>
+        <Text className="text-sm font-sans-medium text-primary mt-2">Add Experience</Text>
       </TouchableOpacity>
     </View>
   );
@@ -827,10 +827,10 @@ const ProfileSettings = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-gray-50">
       {/* Header */}
       <View 
-        className="bg-white px-5 py-4"
+        className="bg-white px-5 py-4 pt-12"
         style={{
           borderBottomWidth: 1,
           borderBottomColor: '#F3F4F6',
@@ -851,8 +851,8 @@ const ProfileSettings = () => {
               <Ionicons name="arrow-back" size={24} color="#374151" />
             </TouchableOpacity>
             <View className="flex-1">
-              <Text className="text-2xl font-bold text-gray-900">Profile Settings</Text>
-              <Text className="text-sm text-gray-500 mt-0.5">Update your professional information</Text>
+              <Text className="text-2xl font-sans-bold text-gray-900">Profile Settings</Text>
+              <Text className="text-sm text-gray-500 font-sans mt-0.5">Update your professional information</Text>
             </View>
           </View>
         </View>
@@ -903,7 +903,7 @@ const ProfileSettings = () => {
                   color={activeSection === section ? 'white' : '#6B7280'} 
                 />
                 <Text 
-                  className={`ml-2 text-sm font-semibold ${
+                  className={`ml-2 text-sm font-sans-semibold ${
                     activeSection === section ? 'text-white' : 'text-gray-600'
                   }`}
                 >
@@ -951,18 +951,16 @@ const ProfileSettings = () => {
           {isLoading ? (
             <>
               <Ionicons name="hourglass-outline" size={20} color="white" />
-              <Text className="text-white font-bold text-base ml-2">Saving Changes...</Text>
+              <Text className="text-white font-sans-bold text-base ml-2">Saving Changes...</Text>
             </>
           ) : (
             <>
               <Ionicons name="checkmark-circle-outline" size={20} color="white" />
-              <Text className="text-white font-bold text-base ml-2">Save Changes</Text>
+              <Text className="text-white font-sans-bold text-base ml-2">Save Changes</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
-
-export default ProfileSettings;

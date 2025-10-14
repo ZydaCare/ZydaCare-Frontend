@@ -6,6 +6,10 @@ export default function RootLayout() {
             <Stack.Screen name='prescriptions' />
             <Stack.Screen name="appointment/[id]" />
             <Stack.Screen name="patient/[id]" />
+            <Stack.Screen name="bank-account" />
+            <Stack.Screen name="profile-settings" />
+            <Stack.Screen name="security" />
+            <Stack.Screen name="schedule-availability" />
         </Stack>
     );
 }

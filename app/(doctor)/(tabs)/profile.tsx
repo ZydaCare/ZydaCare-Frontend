@@ -71,10 +71,10 @@ const Profile = () => {
         action: () => router.push('/(doctor)/(pages)/profile-settings')
       },
       {
-        icon: 'shield-outline',
-        title: 'Security Settings',
+        icon: 'time-outline',
+        title: 'Schedule & Availability',
         chevron: true,
-        action: () => router.push('/(doctor)/(pages)/security')
+        action: () => router.push('/(doctor)/(pages)/schedule-availability')
       },
       {
         icon: 'wallet-outline',
@@ -83,17 +83,12 @@ const Profile = () => {
         action: () => router.push('/(doctor)/(pages)/bank-account')
       },
       {
-        icon: 'calendar-outline',
-        title: 'Schedule & Availability',
+        icon: 'shield-outline',
+        title: 'Security Settings',
         chevron: true,
-        action: () => router.push('/(doctor)/(pages)/schedule')
+        action: () => router.push('/(doctor)/(pages)/security')
       },
-      {
-        icon: 'cash-outline',
-        title: 'Earnings & Payouts',
-        chevron: true,
-        action: () => router.push('/(doctor)/(tabs)/earnings')
-      },
+      // },
       {
         icon: 'chatbubble-ellipses-outline',
         title: 'Help and Support',

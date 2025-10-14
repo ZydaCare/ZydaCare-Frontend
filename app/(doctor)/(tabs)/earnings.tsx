@@ -887,7 +887,7 @@ export default function EarningsScreen() {
         onRequestClose={() => setShowBankPicker(false)}
       >
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6 max-h-[80%]">
+          <View className="bg-white rounded-t-3xl p-6" style={{ height: '75%' }}>
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-xl font-sans-bold text-gray-900">Select Bank</Text>
               <TouchableOpacity
