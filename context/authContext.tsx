@@ -1,9 +1,9 @@
 import { BASE_URL } from '@/config';
+import { DoctorProfile, DoctorProfileData } from '@/types/Doctor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { User, AuthState, LoginData, RegisterData, ForgotPasswordData, VerifyOtpData, ResetPasswordData, ResendOtpData } from '../types/User';
-import { DoctorProfile, DoctorProfileData } from '@/types/Doctor';
+import { AuthState, ForgotPasswordData, LoginData, RegisterData, ResendOtpData, ResetPasswordData, User, VerifyOtpData } from '../types/User';
 
 interface AuthContextType extends AuthState {
     login: (data: LoginData) => Promise<any>;
