@@ -68,13 +68,13 @@ export default function HelpScreen() {
     try {
       setLoadingFAQs(true);
       const response = await getFAQs();
-      
+
       if (response.success) {
         // Flatten all FAQs from all categories and get first 5
         const allFAQs: FAQItem[] = Object.values(response.data)
           .flat()
           .slice(0, 5);
-        
+
         setPopularFAQs(allFAQs);
       }
     } catch (error) {
@@ -108,7 +108,7 @@ export default function HelpScreen() {
   // Render search results
   const renderSearchResults = () => {
     if (!searchQuery.trim()) return null;
-    
+
     if (searching) {
       return (
         <View className="py-4 items-center">
@@ -134,11 +134,10 @@ export default function HelpScreen() {
         </Text>
         <View className="bg-white rounded-2xl shadow-sm border border-gray-100">
           {searchResults.map((faq, index) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={faq._id}
-              className={`px-4 py-4 flex-row items-center justify-between ${
-                index !== searchResults.length - 1 ? 'border-b border-gray-100' : ''
-              }`}
+              className={`px-4 py-4 flex-row items-center justify-between ${index !== searchResults.length - 1 ? 'border-b border-gray-100' : ''
+                }`}
               onPress={() => handleFAQPress(faq._id)}
             >
               <View className="flex-1 pr-3">
@@ -155,7 +154,7 @@ export default function HelpScreen() {
       </View>
     );
   };
-  
+
   const helpCategories = [
     {
       id: 'appointments',
@@ -197,7 +196,7 @@ export default function HelpScreen() {
   return (
     <View className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#67A9AF" />
-      
+
       {/* Header */}
       <View className="bg-primary px-6 pt-8 pb-6 rounded-b-3xl">
         <View className="flex-row justify-between items-center mb-4">
@@ -206,7 +205,7 @@ export default function HelpScreen() {
             <Text className="text-white/90 font-sans">How can we help you today?</Text>
           </View>
         </View>
-        
+
         {/* Search Bar */}
         <View className="bg-white rounded-xl px-4 py-2 flex-row items-center">
           <Ionicons name="search" size={20} color="#9CA3AF" />
@@ -227,7 +226,7 @@ export default function HelpScreen() {
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         className="flex-1 px-4 pt-4"
         refreshControl={
           <RefreshControl
@@ -260,17 +259,17 @@ export default function HelpScreen() {
               <Text className="text-lg font-sans-bold text-gray-900 mb-4">Help Categories</Text>
               <View className="flex-row flex-wrap -mx-2">
                 {helpCategories.map((category) => (
-                  <TouchableOpacity 
-                    key={category.id} 
+                  <TouchableOpacity
+                    key={category.id}
                     className="w-1/2 px-2 mb-4"
                     onPress={() => handleCategoryPress(category.id)}
                   >
                     <View className="bg-white p-4 rounded-xl border border-gray-100 active:border-primary/30 active:bg-primary/5">
                       <View className="w-10 h-10 rounded-lg items-center justify-center mb-2" style={{ backgroundColor: `${category.color}20` }}>
-                        <MaterialCommunityIcons 
-                          name={category.icon as any} 
-                          size={24} 
-                          color={category.color} 
+                        <MaterialCommunityIcons
+                          name={category.icon as any}
+                          size={24}
+                          color={category.color}
                         />
                       </View>
                       <Text className="font-sans-semibold text-gray-900 mb-1">
@@ -289,7 +288,7 @@ export default function HelpScreen() {
             <View className="mb-8">
               <View className="flex-row items-center justify-between mb-4">
                 <Text className="text-lg font-sans-bold text-gray-900">Popular Questions</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => router.push('/(patient)/(pages)/faq')}
                   className="flex-row items-center"
                 >
@@ -297,7 +296,7 @@ export default function HelpScreen() {
                   <Ionicons name="chevron-forward" size={16} color="#67A9AF" />
                 </TouchableOpacity>
               </View>
-              
+
               <View className="bg-white rounded-2xl shadow-sm border border-gray-100">
                 {loadingFAQs ? (
                   <View className="py-8 items-center">
@@ -306,11 +305,10 @@ export default function HelpScreen() {
                   </View>
                 ) : popularFAQs.length > 0 ? (
                   popularFAQs.map((faq, index) => (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       key={faq._id}
-                      className={`px-4 py-4 flex-row items-center justify-between ${
-                        index !== popularFAQs.length - 1 ? 'border-b border-gray-100' : ''
-                      } active:bg-gray-50`}
+                      className={`px-4 py-4 flex-row items-center justify-between ${index !== popularFAQs.length - 1 ? 'border-b border-gray-100' : ''
+                        } active:bg-gray-50`}
                       onPress={() => handleFAQPress(faq._id)}
                     >
                       <View className="flex-1 pr-3">
@@ -327,7 +325,7 @@ export default function HelpScreen() {
                   <View className="py-8 items-center">
                     <Ionicons name="help-circle-outline" size={40} color="#9CA3AF" />
                     <Text className="text-gray-500 font-sans mt-2">No help articles found</Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       className="mt-4 bg-primary/10 px-4 py-2 rounded-lg"
                       onPress={() => router.push('/(patient)/(pages)/supportChat')}
                     >
@@ -339,7 +337,7 @@ export default function HelpScreen() {
             </View>
 
             {/* Browse All FAQs Button */}
-            <TouchableOpacity 
+            <TouchableOpacity
               className="bg-primary/10 border border-primary/20 rounded-2xl p-5 mb-8 flex-row items-center justify-between"
               onPress={() => router.push('/(patient)/(pages)/faq')}
             >
@@ -370,7 +368,7 @@ export default function HelpScreen() {
                   <Text className="text-gray-600 text-sm font-sans mb-3">
                     Can't find what you're looking for? Our support team is here to help you 24/7.
                   </Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     className="bg-primary rounded-full py-3 items-center flex-row justify-center"
                     onPress={() => router.push('/(patient)/(pages)/supportChat')}
                   >
@@ -393,7 +391,7 @@ export default function HelpScreen() {
                     <Text className="text-red-700 text-sm font-sans mb-3">
                       If you're experiencing a medical emergency, please call your local emergency number immediately.
                     </Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       className="flex-row items-center"
                       onPress={() => {
                         // Nigerian emergency numbers

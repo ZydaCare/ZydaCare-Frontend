@@ -39,6 +39,8 @@ export default function App() {
     }
   }, [isLoading, isAuthenticated, user]); // Re-run when auth state changes
 
+  
+
   return (
     <View className="flex-1 items-center justify-center bg-primary">
       <StatusBar hidden />

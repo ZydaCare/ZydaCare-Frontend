@@ -14,7 +14,7 @@ export default function PaymentSuccessScreen() {
   const handleViewAppointment = () => {
     if (bookingId) {
       router.replace({
-        pathname: '/(patient)/(tabs)/appointment',
+        pathname: '/(patient)/(pages)/appointment/[id]',
         params: { id: bookingId }
       });
     } else {

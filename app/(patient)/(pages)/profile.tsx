@@ -8,9 +8,10 @@ import { useToast } from '@/components/ui/Toast';
 import { uploadProfilePicture, deleteAccount } from '../../../api/patient/user';
 import { User } from '@/types/User';
 import { ImageSourcePropType } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProfileScreen() {
-    const { user, token, logout, getMe } = useAuth();
+    const { user, logout, getMe } = useAuth();
     const { showToast } = useToast();
     const [profile, setProfile] = useState<User | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -18,6 +19,22 @@ export default function ProfileScreen() {
     const [loadingProfile, setLoadingProfile] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    const [token, setToken] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadToken = async () => {
+            try {
+                const storedToken = await AsyncStorage.getItem('token');
+                setToken(storedToken);
+            } catch (error) {
+                console.error('Error loading token:', error);
+            }
+        };
+
+        loadToken();
+    }, []);
+
 
     useEffect(() => {
         const fetchProfile = async () => {

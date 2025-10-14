@@ -9,6 +9,7 @@ import {
     TransformedDoctor,
 } from '@/utils/getDoctorUtils';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -31,7 +32,7 @@ import { WebView } from 'react-native-webview';
 const { height } = Dimensions.get('window');
 
 export default function Search() {
-    const { user, token } = useAuth();
+    // const { user, token } = useAuth();
     const { showToast } = useToast();
     const params = useLocalSearchParams();
 
@@ -56,6 +57,22 @@ export default function Search() {
     const bottomSheetAnim = useRef(new Animated.Value(height)).current;
     const scanningAnim = useRef(new Animated.Value(0)).current;
     const webViewRef = useRef<WebView>(null);
+
+    // const [token, setToken] = useState<string | null>(null);
+
+    // useEffect(() => {
+    //     const loadToken = async () => {
+    //         try {
+    //             const storedToken = await AsyncStorage.getItem('token');
+    //             setToken(storedToken);
+    //         } catch (error) {
+    //             console.error('Error loading token:', error);
+    //         }
+    //     };
+
+    //     loadToken();
+    // }, []);
+
 
     // Request location permission and get user's current location
     useEffect(() => {
@@ -113,6 +130,7 @@ export default function Search() {
     }, [rawDoctors, userLocation]);
 
     const fetchDoctors = async () => {
+        const token = await AsyncStorage.getItem('token');
         try {
             setLoading(true);
             setError(null);
@@ -770,7 +788,7 @@ export default function Search() {
                             try {
                                 const message = JSON.parse(event.nativeEvent.data);
                                 console.log('Message from WebView:', message);
-                                
+
                                 if (message.type === 'markerClick') {
                                     handleDoctorMarkerPress(message.doctorId);
                                 } else if (message.type === 'mapReady') {

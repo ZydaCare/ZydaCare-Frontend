@@ -5,12 +5,13 @@ import { Ionicons } from '@expo/vector-icons'
 import Navbar from '@/components/Navbar'
 import { Images } from '@/assets/Images'
 import { router, useFocusEffect } from 'expo-router'
-import { useAuth } from '@/context/authContext'
-import { getMyAppointments } from '@/api/patient/appointments'
 import { format as formatDate } from 'date-fns'
+import axios from 'axios'
+import { BASE_URL } from '@/config'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { getMyAppointments } from '@/api/patient/appointments'
 
 export default function Appointment() {
-  const { token } = useAuth()
   const [isAppointment, setIsAppointment] = useState(true)
   const [selectedTab, setSelectedTab] = useState<'Upcoming' | 'Ongoing' | 'Cancelled' | 'All'>('Ongoing')
   const [appointments, setAppointments] = useState<any[]>([])
@@ -20,12 +21,19 @@ export default function Appointment() {
   const tabs: Array<'Upcoming' | 'Ongoing' | 'Cancelled' | 'All'> = ['Upcoming', 'Ongoing', 'Cancelled', 'All']
 
   const fetchAppointments = useCallback(async () => {
+    const token = await AsyncStorage.getItem('token');
+    console.log('User token', token);
     if (!token) return
     try {
       setLoading(true)
       setError(null)
       const res = await getMyAppointments(token)
-      const items = (res.data || res || []).map((b: any) => {
+      const appointmentArray = Array.isArray(res?.data?.data)
+        ? res.data.data
+        : Array.isArray(res.data)
+          ? res.data
+          : [];
+      const items = appointmentArray.map((b: any) => {
         const title = b.doctor?.profile?.title || ''
         const first = b.doctor?.user?.firstName || ''
         const last = b.doctor?.user?.lastName || ''
@@ -53,10 +61,11 @@ export default function Appointment() {
       setIsAppointment(items.length > 0)
     } catch (e: any) {
       setError(e?.message || 'Failed to load appointments')
+      console.log(e)
     } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [])
 
   useEffect(() => {
     fetchAppointments()
@@ -137,7 +146,7 @@ export default function Appointment() {
       <View className="flex-row">
         {appointment.image ? (
           <Image
-            source={{ uri: appointment.image}}
+            source={{ uri: appointment.image }}
             className="w-[90px] h-[90px] rounded-xl"
             resizeMode="cover"
           />
@@ -218,7 +227,7 @@ export default function Appointment() {
             <View className="w-24 h-24 bg-primary/10 rounded-full items-center justify-center mb-6">
               <Ionicons name="calendar-outline" size={48} color="#67A9AF" />
             </View>
-            
+
             <Text className="text-2xl font-sans-bold text-gray-900 mb-3">No Appointments Yet</Text>
             <Text className="text-base text-gray-600 font-sans text-center mb-8 px-4">
               Book your first appointment with a qualified doctor
@@ -271,8 +280,8 @@ export default function Appointment() {
                     No {selectedTab.toLowerCase()} appointments
                   </Text>
                   <Text className="text-sm text-gray-500 font-sans text-center mb-6">
-                    {selectedTab === 'All' 
-                      ? 'You have no appointments yet' 
+                    {selectedTab === 'All'
+                      ? 'You have no appointments yet'
                       : `You have no ${selectedTab.toLowerCase()} appointments at the moment`}
                   </Text>
 

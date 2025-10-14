@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type FileType = {
   name: string;
@@ -32,7 +33,7 @@ const getStepTitle = (step: number): string => {
 };
 
 export default function ApplyDoctor() {
-  const { user, token, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [applicationStatus, setApplicationStatus] = useState<DoctorApplicationStatus | null>(null);
@@ -93,6 +94,22 @@ export default function ApplyDoctor() {
     nameChangeDocument: null,
     passport: null,
   });
+
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('token');
+        setToken(storedToken);
+      } catch (error) {
+        console.error('Error loading token:', error);
+      }
+    };
+
+    loadToken();
+  }, []);
+
 
   // Check application status on mount
   useEffect(() => {
@@ -184,7 +201,7 @@ export default function ApplyDoctor() {
             {/* Timeline Card */}
             <View className="bg-white rounded-2xl p-6 mb-5 shadow-sm" style={{ elevation: 2 }}>
               <Text className="text-lg font-sans-semibold text-gray-900 mb-4">Review Process</Text>
-              
+
               <View className="space-y-4">
                 <View className="flex-row items-start">
                   <View className="w-8 h-8 rounded-full bg-primary items-center justify-center mr-3">
@@ -252,7 +269,7 @@ export default function ApplyDoctor() {
               <Text className="text-sm font-sans text-gray-600 mb-3">
                 If you have questions about your application status, please contact our support team.
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="bg-gray-100 rounded-xl p-4 flex-row items-center justify-center"
                 activeOpacity={0.7}
               >
@@ -347,7 +364,7 @@ export default function ApplyDoctor() {
             {/* Features Card */}
             <View className="bg-white rounded-2xl p-6 mb-5 shadow-sm" style={{ elevation: 2 }}>
               <Text className="text-lg font-sans-semibold text-gray-900 mb-4">What's Next?</Text>
-              
+
               <View className="space-y-3">
                 <View className="flex-row items-start mb-3">
                   <View className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center mr-3">
@@ -516,7 +533,7 @@ export default function ApplyDoctor() {
               <Text className="text-sm text-gray-600 font-sans mb-3">
                 If you have questions about the rejection or need guidance for reapplying, please contact our support team.
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="bg-gray-100 rounded-xl p-4 flex-row items-center justify-center"
                 activeOpacity={0.7}
               >
@@ -692,41 +709,41 @@ export default function ApplyDoctor() {
       showToast('Authentication required', 'error');
       return;
     }
-  
+
     setLoading(true);
     try {
       const formDataToSend = new FormData();
-  
-      const { 
-        medicalSchool, graduationYear, degree, 
+
+      const {
+        medicalSchool, graduationYear, degree,
         internshipHospitalName, startDate, endDate, supervisor,
         registrationType, folioNumber, foreignDegree,
         regulatoryAuthority, licenseNumber,
         noSanctionsDeclaration, verificationConsent, truthDeclaration,
-        ...restData 
+        ...restData
       } = formData;
-  
+
       Object.entries(restData).forEach(([key, value]) => {
         if (key === 'dateOfBirth') return;
-        
+
         if (typeof value === 'boolean') {
           formDataToSend.append(key, value.toString());
         } else if (value !== undefined && value !== null) {
           formDataToSend.append(key, String(value));
         }
       });
-  
+
       if (formData.dateOfBirth instanceof Date) {
         formDataToSend.append('dateOfBirth', formData.dateOfBirth.toISOString());
       }
-  
+
       const educationDetails = {
         medicalSchool: medicalSchool || '',
         graduationYear: graduationYear || '',
         degree: degree || ''
       };
       formDataToSend.append('educationDetails', JSON.stringify(educationDetails));
-  
+
       if (internshipHospitalName || startDate || endDate || supervisor) {
         const internship = {
           hospitalName: String(internshipHospitalName || ''),
@@ -736,14 +753,14 @@ export default function ApplyDoctor() {
         };
         formDataToSend.append('internship', JSON.stringify(internship));
       }
-  
+
       const mdcnRegistration = {
         registrationType: registrationType || '',
         folioNumber: folioNumber || '',
         foreignDegree: foreignDegree || ''
       };
       formDataToSend.append('mdcnRegistration', JSON.stringify(mdcnRegistration));
-  
+
       if (registrationType === 'foreign' && (regulatoryAuthority || licenseNumber)) {
         const foreignCredentials = {
           regulatoryAuthority: regulatoryAuthority || '',
@@ -751,11 +768,11 @@ export default function ApplyDoctor() {
         };
         formDataToSend.append('foreignCredentials', JSON.stringify(foreignCredentials));
       }
-  
+
       formDataToSend.append('noSanctionsDeclaration', noSanctionsDeclaration ? 'true' : 'false');
       formDataToSend.append('verificationConsent', verificationConsent ? 'true' : 'false');
       formDataToSend.append('truthDeclaration', truthDeclaration ? 'true' : 'false');
-  
+
       Object.entries(files).forEach(([key, file]) => {
         if (file && file.uri) {
           formDataToSend.append(key, {
@@ -765,9 +782,9 @@ export default function ApplyDoctor() {
           } as any);
         }
       });
-  
+
       await applyToBecomeDoctor(formDataToSend, token);
-  
+
       showToast('Application submitted successfully!', 'success');
       router.back();
     } catch (error: any) {
@@ -901,8 +918,8 @@ export default function ApplyDoctor() {
       <TouchableOpacity
         onPress={() => pickDocument(field)}
         className={`border-2 rounded-xl p-5 ${files[field]
-            ? 'border-primary bg-primary/5'
-            : 'border-dashed border-gray-300'
+          ? 'border-primary bg-primary/5'
+          : 'border-dashed border-gray-300'
           }`}
         activeOpacity={0.7}
       >
@@ -1315,8 +1332,8 @@ export default function ApplyDoctor() {
               key={type.value}
               onPress={() => handleInputChange('registrationType', type.value as any)}
               className={`flex-row items-center p-4 rounded-xl mb-3 ${formData.registrationType === type.value
-                  ? 'bg-primary/10 border-2 border-primary'
-                  : 'bg-gray-50 border-2 border-gray-200'
+                ? 'bg-primary/10 border-2 border-primary'
+                : 'bg-gray-50 border-2 border-gray-200'
                 }`}
               activeOpacity={0.7}
             >

@@ -6,18 +6,34 @@ import { useEffect, useState } from 'react';
 import { getFAQById, FAQItem } from '@/api/patient/faq';
 import { useAuth } from '@/context/authContext';
 import { useToast } from '@/components/ui/Toast';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function FAQAnswerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [faq, setFaq] = useState<FAQItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
+  // const { token } = useAuth();
   const { showToast } = useToast();
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('token');
+        setToken(storedToken);
+      } catch (error) {
+        console.error('Error loading token:', error);
+      }
+    };
+
+    loadToken();
+  }, []);
+
 
   const fetchFAQ = async () => {
     if (!id) return;
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -80,7 +96,7 @@ export default function FAQAnswerScreen() {
           <Text className="text-base font-sans text-gray-600 text-center mb-8">
             {error || 'The FAQ you are looking for could not be found'}
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={fetchFAQ}
             className="bg-primary px-8 py-3.5 rounded-xl flex-row items-center shadow-sm"
           >
@@ -122,7 +138,7 @@ export default function FAQAnswerScreen() {
             <Text className="text-2xl font-sans-bold text-gray-900 leading-8 mb-6">
               {faq.question}
             </Text>
-            
+
             {/* Divider */}
             <View className="h-px bg-gray-200 mb-6" />
 
@@ -139,15 +155,15 @@ export default function FAQAnswerScreen() {
             {/* Answer Text */}
             <View>
               {faq.answer.split('\n\n').map((paragraph, index) => (
-                <Text 
-                  key={index} 
+                <Text
+                  key={index}
                   className="text-base font-sans text-gray-700 leading-7 mb-4"
                 >
                   {paragraph}
                 </Text>
               ))}
             </View>
-            
+
             {/* Last Updated */}
             {faq.updatedAt && (
               <View className="mt-6 pt-4 border-t border-gray-100">
@@ -175,29 +191,27 @@ export default function FAQAnswerScreen() {
                 Related Questions
               </Text>
             </View>
-            
+
             <View className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
               {faq.relatedFAQs.map((relatedId, index) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   key={relatedId}
                   onPress={() => handleRelatedPress(relatedId)}
-                  className={`px-5 py-4 flex-row items-center ${
-                    index !== faq.relatedFAQs!.length - 1 ? 'border-b border-gray-100' : ''
-                  }`}
+                  className={`px-5 py-4 flex-row items-center ${index !== faq.relatedFAQs!.length - 1 ? 'border-b border-gray-100' : ''
+                    }`}
                   activeOpacity={0.7}
                   disabled={relatedId === id}
                 >
                   <View className="w-10 h-10 bg-primary/10 rounded-xl items-center justify-center mr-4">
-                    <Ionicons 
-                      name={relatedId === id ? "checkmark-circle" : "document-text-outline"} 
-                      size={20} 
-                      color={relatedId === id ? "#10B981" : "#67A9AF"} 
+                    <Ionicons
+                      name={relatedId === id ? "checkmark-circle" : "document-text-outline"}
+                      size={20}
+                      color={relatedId === id ? "#10B981" : "#67A9AF"}
                     />
                   </View>
                   <View className="flex-1">
-                    <Text className={`text-base font-sans-medium ${
-                      relatedId === id ? 'text-green-600' : 'text-gray-800'
-                    }`}>
+                    <Text className={`text-base font-sans-medium ${relatedId === id ? 'text-green-600' : 'text-gray-800'
+                      }`}>
                       {relatedId === id ? 'Current Question' : `Related Question ${index + 1}`}
                     </Text>
                     <Text className="text-xs font-sans text-gray-500 mt-0.5">
@@ -220,14 +234,14 @@ export default function FAQAnswerScreen() {
               Was this helpful?
             </Text>
             <View className="flex-row justify-center space-x-3">
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="bg-white px-6 py-3 rounded-xl flex-row items-center border border-gray-200 flex-1 justify-center mr-2"
                 onPress={() => showToast('Thanks for your feedback!', 'success')}
               >
                 <Ionicons name="thumbs-up-outline" size={20} color="#10B981" style={{ marginRight: 6 }} />
                 <Text className="text-sm font-sans-semibold text-gray-700">Yes</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="bg-white px-6 py-3 rounded-xl flex-row items-center border border-gray-200 flex-1 justify-center ml-2"
                 onPress={() => showToast('Thanks for your feedback!', 'success')}
               >
@@ -254,8 +268,8 @@ export default function FAQAnswerScreen() {
                 </Text>
               </View>
             </View>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               onPress={handleContactSupport}
               className="bg-primary px-6 py-4 rounded-xl flex-row items-center justify-center shadow-sm"
             >

@@ -2,7 +2,6 @@ import axios from 'axios';
 import { BASE_URL } from '@/config';
 import { User } from '@/types/User';
 
-
 export interface DoctorApplicationStatus {
   status: 'not_submitted' | 'pending' | 'approved' | 'rejected';
   reviewNotes?: string;
@@ -77,6 +76,7 @@ export interface KYCStatus {
  * Get KYC status
  */
 export const getKYCStatus = async (token: string): Promise<KYCStatus> => {
+  
   const response = await axios.get(`${BASE_URL}/auth/kyc/status`, {
     headers: {
       Authorization: `Bearer ${token}`,

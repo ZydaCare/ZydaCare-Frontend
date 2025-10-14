@@ -6,6 +6,7 @@ import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/authContext';
 import { getDoctorDetails } from '@/api/patient/user';
 import { getDoctorAvailability } from '@/utils/getDoctorUtils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RawDoctor = any;
 
@@ -48,11 +49,27 @@ type PatientDoctor = {
 
 export default function DoctorDetailsScreen() {
     const { id } = useLocalSearchParams();
-    const { token } = useAuth();
+    // const { token } = useAuth();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [doctorRaw, setDoctorRaw] = useState<RawDoctor | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const [token, setToken] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadToken = async () => {
+            try {
+                const storedToken = await AsyncStorage.getItem('token');
+                setToken(storedToken);
+            } catch (error) {
+                console.error('Error loading token:', error);
+            }
+        };
+
+        loadToken();
+    }, []);
+
 
     useEffect(() => {
         const fetchDoctorDetails = async () => {

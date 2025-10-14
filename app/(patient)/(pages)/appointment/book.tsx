@@ -10,11 +10,12 @@ import { format as formatDate } from 'date-fns';
 import { useAuth } from '@/context/authContext';
 import { AppointmentType, createBooking } from '@/api/patient/appointments';
 import { getDoctorDetails } from '@/api/patient/user';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function BookAppointmentScreen() {
   const router = useRouter();
   const { doctorId: doctorIdParam } = useLocalSearchParams<{ doctorId?: string }>();
-  const { token, user } = useAuth();
+  const { user } = useAuth();
 
   const [doctorId] = useState<string | undefined>(typeof doctorIdParam === 'string' ? doctorIdParam : Array.isArray(doctorIdParam) ? doctorIdParam[0] : undefined);
 
@@ -72,6 +73,22 @@ export default function BookAppointmentScreen() {
       },
     });
   };
+
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('token');
+        setToken(storedToken);
+      } catch (error) {
+        console.error('Error loading token:', error);
+      }
+    };
+
+    loadToken();
+  }, []);
+
 
   // Fetch doctor's consultation fees
   useEffect(() => {

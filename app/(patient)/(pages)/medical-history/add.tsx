@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { BASE_URL } from '@/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AddMedicalRecordScreen() {
   const [formData, setFormData] = useState({
@@ -23,7 +24,7 @@ export default function AddMedicalRecordScreen() {
   const [imageFiles, setImageFiles] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { user, token } = useAuth();
+  // const { user, token } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -84,6 +85,8 @@ export default function AddMedicalRecordScreen() {
   };
 
   const handleSubmit = async () => {
+    const token = await AsyncStorage.getItem('token');
+
     if (!formData.condition) {
       showToast('Please enter a medical condition', 'error');
       return;

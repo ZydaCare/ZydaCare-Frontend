@@ -7,6 +7,7 @@ import * as Device from 'expo-device';
 import { Picker } from '@react-native-picker/picker';
 import { useToast } from '@/components/ui/Toast';
 import { medicationsApi, conditionsApi, healthProfileApi, Medication, Condition, NotificationPreferences } from '@/api/patient/healthProfile';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -53,7 +54,7 @@ export default function MedicationsTab() {
   });
 
   const notificationIds = useRef<Map<string, string>>(new Map());
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -70,9 +71,11 @@ export default function MedicationsTab() {
     });
 
     return () => subscription.remove();
-  }, []);
+  }, []);  
 
   const fetchData = async () => {
+    const token = await AsyncStorage.getItem('token');
+
     try {
       const [conditionsData, medicationsData, remindersData, profileData] = await Promise.all([
         conditionsApi.getConditions(token!),
@@ -273,6 +276,9 @@ export default function MedicationsTab() {
       return;
     }
 
+    const token = await AsyncStorage.getItem('token');
+
+
     try {
       await conditionsApi.addCondition(token!, {
         name: newCondition,
@@ -296,6 +302,8 @@ export default function MedicationsTab() {
   };
 
   const handleRemoveCondition = async (conditionName: string) => {
+    const token = await AsyncStorage.getItem('token');
+
     Alert.alert(
       'Remove Condition',
       `Are you sure you want to remove "${conditionName}"?`,
@@ -337,6 +345,8 @@ export default function MedicationsTab() {
       return;
     }
 
+    const token = await AsyncStorage.getItem('token');
+
     try {
       const addedMedication = await medicationsApi.addMedication(token!, {
         drugName: newMedication.drugName,
@@ -374,6 +384,8 @@ export default function MedicationsTab() {
   };
 
   const handleToggleMedication = async (medicationId: string, enabled: boolean) => {
+    const token = await AsyncStorage.getItem('token');
+
     try {
       await medicationsApi.updateMedication(token!, medicationId, { enabled });
 
@@ -400,6 +412,8 @@ export default function MedicationsTab() {
   };
 
   const handleDeleteMedication = async (medicationId: string) => {
+    const token = await AsyncStorage.getItem('token');
+
     Alert.alert(
       'Delete Medication',
       'Are you sure you want to delete this medication?',
@@ -432,6 +446,8 @@ export default function MedicationsTab() {
   };
 
   const handleMedicationTaken = async (medicationId: string) => {
+    const token = await AsyncStorage.getItem('token');
+
     try {
       await medicationsApi.markMedicationTaken(token!, medicationId);
 
@@ -450,6 +466,8 @@ export default function MedicationsTab() {
   };
 
   const handleUpdateNotificationPreferences = async () => {
+    const token = await AsyncStorage.getItem('token');
+
     try {
       await healthProfileApi.updateNotificationPreferences(token!, notificationPreferences);
       await scheduleAllMedicationNotifications(medications);

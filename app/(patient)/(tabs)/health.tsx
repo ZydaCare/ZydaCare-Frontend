@@ -5,6 +5,7 @@ import { Images } from '@/assets/Images';
 import { useAuth } from '@/context/authContext';
 import axios from 'axios';
 import { BASE_URL } from '@/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Doctor {
   id: string;
@@ -51,15 +52,15 @@ const DoctorCard = ({ doctor, onBook }: { doctor: Doctor; onBook: (doctor: Docto
   return (
     <View className="bg-white border border-gray-200 rounded-xl p-4 mb-3 shadow-sm">
       <View className="flex-row gap-3">
-        <Image 
-          source={{ uri: doctor.image }} 
+        <Image
+          source={{ uri: doctor.image }}
           className="w-20 h-20 rounded-lg"
         />
         <View className="flex-1">
           <Text className="font-sans-semibold text-base text-gray-900">{doctor.name}</Text>
           <Text className="text-primary font-sans-medium text-sm">{doctor.specialty}</Text>
           <Text className="text-gray-600 font-sans text-xs mt-1">{doctor.qualifications}</Text>
-          
+
           <View className="flex-row items-center gap-3 mt-2">
             <View className="flex-row items-center gap-1">
               <Ionicons name="ribbon" size={12} color="#6B7280" />
@@ -75,7 +76,7 @@ const DoctorCard = ({ doctor, onBook }: { doctor: Doctor; onBook: (doctor: Docto
           </View>
         </View>
       </View>
-      
+
       <View className="mt-3 pt-3 border-t border-gray-100">
         <View className="flex-row items-center justify-between mb-3">
           <View className="flex-row items-center gap-1">
@@ -89,13 +90,13 @@ const DoctorCard = ({ doctor, onBook }: { doctor: Doctor; onBook: (doctor: Docto
             </View>
           )}
         </View>
-        
+
         <View className="flex-row items-start gap-1 mb-3">
           <Ionicons name="location-outline" size={14} color="#6B7280" />
           <Text className="text-xs font-sans text-gray-600 flex-1">{doctor.location}</Text>
         </View>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           onPress={() => onBook(doctor)}
           className="w-full bg-secondary py-3 rounded-lg active:bg-secondary/80"
         >
@@ -125,9 +126,9 @@ const TypingIndicator = () => (
 );
 
 const Health = () => {
-  const { user, token } = useAuth(); // Make sure your auth context provides token
+  const { user } = useAuth(); // Make sure your auth context provides token
   const fullName = `${user?.firstName} ${user?.lastName}`.trim();
-  
+
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -136,11 +137,27 @@ const Health = () => {
       doctors: []
     }
   ]);
-  
+
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('token');
+        setToken(storedToken);
+      } catch (error) {
+        console.error('Error loading token:', error);
+      }
+    };
+
+    loadToken();
+  }, []);
+
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -201,9 +218,9 @@ const Health = () => {
 
     } catch (err: any) {
       console.error('Error getting AI response:', err);
-      
+
       let errorMessage = "I'm having trouble processing your request. ";
-      
+
       if (err.response) {
         // Server responded with error
         console.error('Server Error:', err.response.data);
@@ -288,7 +305,7 @@ const Health = () => {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1"
       style={{ backgroundColor: '#F0FDFA' }}
@@ -320,23 +337,23 @@ const Health = () => {
       <View className="bg-white border-b border-gray-100 px-4 py-3">
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row gap-2">
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => handleQuickAction('general')}
               className="bg-primary/10 px-4 py-2 rounded-full flex-row items-center gap-2"
             >
               <Ionicons name="medical" size={16} color="#67A9AF" />
               <Text className="text-primary font-sans-medium text-sm">General Checkup</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               onPress={() => handleQuickAction('emergency')}
               className="bg-red-50 px-4 py-2 rounded-full flex-row items-center gap-2"
             >
               <Ionicons name="alert-circle" size={16} color="#EF4444" />
               <Text className="text-red-600 font-sans-medium text-sm">Emergency</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               onPress={() => handleQuickAction('followup')}
               className="bg-blue-50 px-4 py-2 rounded-full flex-row items-center gap-2"
             >
@@ -348,7 +365,7 @@ const Health = () => {
       </View>
 
       {/* Messages Container */}
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
         className="flex-1 px-4"
         contentContainerStyle={{ paddingVertical: 16 }}
@@ -361,20 +378,18 @@ const Health = () => {
                 <Ionicons name="chatbubble" size={18} color="white" />
               </View>
             )}
-            
+
             <View className={`flex-1 ${message.role === 'user' ? 'items-end' : 'items-start'}`} style={{ maxWidth: '85%' }}>
-              <View className={`px-4 py-3 rounded-2xl ${
-                message.role === 'user' 
-                  ? 'bg-primary' 
+              <View className={`px-4 py-3 rounded-2xl ${message.role === 'user'
+                  ? 'bg-primary'
                   : 'bg-white border border-gray-200 shadow-sm'
-              }`}>
-                <Text className={`text-sm font-sans-medium leading-relaxed ${
-                  message.role === 'user' ? 'text-white' : 'text-gray-800'
                 }`}>
+                <Text className={`text-sm font-sans-medium leading-relaxed ${message.role === 'user' ? 'text-white' : 'text-gray-800'
+                  }`}>
                   {message.content}
                 </Text>
               </View>
-              
+
               {/* Doctor Cards */}
               {message.doctors && message.doctors.length > 0 && (
                 <View className="w-full mt-3">
@@ -382,15 +397,15 @@ const Health = () => {
                     Recommended Doctors ({message.doctors.length})
                   </Text>
                   {message.doctors.map(doctor => (
-                    <DoctorCard 
-                      key={doctor.id} 
-                      doctor={doctor} 
+                    <DoctorCard
+                      key={doctor.id}
+                      doctor={doctor}
                       onBook={handleBookAppointment}
                     />
                   ))}
                 </View>
               )}
-              
+
               <Text className="text-xs font-sans text-gray-500 mt-1">
                 {message.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </Text>
@@ -398,9 +413,9 @@ const Health = () => {
 
             {message.role === 'user' && (
               <View className="w-8 h-8 rounded-full ml-2 overflow-hidden">
-                <Image 
-                  source={{ uri: user?.profileImage?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'U')}&background=67A9AF&color=fff` }} 
-                  className="w-8 h-8" 
+                <Image
+                  source={{ uri: user?.profileImage?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'U')}&background=67A9AF&color=fff` }}
+                  className="w-8 h-8"
                 />
               </View>
             )}
@@ -437,7 +452,7 @@ const Health = () => {
             )}
           </TouchableOpacity>
         </View>
-        
+
         <View className="flex-row items-center justify-center mt-2 gap-1">
           <Ionicons name="shield-checkmark" size={12} color="#6B7280" />
           <Text className="text-xs font-sans text-gray-500 text-center">

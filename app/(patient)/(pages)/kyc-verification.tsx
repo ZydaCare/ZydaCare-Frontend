@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/context/authContext';
 import { useToast } from '@/components/ui/Toast';
 import { getKYCStatus, submitKYCDocuments, KYCStatus } from '@/api/patient/user';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type VerificationDocument = {
     id: string;
@@ -18,9 +19,9 @@ type VerificationDocument = {
 };
 
 export default function KYCVerificationScreen() {
-    const { user, token, isAuthenticated } = useAuth();
+    const { user, isAuthenticated } = useAuth();
     const { showToast } = useToast();
-    
+
     useEffect(() => {
         if (!isAuthenticated) {
             router.replace('/(auth)/login');
@@ -59,17 +60,33 @@ export default function KYCVerificationScreen() {
     const [kycStatus, setKycStatus] = useState<KYCStatus | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const [token, setToken] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadToken = async () => {
+            try {
+                const storedToken = await AsyncStorage.getItem('token');
+                setToken(storedToken);
+            } catch (error) {
+                console.error('Error loading token:', error);
+            }
+        };
+
+        loadToken();
+    }, []);
+
+
     useEffect(() => {
         const checkKYCStatus = async () => {
             if (!token) return;
-            
+
             try {
                 setIsLoading(true);
                 const status = await getKYCStatus(token);
                 setKycStatus(status);
-                
+
                 if (status.status === 'approved') {
-                    setDocuments(docs => 
+                    setDocuments(docs =>
                         docs.map(doc => ({
                             ...doc,
                             status: 'verified' as const
@@ -103,9 +120,9 @@ export default function KYCVerificationScreen() {
             });
 
             if (!result.canceled) {
-                setDocuments(docs => 
-                    docs.map(doc => 
-                        doc.type === type 
+                setDocuments(docs =>
+                    docs.map(doc =>
+                        doc.type === type
                             ? { ...doc, imageUri: result.assets[0].uri, status: 'pending' as const }
                             : doc
                     )
@@ -134,9 +151,9 @@ export default function KYCVerificationScreen() {
             });
 
             if (!result.canceled) {
-                setDocuments(docs => 
-                    docs.map(doc => 
-                        doc.type === 'selfie' 
+                setDocuments(docs =>
+                    docs.map(doc =>
+                        doc.type === 'selfie'
                             ? { ...doc, imageUri: result.assets[0].uri, status: 'pending' as const }
                             : doc
                     )
@@ -163,7 +180,7 @@ export default function KYCVerificationScreen() {
 
         try {
             setIsSubmitting(true);
-            
+
             const docImage = documents.find(doc => doc.type === 'id');
             const selfie = documents.find(doc => doc.type === 'selfie');
             const proofAddress = documents.find(doc => doc.type === 'proof_of_address');
@@ -184,7 +201,7 @@ export default function KYCVerificationScreen() {
                 { uri: selfie.imageUri },
                 { uri: proofAddress.imageUri }
             );
-            
+
             if (result.success) {
                 showToast('Verification submitted successfully', 'success');
                 setKycStatus({
@@ -214,7 +231,7 @@ export default function KYCVerificationScreen() {
                 <Text className="text-base text-gray-600 font-sans text-center mb-6">
                     Your identity has been successfully verified. You now have full access to all features.
                 </Text>
-                
+
                 <View className="w-full bg-primary rounded-xl p-4 mb-4">
                     <View className="flex-row items-center mb-3">
                         <Ionicons name="shield-checkmark" size={20} color="#fff" />
@@ -278,7 +295,7 @@ export default function KYCVerificationScreen() {
                 <Text className="text-base text-gray-600 font-sans text-center mb-6">
                     Your documents are currently under review. This usually takes 24-48 hours.
                 </Text>
-                
+
                 <View className="w-full bg-primary rounded-xl p-4 mb-4">
                     <View className="flex-row items-center mb-3">
                         <Ionicons name="document-text" size={20} color="#fff" />
@@ -318,7 +335,7 @@ export default function KYCVerificationScreen() {
                     <View className="ml-2 flex-1">
                         <Text className="text-sm font-sans-medium text-blue-800 mb-1">What's Next?</Text>
                         <Text className="text-xs text-blue-700 font-sans">
-                            Our team is carefully reviewing your documents. You'll receive a notification once the verification is complete. 
+                            Our team is carefully reviewing your documents. You'll receive a notification once the verification is complete.
                             No action is needed from you at this time.
                         </Text>
                     </View>
@@ -340,7 +357,7 @@ export default function KYCVerificationScreen() {
                 <Text className="text-base text-gray-600 font-sans text-center mb-4">
                     Unfortunately, your submitted documents did not meet our verification requirements.
                 </Text>
-                
+
                 {kycStatus?.rejectionReason && (
                     <View className="w-full bg-red-50 rounded-xl p-4 mb-4">
                         <View className="flex-row items-start">
@@ -368,7 +385,7 @@ export default function KYCVerificationScreen() {
                 </View>
 
                 <Text className="text-gray-900 font-sans-medium text-base mb-3 self-start">Resubmit Documents</Text>
-                
+
                 {/* Document Type and Number */}
                 <View className="w-full mb-4">
                     <Text className="text-sm font-sans-medium text-gray-700 mb-1">Document Type</Text>
@@ -386,7 +403,7 @@ export default function KYCVerificationScreen() {
                         ))}
                     </View>
                 </View>
-                
+
                 <View className="w-full mb-4">
                     <Text className="text-sm font-sans-medium text-gray-700 mb-1">Document Number</Text>
                     <TextInput
@@ -412,12 +429,12 @@ export default function KYCVerificationScreen() {
 
                     {doc.imageUri ? (
                         <View className="mt-2">
-                            <Image 
-                                source={{ uri: doc.imageUri }} 
+                            <Image
+                                source={{ uri: doc.imageUri }}
                                 className="w-full h-40 rounded-lg"
                                 resizeMode="cover"
                             />
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => {
                                     if (doc.type === 'selfie') {
                                         handleSelfieCapture();
@@ -431,7 +448,7 @@ export default function KYCVerificationScreen() {
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => {
                                 if (doc.type === 'selfie') {
                                     handleSelfieCapture();
@@ -446,8 +463,8 @@ export default function KYCVerificationScreen() {
                                 {doc.type === 'selfie' ? 'Take a selfie' : 'Upload Document'}
                             </Text>
                             <Text className="text-xs text-gray-500 font-sans mt-1 text-center">
-                                {doc.type === 'selfie' 
-                                    ? 'Make sure your face is clearly visible' 
+                                {doc.type === 'selfie'
+                                    ? 'Make sure your face is clearly visible'
                                     : 'JPG, PNG or PDF (max 5MB)'}
                             </Text>
                         </TouchableOpacity>
@@ -482,7 +499,7 @@ export default function KYCVerificationScreen() {
                         <Text className="text-sm text-gray-600 font-sans">Complete your KYC to access all features</Text>
                     </View>
                 </View>
-                
+
                 {/* Document Type and Number */}
                 <View className="mb-4">
                     <Text className="text-sm font-sans-medium text-gray-700 mb-1">Document Type</Text>
@@ -500,7 +517,7 @@ export default function KYCVerificationScreen() {
                         ))}
                     </View>
                 </View>
-                
+
                 <View className="mb-6">
                     <Text className="text-sm font-sans-medium text-gray-700 mb-1">Document Number</Text>
                     <TextInput
@@ -510,23 +527,23 @@ export default function KYCVerificationScreen() {
                         onChangeText={setDocumentNumber}
                     />
                 </View>
-                
+
                 <View className="h-2 bg-gray-100 rounded-full overflow-hidden mb-4">
-                    <View 
-                        className="h-full bg-primary rounded-full" 
-                        style={{ 
-                            width: `${(documents.filter(d => d.status !== 'not_uploaded').length / documents.length) * 100}%` 
-                        }} 
+                    <View
+                        className="h-full bg-primary rounded-full"
+                        style={{
+                            width: `${(documents.filter(d => d.status !== 'not_uploaded').length / documents.length) * 100}%`
+                        }}
                     />
                 </View>
-                
+
                 <Text className="text-sm text-gray-600 font-sans text-center">
                     {documents.filter(d => d.status !== 'not_uploaded').length} of {documents.length} steps completed
                 </Text>
             </View>
 
             <Text className="text-gray-900 font-sans-medium text-base mb-3">Required Documents</Text>
-            
+
             {documents.map((doc) => (
                 <View key={doc.id} className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
                     <View className="flex-row items-start mb-3">
@@ -548,12 +565,12 @@ export default function KYCVerificationScreen() {
 
                     {doc.imageUri ? (
                         <View className="mt-2">
-                            <Image 
-                                source={{ uri: doc.imageUri }} 
+                            <Image
+                                source={{ uri: doc.imageUri }}
                                 className="w-full h-40 rounded-lg"
                                 resizeMode="cover"
                             />
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => {
                                     if (doc.type === 'selfie') {
                                         handleSelfieCapture();
@@ -567,7 +584,7 @@ export default function KYCVerificationScreen() {
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => {
                                 if (doc.type === 'selfie') {
                                     handleSelfieCapture();
@@ -582,8 +599,8 @@ export default function KYCVerificationScreen() {
                                 {doc.type === 'selfie' ? 'Take a selfie' : 'Upload Document'}
                             </Text>
                             <Text className="text-xs text-gray-500 font-sans mt-1 text-center">
-                                {doc.type === 'selfie' 
-                                    ? 'Make sure your face is clearly visible' 
+                                {doc.type === 'selfie'
+                                    ? 'Make sure your face is clearly visible'
                                     : 'JPG, PNG or PDF (max 5MB)'}
                             </Text>
                         </TouchableOpacity>
@@ -597,7 +614,7 @@ export default function KYCVerificationScreen() {
                     <View className="ml-2 flex-1">
                         <Text className="text-sm font-sans-medium text-blue-800 mb-1">Why do we need this?</Text>
                         <Text className="text-xs text-blue-700 font-sans">
-                            We require identity verification to ensure the security of your account and comply with regulatory requirements. 
+                            We require identity verification to ensure the security of your account and comply with regulatory requirements.
                             Your information is encrypted and stored securely.
                         </Text>
                     </View>
@@ -627,7 +644,7 @@ export default function KYCVerificationScreen() {
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
             <StatusBar barStyle="dark-content" />
-            
+
             {/* Header */}
             <View className="flex-row items-center p-4 border-b border-gray-100 bg-white">
                 <TouchableOpacity onPress={() => router.back()} className="p-2">
@@ -648,11 +665,10 @@ export default function KYCVerificationScreen() {
                     <TouchableOpacity
                         onPress={handleSubmit}
                         disabled={isSubmitting || documents.some(doc => doc.status === 'not_uploaded') || !documentNumber.trim()}
-                        className={`rounded-full py-4 items-center ${
-                            documents.some(doc => doc.status === 'not_uploaded') || !documentNumber.trim()
-                                ? 'bg-gray-200' 
+                        className={`rounded-full py-4 items-center ${documents.some(doc => doc.status === 'not_uploaded') || !documentNumber.trim()
+                                ? 'bg-gray-200'
                                 : 'bg-primary'
-                        }`}
+                            }`}
                     >
                         {isSubmitting ? (
                             <View className="flex-row items-center">
@@ -661,8 +677,8 @@ export default function KYCVerificationScreen() {
                             </View>
                         ) : (
                             <Text className="text-white font-sans-medium">
-                                {kycStatus?.status === 'rejected' 
-                                    ? 'Resubmit for Verification' 
+                                {kycStatus?.status === 'rejected'
+                                    ? 'Resubmit for Verification'
                                     : 'Submit for Verification'}
                             </Text>
                         )}

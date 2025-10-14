@@ -1,10 +1,9 @@
-import { View, Text, Image, TouchableOpacity } from 'react-native'
-import React, { useEffect, useState } from 'react'
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons'
-import { useAuth } from '@/context/authContext'
+import { Images } from '@/assets/Images';
+import { useAuth } from '@/context/authContext';
 import { User } from '@/types/User';
 import { router } from 'expo-router';
-import { Images } from '@/assets/Images';
+import React, { useEffect, useState } from 'react';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 export default function Navbar() {
     const { user, getMe } = useAuth();

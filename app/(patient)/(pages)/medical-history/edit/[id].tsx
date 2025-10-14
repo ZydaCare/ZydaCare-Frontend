@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/context/authContext';
 import { useToast } from '@/components/ui/Toast';
 import { BASE_URL } from '@/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 const EditMedicalRecord = () => {
@@ -27,11 +28,27 @@ const EditMedicalRecord = () => {
     severity: 'mild',
   });
 
-  const { user, token } = useAuth();
+  // const { user, token } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingImage, setDeletingImage] = useState(false);
+
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('token');
+        setToken(storedToken);
+      } catch (error) {
+        console.error('Error loading token:', error);
+      }
+    };
+
+    loadToken();
+  }, []);
+
 
   useEffect(() => {
     if (id && token) {

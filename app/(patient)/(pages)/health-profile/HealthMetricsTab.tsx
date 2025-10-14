@@ -4,6 +4,7 @@ import { useAuth } from '@/context/authContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '@/components/ui/Toast';
 import { healthProfileApi } from '@/api/patient/healthProfile';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface HealthMetricsState {
   temperature: { value: string; unit: 'C' | 'F' };
@@ -29,7 +30,7 @@ export default function HealthMetricsTab() {
     visualAcuity: { leftEye: '20', rightEye: '20' },
   });
 
-  const { token } = useAuth();
+  // const { token } = useAuth();
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function HealthMetricsTab() {
   }, []);
 
   const fetchHealthProfile = async () => {
+    const token = await AsyncStorage.getItem('token');
     try {
       const { healthProfile } = await healthProfileApi.getHealthProfile(token!);
 
@@ -160,7 +162,7 @@ export default function HealthMetricsTab() {
           rightEye: `${healthMetrics.visualAcuity.rightEye}/20`
         };
       }
-
+      const token = await AsyncStorage.getItem('token');
       const response = await healthProfileApi.updateHealthMetrics(token!, payload);
 
       if (response.healthProfile.bmi) {

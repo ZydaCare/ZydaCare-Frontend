@@ -8,6 +8,7 @@ import { format as formatDate } from 'date-fns';
 import { useAuth } from '@/context/authContext';
 import { getAppointmentDetails, initiateAppointmentPayment } from '@/api/patient/appointments';
 import { useToast } from '@/components/ui/Toast';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PRIMARY = '#67A9AF';
 
@@ -53,7 +54,7 @@ export default function AppointmentDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const { token } = useAuth();
+  // const { token } = useAuth();
   const { showToast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -61,6 +62,22 @@ export default function AppointmentDetailScreen() {
   const [appt, setAppt] = useState<any | null>(null);
   const [payPromptOpen, setPayPromptOpen] = useState(false);
   const [initiating, setInitiating] = useState(false);
+
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('token');
+        setToken(storedToken);
+      } catch (error) {
+        console.error('Error loading token:', error);
+      }
+    };
+
+    loadToken();
+  }, []);
+
 
   useEffect(() => {
     const run = async () => {
@@ -187,14 +204,14 @@ export default function AppointmentDetailScreen() {
               {/* Doctor Image */}
               <View className="mr-3">
                 {formatted.doctorImage ? (
-                  <Image 
-                    source={{ uri: formatted.doctorImage }} 
+                  <Image
+                    source={{ uri: formatted.doctorImage }}
                     className="w-16 h-16 rounded-full"
                     style={{ backgroundColor: '#F3F4F6' }}
                   />
                 ) : (
-                  <View 
-                    className="w-16 h-16 rounded-full items-center justify-center bg-primary/20" 
+                  <View
+                    className="w-16 h-16 rounded-full items-center justify-center bg-primary/20"
                   >
                     <Ionicons name="person" size={28} color='#67A9AF' />
                   </View>
@@ -283,10 +300,10 @@ export default function AppointmentDetailScreen() {
           <View className="bg-white rounded-2xl p-5 shadow-sm mb-4">
             <Text className="text-base font-sans-semibold text-gray-900 mb-3">Patient Information</Text>
             <InfoRow icon="person-outline" label="Full Name" value={formatted.patientFullName} />
-            <InfoRow 
-              icon="body-outline" 
-              label="Age & Gender" 
-              value={`${formatted.patientAge} years, ${formatted.patientGender}`} 
+            <InfoRow
+              icon="body-outline"
+              label="Age & Gender"
+              value={`${formatted.patientAge} years, ${formatted.patientGender}`}
             />
             {formatted.patientPhone ? (
               <InfoRow icon="call-outline" label="Phone" value={formatted.patientPhone} />
@@ -299,7 +316,7 @@ export default function AppointmentDetailScreen() {
           {/* Medical Context */}
           <View className="bg-white rounded-2xl p-5 shadow-sm mb-4">
             <Text className="text-base font-sans-semibold text-gray-900 mb-3">Medical Context</Text>
-            
+
             {formatted.reason ? (
               <View className="mb-4">
                 <Text className="text-xs font-sans text-gray-500 mb-1">Reason for Appointment</Text>
@@ -372,16 +389,16 @@ export default function AppointmentDetailScreen() {
               This appointment has been completed. Please pay the doctor for their services to proceed.
             </Text>
             <View className="flex-row gap-3">
-              <TouchableOpacity 
-                onPress={() => setPayPromptOpen(false)} 
+              <TouchableOpacity
+                onPress={() => setPayPromptOpen(false)}
                 className="flex-1 py-4 rounded-xl items-center justify-center border-2 border-gray-200"
               >
                 <Text className="text-gray-700 font-sans-semibold">Later</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                disabled={initiating} 
-                onPress={startPayment} 
-                className="flex-1 py-4 rounded-xl items-center justify-center" 
+              <TouchableOpacity
+                disabled={initiating}
+                onPress={startPayment}
+                className="flex-1 py-4 rounded-xl items-center justify-center"
                 style={{ backgroundColor: initiating ? '#9CA3AF' : '#67A9AF' }}
               >
                 {initiating ? (

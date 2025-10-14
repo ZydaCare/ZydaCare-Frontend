@@ -11,6 +11,8 @@ import { getMyAppointments } from '@/api/patient/appointments';
 import UpcomingAppointmentCard from '@/components/UpcomingAppointmentCard';
 import { ReanimatedLogLevel } from 'react-native-reanimated';
 import HealthTipsSection from '@/components/HealthTipsSection';
+import { ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Define the type for category items
 interface CategoryItem {
@@ -46,7 +48,34 @@ const Home = () => {
   const [homeSearch, setHomeSearch] = useState('');
   const [upcomingAppointment, setUpcomingAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { token } = useAuth();
+  const { isLoading, isAuthenticated } = useAuth();
+
+  // Wait for auth state to finish loading before checking token
+  // useEffect(() => {
+  //   if (!isLoading) {
+  //     if (!token || !isAuthenticated) {
+  //       console.log('No token found, going back to welcome screen');
+  //       router.replace('/welcome');
+  //     } else {
+  //       console.log('✅ Token found, staying on Home screen');
+  //     }
+  //   }
+  // }, [isLoading, token, isAuthenticated]);
+
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('token');
+        setToken(storedToken);
+      } catch (error) {
+        console.error('Error loading token:', error);
+      }
+    };
+
+    loadToken();
+  }, []);
 
   const fetchAppointments = useCallback(async () => {
     if (!token) return;

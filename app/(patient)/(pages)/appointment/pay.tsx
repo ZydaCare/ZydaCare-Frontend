@@ -7,13 +7,14 @@ import { WebView } from 'react-native-webview';
 import { useAuth } from '@/context/authContext';
 import { useToast } from '@/components/ui/Toast';
 import { checkPaymentStatus } from '@/api/patient/appointments';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function PayAppointmentScreen() {
   const router = useRouter();
-  const { token } = useAuth();
+  // const { token } = useAuth();
   const { showToast } = useToast();
-  const { reference, url, bookingId } = useLocalSearchParams<{ 
-    reference?: string; 
+  const { reference, url, bookingId } = useLocalSearchParams<{
+    reference?: string;
     url?: string;
     bookingId?: string;
   }>();
@@ -23,6 +24,22 @@ export default function PayAppointmentScreen() {
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasNavigatedRef = useRef(false);
 
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('token');
+        setToken(storedToken);
+      } catch (error) {
+        console.error('Error loading token:', error);
+      }
+    };
+
+    loadToken();
+  }, []);
+
+
   // Poll backend to check if webhook has processed payment
   const pollPaymentStatus = useCallback(async () => {
     if (!reference || !token || hasNavigatedRef.current) return;
@@ -30,17 +47,17 @@ export default function PayAppointmentScreen() {
     try {
       console.log('[PaymentDebug] Polling payment status for ref:', reference);
       const result = await checkPaymentStatus(reference, token);
-      
+
       if (result.success && result.data.paymentStatus === 'success') {
         console.log('[PaymentDebug] Payment verified successfully');
         hasNavigatedRef.current = true;
-        
+
         // Clear polling interval
         if (pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = null;
         }
-        
+
         showToast('Payment successful!', 'success');
         router.replace({
           pathname: '/(patient)/(pages)/appointment/pay-success',
@@ -56,13 +73,13 @@ export default function PayAppointmentScreen() {
   // Start polling when component mounts
   useEffect(() => {
     if (!reference || !token || hasNavigatedRef.current) return;
-    
+
     console.log('[PaymentDebug] Starting payment status polling');
-    
+
     // Poll immediately after 5 seconds (give user time to complete payment)
     const initialDelay = setTimeout(() => {
       pollPaymentStatus();
-      
+
       // Then poll every 5 seconds to avoid rate limiting
       pollIntervalRef.current = setInterval(() => {
         pollPaymentStatus();

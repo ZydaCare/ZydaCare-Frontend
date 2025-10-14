@@ -8,6 +8,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/authContext';
 import { useToast } from '@/components/ui/Toast';
 import { BASE_URL } from '@/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
@@ -21,11 +22,13 @@ export default function MedicalHistoryScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
 
   const fetchMedicalHistory = async () => {
+    const token = await AsyncStorage.getItem('token');
+
     try {
       if (!token) {
         showToast('Authentication required', 'error');
@@ -74,6 +77,8 @@ export default function MedicalHistoryScreen() {
   };
 
   const handleDeleteRecord = async (id: string) => {
+    const token = await AsyncStorage.getItem('token');
+
     try {
       setDeleting(true);
 
