@@ -17,6 +17,38 @@ const defaultTimeSlots = [
   { startTime: '17:00', endTime: '20:00', isAvailable: true },
 ];
 
+function ConsultationTypeRow({ icon, label, description, value, onChange, isLast }: {
+  icon: string;
+  label: string;
+  description: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  isLast: boolean;
+}) {
+  return (
+    <View className={`px-5 py-4 ${!isLast ? 'border-b border-gray-100' : ''}`}>
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center flex-1">
+          <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${value ? 'bg-primary/10' : 'bg-gray-100'}`}>
+            <Ionicons name={icon as any} size={20} color={value ? '#67A9AF' : '#9CA3AF'} />
+          </View>
+          <View className="flex-1 mr-3">
+            <Text className="font-sans-semibold text-base text-gray-900">{label}</Text>
+            <Text className="text-sm text-gray-500 mt-0.5 font-sans">{description}</Text>
+          </View>
+        </View>
+        <Switch
+          value={value}
+          onValueChange={onChange}
+          trackColor={{ false: '#E5E7EB', true: '#67A9AF' }}
+          thumbColor="white"
+          ios_backgroundColor="#E5E7EB"
+        />
+      </View>
+    </View>
+  );
+}
+
 export default function ScheduleAvailabilityScreen() {
   const { doctorProfile, getDoctorProfile, updateDoctorProfile } = useAuth();
   const { showToast } = useToast();
@@ -185,6 +217,10 @@ export default function ScheduleAvailabilityScreen() {
       workingDays: updatedDays
     }));
   };
+
+  const handleNoticePeriodSelect = React.useCallback((value: number) => {
+    setAvailability(prev => ({ ...prev, noticePeriod: value }));
+  }, []);
 
   const handleSave = async () => {
     try {
@@ -445,48 +481,114 @@ export default function ScheduleAvailabilityScreen() {
               </View>
             </View>
 
-            {/* Notice Period */}
+            {/* Notice Period - Slider Design */}
             <View className="mb-6 mt-2">
               <View className="flex-row items-center mb-4">
                 <View className="w-1 h-5 bg-primary rounded-full mr-3" />
-                <Text className="text-lg font-sans-bold text-gray-900">Booking Notice</Text>
+                <Text className="text-lg font-sans-bold text-gray-900">Booking Notice Period</Text>
               </View>
-              <View className="bg-white rounded-2xl shadow-sm p-5">
-                <Text className="text-sm text-gray-600 mb-4 font-sans leading-5">
-                  Minimum time required before accepting new appointments
-                </Text>
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingBottom: 8 }}
-                >
-                  <View className="flex-row" style={{ gap: 12 }}>
+              <View className="bg-white rounded-2xl shadow-sm p-6">
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-sm text-gray-600 font-sans">
+                    Minimum advance booking time
+                  </Text>
+                  <View className="bg-primary/10 px-4 py-2 rounded-xl">
+                    <Text className="text-primary font-sans-bold text-base">
+                      {availability.noticePeriod >= 60 
+                        ? `${Math.floor(availability.noticePeriod / 60)} ${Math.floor(availability.noticePeriod / 60) === 1 ? 'hour' : 'hours'}`
+                        : `${availability.noticePeriod} min`}
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="mt-4">
+                  {/* Quick Select Options */}
+                  <View className="flex-row justify-between mb-6">
                     {[
-                      { value: 30, label: '30 min' },
-                      { value: 60, label: '1 hour' },
-                      { value: 120, label: '2 hours' },
-                      { value: 180, label: '3 hours' },
-                      { value: 240, label: '4 hours' },
-                      { value: 300, label: '5 hours' },
-                      { value: 360, label: '6 hours' },
-                      { value: 720, label: '12 hours' },
-                      { value: 1440, label: '24 hours' },
-                    ].map(option => (
-                      <TouchableOpacity
+                      { value: 30, label: '30m', icon: 'flash' },
+                      { value: 60, label: '1h', icon: 'time' },
+                      { value: 240, label: '4h', icon: 'hourglass' },
+                      { value: 720, label: '12h', icon: 'moon' },
+                      { value: 1440, label: '24h', icon: 'sunny' },
+                    ].map((option, index) => (
+                      <Pressable
                         key={option.value}
-                        onPress={() => setAvailability(prev => ({ ...prev, noticePeriod: option.value }))}
-                        className={`py-2 px-4 rounded-xl ${availability.noticePeriod === option.value
-                            ? 'bg-primary shadow-sm'
-                            : 'bg-gray-100 active:bg-gray-200'
-                          }`}
+                        onPress={() => {
+                          setAvailability(prev => ({ ...prev, noticePeriod: option.value }));
+                        }}
+                        style={({ pressed }) => [
+                          {
+                            opacity: pressed ? 0.7 : 1,
+                          }
+                        ]}
+                        className={`flex-1 ${index > 0 ? 'ml-2' : ''} items-center py-3 rounded-xl border-2 ${
+                          availability.noticePeriod === option.value
+                            ? 'bg-primary border-primary'
+                            : 'bg-gray-50 border-gray-200'
+                        }`}
                       >
-                        <Text className={`font-sans-semibold text-sm ${availability.noticePeriod === option.value ? 'text-white' : 'text-gray-700'}`}>
+                        <Ionicons 
+                          name={option.icon as any} 
+                          size={20} 
+                          color={availability.noticePeriod === option.value ? '#FFFFFF' : '#67A9AF'} 
+                        />
+                        <Text 
+                          className={`text-xs font-sans-semibold mt-1 ${
+                            availability.noticePeriod === option.value ? 'text-white' : 'text-gray-700'
+                          }`}
+                        >
                           {option.label}
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     ))}
                   </View>
-                </ScrollView>
+
+                  {/* Custom Time Selector */}
+                  <View className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <Text className="text-sm font-sans-semibold text-gray-700 mb-3">
+                      Or set custom time:
+                    </Text>
+                    <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                      {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 18, 20].map(hours => (
+                        <Pressable
+                          key={hours}
+                          onPress={() => {
+                            setAvailability(prev => ({ ...prev, noticePeriod: hours * 60 }));
+                          }}
+                          style={({ pressed }) => [
+                            {
+                              opacity: pressed ? 0.7 : 1,
+                            }
+                          ]}
+                          className={`px-4 py-2 rounded-lg ${
+                            availability.noticePeriod === hours * 60
+                              ? 'bg-primary'
+                              : 'bg-white'
+                          }`}
+                        >
+                          <Text 
+                            className={`font-sans-medium text-sm ${
+                              availability.noticePeriod === hours * 60 ? 'text-white' : 'text-gray-700'
+                            }`}
+                          >
+                            {hours}h
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+
+                <View className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <View className="flex-row items-start">
+                    <Ionicons name="information-circle" size={18} color="#3B82F6" style={{ marginTop: 1, marginRight: 8 }} />
+                    <Text className="flex-1 text-xs text-blue-700 font-sans leading-5">
+                      Patients must book at least {availability.noticePeriod >= 60 
+                        ? `${Math.floor(availability.noticePeriod / 60)} ${Math.floor(availability.noticePeriod / 60) === 1 ? 'hour' : 'hours'}`
+                        : `${availability.noticePeriod} minutes`} in advance
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
           </View>
@@ -541,37 +643,5 @@ export default function ScheduleAvailabilityScreen() {
         </View>
       </Modal>
     </SafeAreaView>
-  );
-}
-
-function ConsultationTypeRow({ icon, label, description, value, onChange, isLast }: {
-  icon: string;
-  label: string;
-  description: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
-  isLast: boolean;
-}) {
-  return (
-    <View className={`px-5 py-4 ${!isLast ? 'border-b border-gray-100' : ''}`}>
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center flex-1">
-          <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${value ? 'bg-primary/10' : 'bg-gray-100'}`}>
-            <Ionicons name={icon as any} size={20} color={value ? '#67A9AF' : '#9CA3AF'} />
-          </View>
-          <View className="flex-1 mr-3">
-            <Text className="font-sans-semibold text-base text-gray-900">{label}</Text>
-            <Text className="text-sm text-gray-500 mt-0.5 font-sans">{description}</Text>
-          </View>
-        </View>
-        <Switch
-          value={value}
-          onValueChange={onChange}
-          trackColor={{ false: '#E5E7EB', true: '#67A9AF' }}
-          thumbColor="white"
-          ios_backgroundColor="#E5E7EB"
-        />
-      </View>
-    </View>
   );
 }

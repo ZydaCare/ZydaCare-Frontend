@@ -28,6 +28,11 @@ export default function DoctorHome() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const handleSearchPress = () => {
+    // Navigate to the search screen when the search bar is pressed
+    router.push('/(doctor)/(pages)/search');
+  };
+
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -195,7 +200,6 @@ export default function DoctorHome() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50 pt-5">
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -239,16 +243,9 @@ export default function DoctorHome() {
               className="flex-1 ml-2 font-sans text-gray-800 py-1"
               placeholder="Search patients, appointments..."
               placeholderTextColor="#9CA3AF"
+              onPress={handleSearchPress}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              onSubmitEditing={() => {
-                if (searchQuery.trim()) {
-                  router.push({
-                    pathname: '/(doctor)/(tabs)/patients',
-                    params: { search: searchQuery },
-                  });
-                }
-              }}
             />
           </View>
         </View>

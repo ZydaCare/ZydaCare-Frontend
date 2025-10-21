@@ -49,7 +49,7 @@ export interface Appointment {
     appointmentDate: string;
     appointmentType: 'virtual' | 'in-person' | 'home-visit';
     amount: number;
-    status: 'pending' | 'confirmed' | 'paid' | 'completed' | 'cancelled';
+    status: 'pending' | 'accepted' | 'awaiting_payment' | 'paid' | 'cancelled';
     paymentStatus: string;
     reference?: string;
     createdAt: string;
@@ -166,6 +166,24 @@ export const getAppointment = async (id: string): Promise<{ success: boolean; da
     return response.json();
 };
 
+// Accept an appointment
+export const acceptAppointment = async (id: string): Promise<{ success: boolean; message: string }> => {
+    const token = await AsyncStorage.getItem('token');
+    const response = await fetch(`${BASE_URL}/appointments/${id}/accept`, {
+        method: 'PATCH',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to accept appointment');
+    }
+
+    return response.json();
+};
+
 // Complete an appointment
 export const completeAppointment = async (id: string): Promise<{ success: boolean; message: string }> => {
     const token = await AsyncStorage.getItem('token');
@@ -179,6 +197,24 @@ export const completeAppointment = async (id: string): Promise<{ success: boolea
 
     if (!response.ok) {
         throw new Error('Failed to complete appointment');
+    }
+
+    return response.json();
+};
+
+// Cancel an appointment
+export const cancelAppointment = async (id: string): Promise<{ success: boolean; message: string }> => {
+    const token = await AsyncStorage.getItem('token');
+    const response = await fetch(`${BASE_URL}/appointments/${id}/cancel`, {
+        method: 'PATCH',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to cancel appointment');
     }
 
     return response.json();

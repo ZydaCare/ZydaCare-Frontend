@@ -10,6 +10,11 @@ export default function RootLayout() {
             <Stack.Screen name="profile-settings" />
             <Stack.Screen name="security" />
             <Stack.Screen name="schedule-availability" />
+            <Stack.Screen name="help" />
+            <Stack.Screen name="supportChat" />
+            <Stack.Screen name="faq/index" />
+            <Stack.Screen name="faq/[id]" />
+            <Stack.Screen name="search/index" />
         </Stack>
     );
 }

@@ -81,9 +81,10 @@ export default function Appointment() {
     switch (status) {
       case 'pending':
         return 'text-amber-600'
+      case 'accepted':
+        return 'text-primary'
       case 'awaiting_payment':
         return 'text-amber-600'
-      case 'completed':
       case 'paid':
         return 'text-green-600'
       case 'cancelled':
@@ -97,9 +98,10 @@ export default function Appointment() {
     switch (status) {
       case 'pending':
         return 'bg-amber-50'
+      case 'accepted':
+        return 'bg-primary/20'
       case 'awaiting_payment':
         return 'bg-amber-50'
-      case 'completed':
       case 'paid':
         return 'bg-green-50'
       case 'cancelled':
@@ -119,10 +121,11 @@ export default function Appointment() {
 
       // Derive flags per spec
       const isCancelled = status === 'cancelled'
-      const isCompleted = status === 'completed' || status === 'paid'
+      const isCompleted = status === 'paid'
+      const isAccepted = status === 'accepted'
       const isAwaitingPayment = status === 'awaiting_payment'
       const isUpcoming = !!start && start > now && status === 'pending'
-      const isOngoing = (!isCancelled && !isCompleted) && (isAwaitingPayment || (sameDay && startedOrNow))
+      const isOngoing = (!isCancelled && !isCompleted) && (isAccepted || isAwaitingPayment || (sameDay && startedOrNow))
 
       return {
         ...a,

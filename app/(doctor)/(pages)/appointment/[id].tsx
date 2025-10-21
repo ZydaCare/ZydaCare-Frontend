@@ -1,4 +1,4 @@
-import { Appointment, completeAppointment, getAppointment } from '@/api/doctor/appointments';
+import { acceptAppointment, Appointment, cancelAppointment, completeAppointment, getAppointment } from '@/api/doctor/appointments';
 import { useToast } from '@/components/ui/Toast';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
@@ -23,6 +23,9 @@ export default function AppointmentDetailScreen() {
   const [completing, setCompleting] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const { showToast } = useToast();
+  const [accepting, setAccepting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -63,18 +66,55 @@ export default function AppointmentDetailScreen() {
     }
   };
 
+  const acceptPatientAppointment = async () => {
+    try {
+      setAccepting(true);
+      await acceptAppointment(id as string);
+      showToast('Appointment accepted', 'success');
+      fetchAppointmentDetails();
+    } catch (error) {
+      showToast('Failed to accept appointment', 'error');
+    } finally {
+      setAccepting(false);
+    }
+  };
+
   const cancelCompleteAppointment = () => {
     setShowCompleteModal(false);
   };
 
+  const handleCancelAppointment = async () => {
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelAppointment = async () => {
+    try {
+      setCancelling(true);
+      await cancelAppointment(id as string);
+      showToast('Appointment cancelled', 'success');
+      fetchAppointmentDetails();
+    } catch (error) {
+      showToast('Failed to cancel appointment', 'error');
+    } finally {
+      setCancelling(false);
+      setShowCancelModal(false);
+    }
+  };
+
+  const cancelCancelAppointment = () => {
+    setShowCancelModal(false);
+  };
+
   const getStatusBgColor = (status: string) => {
     switch (status) {
-      case 'paid':
-        return 'bg-[#10B981]';
       case 'pending':
+        return 'bg-[#F59E0B]';
+      case 'accepted':
         return 'bg-[#F59E0B]';
       case 'awaiting_payment':
         return 'bg-[#3B82F6]';
+      case 'paid':
+        return 'bg-[#10B981]';
       case 'cancelled':
         return 'bg-[#EF4444]';
       default:
@@ -325,33 +365,128 @@ export default function AppointmentDetailScreen() {
 
         {/* Action Buttons */}
         <View className="mx-6 mb-8">
+          {/* Pending status: Show Accept Appointment button only */}
           {appointment.status === 'pending' && (
-            <TouchableOpacity
-              className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center"
-              onPress={handleCompleteAppointment}
-              disabled={completing}
-            >
-              {completing ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle" size={20} color="white" />
-                  <Text className="text-white font-sans-bold text-base ml-2">
-                    Complete Appointment
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
-          {appointment.status === 'awaiting_payment' || appointment.status === 'pending' && (
-            appointment.appointmentType === 'virtual' && (
-              <TouchableOpacity className="bg-secondary py-4 rounded-xl items-center flex-row justify-center mt-4">
-                <Ionicons name="videocam" size={20} color="white" />
-                <Text className="text-white font-sans-bold text-base ml-2">
-                  Start Video Call
-                </Text>
+            <View>
+              <TouchableOpacity
+                className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center"
+                onPress={acceptPatientAppointment}
+                disabled={accepting}
+              >
+                {accepting ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={20} color="white" />
+                    <Text className="text-white font-sans-bold text-base ml-2">
+                      Accept Appointment
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
-            )
+              <TouchableOpacity
+                className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center"
+                onPress={handleCancelAppointment}
+                disabled={cancelling}
+              >
+                {cancelling ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <>
+                    <Ionicons name="close-circle" size={20} color="white" />
+                    <Text className="text-white font-sans-bold text-base ml-2">
+                      Cancel Appointment
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Accepted status: Show Complete + Video/Chat based on type */}
+          {appointment.status === 'accepted' && (
+            <>
+              {/* Show Video Call button for virtual appointments */}
+              {appointment.appointmentType === 'virtual' && (
+                <TouchableOpacity className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center">
+                  <Ionicons name="videocam" size={20} color="white" />
+                  <Text className="text-white font-sans-bold text-base ml-2">
+                    Start Video Call
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Show Chat button for home-visit or in-person appointments */}
+              {(appointment.appointmentType === 'home-visit' ||
+                appointment.appointmentType === 'in-person') && (
+                  <TouchableOpacity className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center">
+                    <Ionicons name="chatbubble-outline" size={20} color="white" />
+                    <Text className="text-white font-sans-bold text-base ml-2">
+                      Chat with Patient
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+              {/* Complete Appointment button */}
+              <TouchableOpacity
+                className="bg-primary py-4 rounded-xl items-center flex-row justify-center mt-4"
+                onPress={handleCompleteAppointment}
+                disabled={completing}
+              >
+                {completing ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-done" size={20} color="white" />
+                    <Text className="text-white font-sans-bold text-base ml-2">
+                      Complete Appointment
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Cancel Appointment button */}
+              <TouchableOpacity
+                className="bg-secondary py-4 rounded-xl items-center flex-row justify-center mt-4"
+                onPress={handleCancelAppointment}
+                disabled={cancelling}
+              >
+                {cancelling ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <>
+                    <Ionicons name="close-circle" size={20} color="white" />
+                    <Text className="text-white font-sans-bold text-base ml-2">
+                      Cancel Appointment
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Awaiting Payment status: Show appointment type button only */}
+          {appointment.status === 'awaiting_payment' && (
+            <>
+              {appointment.appointmentType === 'virtual' && (
+                <TouchableOpacity className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center">
+                  <Ionicons name="videocam" size={20} color="white" />
+                  <Text className="text-white font-sans-bold text-base ml-2">
+                    Start Video Call
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {(appointment.appointmentType === 'home-visit' ||
+                appointment.appointmentType === 'in-person') && (
+                  <TouchableOpacity className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center">
+                    <Ionicons name="chatbubble-outline" size={20} color="white" />
+                    <Text className="text-white font-sans-bold text-base ml-2">
+                      Chat with Patient
+                    </Text>
+                  </TouchableOpacity>
+                )}
+            </>
           )}
         </View>
       </ScrollView>
@@ -391,6 +526,49 @@ export default function AppointmentDetailScreen() {
                 ) : (
                   <Text className="text-base font-sans-bold text-white">
                     Complete
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cancel Appointment Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showCancelModal}
+        onRequestClose={cancelCancelAppointment}
+      >
+        <View className="flex-1 bg-black/50 justify-center px-4">
+          <View className="bg-white rounded-xl p-6 mx-4">
+            <Text className="text-xl font-sans-bold text-gray-900 mb-2">
+              Cancel Appointment
+            </Text>
+            <Text className="text-base font-sans text-gray-600 mb-6">
+              Are you sure you want to cancel this appointment?
+            </Text>
+            <View className="flex-row justify-end space-x-3">
+              <TouchableOpacity
+                onPress={cancelCancelAppointment}
+                className="px-4 py-2 rounded-lg"
+                disabled={cancelling}
+              >
+                <Text className="text-base font-sans-medium text-gray-700">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={confirmCancelAppointment}
+                className="bg-[#67A9AF] px-4 py-2 rounded-lg"
+                disabled={cancelling}
+              >
+                {cancelling ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-base font-sans-bold text-white">
+                    Cancel
                   </Text>
                 )}
               </TouchableOpacity>

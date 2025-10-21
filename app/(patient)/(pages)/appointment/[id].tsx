@@ -15,11 +15,13 @@ const PRIMARY = '#67A9AF';
 const StatusBadge = ({ status }: { status: string }) => {
   const getStatusColor = () => {
     switch (status) {
+      case 'pending':
+        return { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D' };
       case 'awaiting_payment':
         return { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D' };
-      case 'confirmed':
+      case 'accepted':
         return { bg: '#D1FAE5', text: '#059669', border: '#6EE7B7' };
-      case 'completed':
+      case 'paid':
         return { bg: '#DBEAFE', text: '#2563EB', border: '#93C5FD' };
       case 'cancelled':
         return { bg: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' };

@@ -1,5 +1,4 @@
 import '../global.css'
-import '@/assets/fonts';
 import { AuthProvider } from '@/context/authContext';
 import { ToastProvider } from '@/components/ui/Toast';
 import * as Font from 'expo-font';

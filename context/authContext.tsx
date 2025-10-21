@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { AuthState, ForgotPasswordData, LoginData, RegisterData, ResendOtpData, ResetPasswordData, User, VerifyOtpData } from '../types/User';
+import { registerForPushNotificationsAsync } from "@/utils/notifications";
 
 interface AuthContextType extends AuthState {
     login: (data: LoginData) => Promise<any>;
@@ -50,11 +51,11 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
 
     try {
         const response = await fetch(url, config);
-        
+
         // First, get the response text to handle both JSON and non-JSON responses
         const responseText = await response.text();
         let data;
-        
+
         try {
             // Try to parse as JSON
             data = responseText ? JSON.parse(responseText) : {};
@@ -69,8 +70,8 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
         }
 
         if (!response.ok) {
-            const errorMessage = data?.message || data?.error || 
-                               `HTTP error! status: ${response.status} - ${response.statusText}`;
+            const errorMessage = data?.message || data?.error ||
+                `HTTP error! status: ${response.status} - ${response.statusText}`;
             console.error(`API Error (${endpoint}):`, errorMessage, 'Response:', data);
             throw new Error(errorMessage);
         }
@@ -99,6 +100,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         checkAuthState();
     }, []);
+
+    const expoPushToken = registerForPushNotificationsAsync();
 
     const checkAuthState = async () => {
         try {
@@ -152,6 +155,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }));
         }
     };
+
+
     const login = async (data: LoginData) => {
         try {
             setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -165,6 +170,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 body: JSON.stringify({
                     email: data.email.trim(),
                     password: data.password,
+                    expoPushToken,
                 }),
             });
 

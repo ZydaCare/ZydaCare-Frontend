@@ -20,7 +20,8 @@ import { useToast } from '@/components/ui/Toast';
 
 const statusColors = {
   pending: 'bg-yellow-50 text-yellow-600',
-  awaiting_payment: 'bg-primary text-white',
+  accepted: 'bg-primary text-white',
+  awaiting_payment: 'bg-secondary text-white',
   paid: 'bg-green-50 text-green-600',
   cancelled: 'bg-red-50 text-red-600',
 };
@@ -37,6 +38,7 @@ export default function AppointmentsScreen() {
   const statusOptions = [
     { value: 'all', label: 'All' },
     { value: 'pending', label: 'Pending' },
+    { value: 'accepted', label: 'Ongoing' },
     { value: 'awaiting_payment', label: 'Awaiting Payment' },
     { value: 'paid', label: 'Completed' },
     { value: 'cancelled', label: 'Cancelled' },

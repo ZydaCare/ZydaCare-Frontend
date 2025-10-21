@@ -97,18 +97,24 @@ const Home = () => {
 
           // Derive status flags
           const isCancelled = status === 'cancelled';
-          const isCompleted = status === 'completed' || status === 'paid';
+          const isCompleted = status === 'paid';
+          const isAccepted = status === 'accepted';
+          const isPending = status === 'pending';
           const isAwaitingPayment = status === 'awaiting_payment';
           const isUpcoming = !!apptDate && apptDate > now && status === 'pending';
-          const isOngoing = (!isCancelled && !isCompleted) &&
-            (isAwaitingPayment || (sameDay && startedOrNow));
+          const isOngoing = (!isCancelled && !isCompleted) && (isAccepted || isAwaitingPayment || (sameDay && startedOrNow))
+          const isPast = apptDate && apptDate < now;
 
           // Determine the final status to display
-          let displayStatus: 'upcoming' | 'ongoing' | 'completed' = 'upcoming';
+          let displayStatus: 'pending' | 'upcoming' | 'accepted' | 'awaiting_payment' | 'cancelled' | 'paid' | 'past' = 'upcoming';
           if (isOngoing) {
-            displayStatus = 'ongoing';
+            displayStatus = 'accepted';
           } else if (isCompleted || isCancelled || (apptDate && apptDate < now)) {
-            displayStatus = 'completed';
+            displayStatus = 'paid';
+          } else if (isPending) {
+            displayStatus = 'pending';
+          } else if (isAwaitingPayment) {
+            displayStatus = 'awaiting_payment';
           }
 
           const title = appt.doctor?.profile?.title || '';

@@ -34,9 +34,9 @@ export default function Welcome() {
 
         {/* Info Cards */}
         <View style={styles.cardsSection}>
-          <View style={styles.infoCard}>
-            <View style={[styles.iconCircle, { backgroundColor: '#E8F5F6' }]}>
-              <Ionicons name="people" size={28} color="#67A9AF" />
+          <View style={styles.infoCard} className='bg-secondary/10'>
+            <View style={styles.iconCircle} className='bg-secondary/20'>
+              <Ionicons name="people" size={28} color="#D65C1E" />
             </View>
             <View style={styles.cardTextContainer}>
               <Text style={styles.cardTitle} className='font-sans-semibold'>Expert Doctors</Text>
@@ -44,9 +44,9 @@ export default function Welcome() {
             </View>
           </View>
 
-          <View style={styles.infoCard}>
-            <View style={[styles.iconCircle, { backgroundColor: '#E8F5F6' }]}>
-              <Ionicons name="calendar-sharp" size={28} color="#67A9AF" />
+          <View style={styles.infoCard} className='bg-secondary/10'>
+            <View style={styles.iconCircle} className='bg-secondary/20'>
+              <Ionicons name="calendar-sharp" size={28} color="#D65C1E" />
             </View>
             <View style={styles.cardTextContainer}>
               <Text style={styles.cardTitle} className='font-sans-semibold'>Easy Scheduling</Text>
@@ -54,9 +54,9 @@ export default function Welcome() {
             </View>
           </View>
 
-          <View style={styles.infoCard}>
-            <View style={[styles.iconCircle, { backgroundColor: '#E8F5F6' }]}>
-              <Ionicons name="shield-checkmark" size={28} color="#67A9AF" />
+          <View style={styles.infoCard} className='bg-secondary/10'>
+            <View style={styles.iconCircle} className='bg-secondary/20'>
+              <Ionicons name="shield-checkmark" size={28} color="#D65C1E" />
             </View>
             <View style={styles.cardTextContainer}>
               <Text style={styles.cardTitle} className='font-sans-semibold'>Secure & Private</Text>
@@ -71,7 +71,7 @@ export default function Welcome() {
       {/* Bottom Section */}
       <View style={styles.bottomContainer}>
         <Button
-          variant="primary"
+          variant="secondary"
           size="lg"
           radius="full"
           onPress={() => router.push("/(auth)/signup")}
@@ -149,12 +149,12 @@ const styles = StyleSheet.create({
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    // backgroundColor: '#D65C1E',
     padding: 20,
     borderRadius: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#D65C1E',
   },
   iconCircle: {
     width: 56,
