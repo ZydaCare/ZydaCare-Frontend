@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "544348447911",
+    "project_id": "zydacare",
+    "storage_bucket": "zydacare.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:544348447911:android:977cb8487f0d8c7fda2782",
+        "android_client_info": {
+          "package_name": "com.ndjephthah.zydacare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnHuR7Wc9-WUtqnO6jwbkOmVb6Wvkgtlw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
