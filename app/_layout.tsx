@@ -5,6 +5,10 @@ import * as Font from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
+import { registerForPushNotificationsAsync } from '@/utils/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,6 +22,32 @@ const loadFonts = async () => {
 };
 
 function RootLayoutNav() {
+  const [expoPushToken, setExpoPushToken] = useState('');
+  const [notification, setNotification] = useState<Notifications.Notification | undefined>(
+    undefined
+  );
+
+  useEffect(() => {
+    registerForPushNotificationsAsync()
+      .then(token => setExpoPushToken(token ?? ''))
+      .catch((error: any) => setExpoPushToken(`${error}`));
+
+    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+      setNotification(notification);
+    });
+
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log(response);
+    });
+
+    console.log('YOUR TOKEN IS: ', expoPushToken);
+
+    return () => {
+      notificationListener.remove();
+      responseListener.remove();
+    };
+  }, []);
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
