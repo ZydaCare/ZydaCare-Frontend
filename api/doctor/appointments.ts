@@ -14,6 +14,14 @@ export interface AppointmentStats {
     };
 }
 
+export interface ChatRoom {
+    _id: string;
+    unreadCountDoctor: number;
+    unreadCountPatient: number;
+    lastMessage: string;
+    lastMessageAt: string;
+}
+
 export interface Appointment {
     _id: string;
     patientInfo: {
@@ -54,6 +62,7 @@ export interface Appointment {
     reference?: string;
     createdAt: string;
     updatedAt: string;
+    chatRoom?: ChatRoom;
 }
 
 export interface Patient {

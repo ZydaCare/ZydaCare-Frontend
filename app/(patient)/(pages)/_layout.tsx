@@ -25,6 +25,7 @@ export default function PatientPageLayout() {
             <Stack.Screen name="medical-history/add" options={{ headerShown: false }} />
             <Stack.Screen name="medical-history/edit/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="health-profile/healthProfile" options={{ headerShown: false }} />
+            <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
         </Stack>
     );
 }

@@ -10,6 +10,7 @@ import axios from 'axios'
 import { BASE_URL } from '@/config'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getMyAppointments } from '@/api/patient/appointments'
+import { useToast } from '@/components/ui/Toast'
 
 export default function Appointment() {
   const [isAppointment, setIsAppointment] = useState(true)
@@ -17,6 +18,7 @@ export default function Appointment() {
   const [appointments, setAppointments] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { showToast } = useToast();
 
   const tabs: Array<'Upcoming' | 'Ongoing' | 'Cancelled' | 'All'> = ['Upcoming', 'Ongoing', 'Cancelled', 'All']
 
@@ -33,30 +35,12 @@ export default function Appointment() {
         : Array.isArray(res.data)
           ? res.data
           : [];
-      const items = appointmentArray.map((b: any) => {
-        const title = b.doctor?.profile?.title || ''
-        const first = b.doctor?.user?.firstName || ''
-        const last = b.doctor?.user?.lastName || ''
-        const constructedName = `${title ? title + ' ' : ''}${first} ${last}`.trim()
-        const specialties = b.doctor?.profile?.specialties
-        const specialtyFromProfile = Array.isArray(specialties) && specialties.length > 0 ? specialties[0] : ''
-        const specialtyFromMedical = b.medicalContext?.preferredDoctorOrSpecialty || ''
-
-        return {
-          _id: b._id || b.id,
-          doctorName: b.doctor?.profile?.fullName || b.doctor?.profile?.name || constructedName || 'Doctor',
-          speciality:
-            b.doctor?.speciality ||
-            b.doctor?.practiceInfo?.speciality ||
-            b.doctor?.practiceInfo?.specialty ||
-            specialtyFromProfile ||
-            specialtyFromMedical ||
-            'General Practice',
-          dateISO: b.appointmentDate,
-          status: b.status,
-          image: b.doctor?.profile?.imageUrl || b.doctor?.profile?.profileImageUrl,
-        }
-      })
+      const items = appointmentArray.map((b: any) => ({
+        ...b,
+        date: b.appointmentDate ? formatDate(new Date(b.appointmentDate), 'd MMMM yyyy h:mma') : '',
+        speciality: b.doctor?.speciality || b.medicalContext?.preferredDoctorOrSpecialty || 'General Practice',
+        image: b.doctor?.profile?.profileImage?.url || b.doctor?.profile?.profileImageUrl,
+      }))
       setAppointments(items)
       setIsAppointment(items.length > 0)
     } catch (e: any) {
@@ -147,9 +131,9 @@ export default function Appointment() {
   const AppointmentCard = ({ appointment }: any) => (
     <View className="bg-white rounded-2xl p-4 mb-4 mx-4 shadow-sm border border-gray-100">
       <View className="flex-row">
-        {appointment.image ? (
+        {appointment.doctor?.profile?.profileImage?.url ? (
           <Image
-            source={{ uri: appointment.image }}
+            source={{ uri: appointment.doctor.profile.profileImage.url }}
             className="w-[90px] h-[90px] rounded-xl"
             resizeMode="cover"
           />
@@ -162,7 +146,7 @@ export default function Appointment() {
         <View className="flex-1 ml-4">
           <View className="flex-row items-start justify-between mb-2">
             <Text className="text-base font-sans-bold text-gray-900 flex-1 pr-2">
-              {appointment.doctorName}
+              {appointment.doctor?.profile?.title} {appointment.doctor?.fullName}
             </Text>
             <View className={`px-3 py-1 rounded-full ${getStatusBgColor(appointment.status)}`}>
               <Text className={`text-xs font-sans-semibold ${getStatusColor(appointment.status)} capitalize`}>
@@ -178,7 +162,9 @@ export default function Appointment() {
 
           <View className="flex-row items-center mb-3">
             <Ionicons name="calendar-outline" size={14} color="#6B7280" />
-            <Text className="text-gray-500 font-sans text-xs ml-1.5">{appointment.date}</Text>
+            <Text className="text-gray-500 font-sans text-xs ml-1.5">
+              {appointment.date || (appointment.appointmentDate ? formatDate(new Date(appointment.appointmentDate), 'd MMMM yyyy h:mma') : '')}
+            </Text>
           </View>
 
           <View className="flex-row items-center gap-2">
@@ -189,13 +175,30 @@ export default function Appointment() {
               <Text className="text-primary font-sans-semibold text-sm text-center">View Details</Text>
             </TouchableOpacity>
 
-            {(appointment.isUpcoming || appointment.isOngoing) ? (
-              <TouchableOpacity className="bg-primary px-3 py-2.5 rounded-lg flex-1 flex-row items-center justify-center">
+            {(appointment.isOngoing || appointment.awaiting_payment) ? (
+              <TouchableOpacity
+                onPress={() => {
+                  if (!appointment.chatRoom?._id) {
+                    showToast('Chat room not available yet', 'error');
+                    return;
+                  }
+                  router.push({
+                    pathname: `/(patient)/(pages)/chat/${appointment.chatRoom._id}`,
+                    params: {
+                      doctorId: appointment.doctor._id,
+                      doctorName: `${appointment.doctor.fullName}`,
+                      doctorTitle: appointment.doctor.profile?.title,
+                      doctorAvatar: appointment.doctor.profile?.profileImage?.url
+                    }
+                  });
+                }}
+                className="bg-primary px-3 py-2.5 rounded-lg flex-1 flex-row items-center justify-center"
+              >
                 <Ionicons name="chatbubble-outline" size={16} color="white" />
                 <Text className="text-white font-sans-semibold text-sm ml-1.5">Chat</Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity className="bg-primary px-3 py-2.5 rounded-lg flex-1">
+              <TouchableOpacity onPress={() => router.push({ pathname: '/(patient)/(pages)/appointment/[id]', params: { id: appointment._id } })} className="bg-primary px-3 py-2.5 rounded-lg flex-1">
                 <Text className="text-white font-sans-semibold text-sm text-center">Book Again</Text>
               </TouchableOpacity>
             )}

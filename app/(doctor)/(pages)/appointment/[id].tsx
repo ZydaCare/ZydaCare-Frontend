@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import ChatService from '@/api/chat'; // Add this import
 
 export default function AppointmentDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -26,6 +27,7 @@ export default function AppointmentDetailScreen() {
   const [accepting, setAccepting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [chatRoom, setChatRoom] = useState<any>(null)
 
   useEffect(() => {
     if (id) {
@@ -39,6 +41,7 @@ export default function AppointmentDetailScreen() {
       const response = await getAppointment(id as string);
       if (response.success) {
         setAppointment(response.data);
+
       }
     } catch (error) {
       console.error('Error fetching appointment:', error);
@@ -176,9 +179,35 @@ export default function AppointmentDetailScreen() {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Patient Info Card */}
         <View className="bg-white m-6 rounded-2xl p-4 shadow-sm" style={{ elevation: 2 }}>
-          <Text className="text-sm font-sans-bold text-gray-500 uppercase mb-3">
-            Patient Information
-          </Text>
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-sm font-sans-bold text-gray-500 uppercase">
+              Patient Information
+            </Text>
+            {appointment?.chatRoom && (appointment.status === 'accepted' || appointment.status === 'awaiting_payment') && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (appointment.chatRoom?._id) {
+                    router.push({
+                      pathname: `/(doctor)/(pages)/chat/${appointment.chatRoom._id}`,
+                      params: {
+                        patientId: appointment.patient._id,
+                        patientName: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
+                        patientAvatar: appointment.patient.profileImage?.url
+                      }
+                    });
+                  } else {
+                    showToast('Chat room not available yet', 'error');
+                  }
+                }}
+                className="flex-row items-center mr-3 bg-primary px-3 py-1.5 rounded-lg"
+              >
+                <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
+                <Text className="text-white font-sans-medium text-sm ml-1">Chat</Text>
+              </TouchableOpacity>
+            )}
+
+          </View>
+
 
           <TouchableOpacity
             className="flex-row items-center mb-4"
@@ -369,7 +398,7 @@ export default function AppointmentDetailScreen() {
           {appointment.status === 'pending' && (
             <View>
               <TouchableOpacity
-                className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center"
+                className="bg-primary py-4 rounded-xl items-center flex-row justify-center"
                 onPress={acceptPatientAppointment}
                 disabled={accepting}
               >
@@ -385,7 +414,7 @@ export default function AppointmentDetailScreen() {
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center"
+                className="bg-secondary py-4 rounded-xl items-center flex-row justify-center mt-4"
                 onPress={handleCancelAppointment}
                 disabled={cancelling}
               >
@@ -403,6 +432,7 @@ export default function AppointmentDetailScreen() {
             </View>
           )}
 
+
           {/* Accepted status: Show Complete + Video/Chat based on type */}
           {appointment.status === 'accepted' && (
             <>
@@ -419,7 +449,13 @@ export default function AppointmentDetailScreen() {
               {/* Show Chat button for home-visit or in-person appointments */}
               {(appointment.appointmentType === 'home-visit' ||
                 appointment.appointmentType === 'in-person') && (
-                  <TouchableOpacity className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center">
+                  <TouchableOpacity
+                    className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center"
+                    onPress={() => router.push({
+                      pathname: '/(doctor)/(pages)/chat/[id]',
+                      params: { id: appointment.patient._id }
+                    })}
+                  >
                     <Ionicons name="chatbubble-outline" size={20} color="white" />
                     <Text className="text-white font-sans-bold text-base ml-2">
                       Chat with Patient

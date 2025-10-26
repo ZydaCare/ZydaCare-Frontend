@@ -170,7 +170,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 body: JSON.stringify({
                     email: data.email.trim(),
                     password: data.password,
-                    expoPushToken,
+                    expoPushToken: expoPushToken?.data || expoPushToken?._j || expoPushToken,
                 }),
             });
 

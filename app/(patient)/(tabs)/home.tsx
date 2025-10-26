@@ -159,7 +159,7 @@ const Home = () => {
   const handleSearch = () => {
     if (homeSearch.trim() !== '') {
       router.push({
-        pathname: '/search',
+        pathname: '/(patient)/(pages)/search',
         params: { query: homeSearch }, // ✅ pass query to search screen
       })
     }
