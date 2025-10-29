@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 type SupportItem = {
@@ -15,14 +15,46 @@ type SupportItem = {
 export default function HelpAndSupportScreen() {
   const router = useRouter();
 
-  const supportItems: SupportItem[] = [
+  const openLink = (url: string) => Linking.openURL(url);
+
+  // 🔗 Main Contact Options
+  const contactOptions = [
     {
-      id: 'chat',
-      title: 'Chat with Support',
-      icon: 'chatbubble-ellipses-outline',
-      description: 'Get instant help from our support team',
-      action: () => router.push('/(doctor)/(pages)/supportChat'),
+      id: 'whatsapp',
+      title: 'Chat on WhatsApp',
+      icon: <Ionicons name="logo-whatsapp" size={22} color="#25D366" />,
+      action: () =>
+        openLink('https://wa.me/2349068937365?text=Hi%20ZydaCare%20Support%2C%20I%20need%20help'),
     },
+    {
+      id: 'twitter',
+      title: 'Message on Twitter',
+      icon: <Ionicons name="logo-twitter" size={22} color="#1DA1F2" />,
+      action: () => openLink('https://twitter.com/messages/compose?recipient_id=YOUR_TWITTER_ID'),
+    },
+    {
+      id: 'instagram',
+      title: 'DM on Instagram',
+      icon: <Ionicons name="logo-instagram" size={22} color="#E1306C" />,
+      action: () => openLink('https://instagram.com/zydacare'),
+    },
+    {
+      id: 'email',
+      title: 'Email Support',
+      icon: <Ionicons name="mail-outline" size={22} color="#205295" />,
+      action: () =>
+        openLink('mailto:support@zydacare.com?subject=ZydaCare%20Support%20Request'),
+    },
+    {
+      id: 'call',
+      title: 'Call Hotline',
+      icon: <Ionicons name="call-outline" size={22} color="#67A9AF" />,
+      action: () => openLink('tel:+2349068937365'),
+    },
+  ];
+
+  // 🔹 Additional sections (unchanged)
+  const supportItems: SupportItem[] = [
     {
       id: 'faq',
       title: 'FAQs',
@@ -30,13 +62,13 @@ export default function HelpAndSupportScreen() {
       description: 'Find answers to common questions',
       action: () => router.push('/(doctor)/(pages)/faq'),
     },
-    {
-      id: 'feedback',
-      title: 'Send Feedback',
-      icon: 'thumbs-up-outline',
-      description: 'Share your experience with us',
-      action: () => Linking.openURL('mailto:feedback@zydacare.com'),
-    },
+    // {
+    //   id: 'feedback',
+    //   title: 'Send Feedback',
+    //   icon: 'thumbs-up-outline',
+    //   description: 'Share your experience with us',
+    //   action: () => Linking.openURL('mailto:feedback@zydacare.com'),
+    // },
     {
       id: 'privacy',
       title: 'Privacy Policy',
@@ -53,19 +85,12 @@ export default function HelpAndSupportScreen() {
     },
   ];
 
-  const handleCallSupport = () => {
-    Linking.openURL('tel:+1234567890');
-  };
-
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
       <View className="px-6 py-4 bg-white border-b border-gray-100">
         <View className="flex-row items-center">
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            className="p-2 -ml-2 mr-2"
-          >
+          <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 mr-2">
             <Ionicons name="arrow-back" size={24} color="#1F2937" />
           </TouchableOpacity>
           <Text className="text-xl font-sans-bold text-gray-900">Help & Support</Text>
@@ -73,9 +98,9 @@ export default function HelpAndSupportScreen() {
       </View>
 
       <ScrollView className="flex-1">
-        <View className="px-6 py-6">
+        <View className="px-4 py-6">
           {/* Support Card */}
-          <View className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+          <View className="bg-white rounded-2xl shadow-sm py-6 px-4 mb-6">
             <View className="items-center mb-4">
               <View className="w-16 h-16 bg-primary/10 rounded-full items-center justify-center mb-3">
                 <Ionicons name="headset" size={32} color="#67A9AF" />
@@ -86,22 +111,21 @@ export default function HelpAndSupportScreen() {
               </Text>
             </View>
 
-            <View className="flex-row gap-5 mt-4">
-              <TouchableOpacity 
-                className="flex-1 flex-row items-center justify-center py-3 bg-primary/10 rounded-xl"
-                onPress={() => router.push('/(doctor)/(pages)/supportChat')}
-              >
-                <Ionicons name="chatbubble-ellipses-outline" size={20} color="#67A9AF" />
-                <Text className="text-primary font-sans-bold ml-2">Chat Now</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                className="flex-1 flex-row items-center justify-center py-3 bg-primary/10 rounded-xl"
-                onPress={handleCallSupport}
-              >
-                <Ionicons name="call-outline" size={20} color="#67A9AF" />
-                <Text className="text-primary font-sans-bold ml-2">Call Us</Text>
-              </TouchableOpacity>
+            {/* Contact Options */}
+            <View className="mt-3 space-y-3">
+              {contactOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.id}
+                  onPress={option.action}
+                  className="flex-row items-center bg-gray-50 rounded-xl py-3 px-4"
+                  activeOpacity={0.9}
+                >
+                  <View className="bg-white rounded-full p-2 mr-3 shadow-sm">{option.icon}</View>
+                  <Text className="text-gray-900 font-sans-semibold text-[15px]">
+                    {option.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
@@ -131,9 +155,11 @@ export default function HelpAndSupportScreen() {
 
           {/* Helpful Resources */}
           <View className="mt-8">
-            <Text className="text-base font-sans-bold text-gray-900 mb-4">Helpful Resources</Text>
+            <Text className="text-base font-sans-bold text-gray-900 mb-4">
+              Helpful Resources
+            </Text>
             <View className="space-y-3">
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="bg-white rounded-xl p-4 flex-row items-center"
                 onPress={() => router.push('/(doctor)/(pages)/user-guide')}
               >
@@ -150,7 +176,7 @@ export default function HelpAndSupportScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
               </TouchableOpacity>
-              
+
               <TouchableOpacity className="bg-white rounded-xl p-4 flex-row items-center">
                 <View className="w-10 h-10 rounded-lg bg-purple-50 items-center justify-center mr-4">
                   <Ionicons name="videocam-outline" size={20} color="#8B5CF6" />
@@ -163,7 +189,7 @@ export default function HelpAndSupportScreen() {
             </View>
           </View>
 
-          {/* Bottom Info */}
+          {/* Footer */}
           <View className="mt-10 mb-8 items-center">
             <Text className="text-sm text-gray-500 text-center font-sans">
               ZydaCare v1.0.0

@@ -85,6 +85,12 @@ export default function HelpScreen() {
     }
   };
 
+   const openWhatsApp = () => { 
+    const phoneNumber = '+2349068937365';
+    const url = `https://wa.me/${phoneNumber}`;
+    Linking.openURL(url);
+  };
+
   // Handle category press
   const handleCategoryPress = (categoryId: string) => {
     router.push({
@@ -370,7 +376,7 @@ export default function HelpScreen() {
                   </Text>
                   <TouchableOpacity
                     className="bg-primary rounded-full py-3 items-center flex-row justify-center"
-                    onPress={() => router.push('/(patient)/(pages)/supportChat')}
+                    onPress={openWhatsApp}
                   >
                     <Ionicons name="chatbubble-ellipses" size={18} color="white" />
                     <Text className="text-white font-sans-semibold ml-2">Chat with Support</Text>

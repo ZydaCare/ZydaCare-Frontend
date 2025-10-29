@@ -109,6 +109,12 @@ Our average response time is less than 2 hours.`
     }
   ];
 
+   const openWhatsApp = () => { 
+      const phoneNumber = '+2349068937365';
+      const url = `https://wa.me/${phoneNumber}`;
+      Linking.openURL(url);
+    };
+
   const handleOpenVideo = (videoUrl?: string) => {
     if (videoUrl) {
       Linking.openURL(videoUrl);
@@ -194,7 +200,7 @@ Our average response time is less than 2 hours.`
           </Text>
           <TouchableOpacity 
             className="flex-row items-center justify-center py-3 bg-primary/10 rounded-xl"
-            onPress={() => router.push('/(doctor)/(pages)/supportChat')}
+            onPress={openWhatsApp}
           >
             <Ionicons name="chatbubble-ellipses-outline" size={20} color="#67A9AF" />
             <Text className="text-primary font-sans-bold ml-2">Chat with Support</Text>

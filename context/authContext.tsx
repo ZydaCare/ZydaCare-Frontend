@@ -272,8 +272,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 router.replace('/(doctor)/(tabs)/home');
             } else if (formattedUserData.role === 'patient') {
                 router.replace('/(patient)/(tabs)/home');
-            } else if (formattedUserData.role === 'admin') {
-                router.replace('/(admin)/(tabs)/home');
+            } else if (formattedUserData.role === 'admin' || formattedUserData.role === 'super_admin' || formattedUserData.role === 'support_admin') {
+                router.replace('/(admin)/(tabs)/dashboard');
             }
 
             return response;
@@ -384,8 +384,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     router.replace('/(doctor)/(tabs)/home');
                 } else if (formattedUserData.role === 'patient') {
                     router.replace('/(patient)/(tabs)/home');
-                } else if (formattedUserData.role === 'admin') {
-                    router.replace('/(admin)/(tabs)/home');
+                } else if (formattedUserData.role === 'admin' || formattedUserData.role === 'super_admin' || formattedUserData.role === 'support_admin') {
+                    router.replace('/(admin)/(tabs)/dashboard');
                 }
             } else {
                 setAuthState(prev => ({

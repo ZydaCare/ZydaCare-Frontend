@@ -1,4 +1,4 @@
-import { View, Image, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Image, Text, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import Button from '@/components/ui/Button';
 import { Images } from '@/assets/Images';
 import { useRouter } from "expo-router";
@@ -10,66 +10,81 @@ export default function Welcome() {
   const router = useRouter();
 
   return (
-    <View className='flex-1 bg-white'>
+    <View className="flex-1 bg-white">
       <ScrollView
-        className='flex-1'
-        // contentContainerStyle={styles.scrollContent}
+        className="flex-1"
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Section */}
-        <View className='pt-16 px-[24px] pb-10 items-center'>
-          <View style={styles.logoContainer}>
+        <View className="pt-20 px-6 pb-10 items-center">
+          <View
+            className="w-[110px] h-[110px] rounded-[28px] bg-[#67A9AF] items-center justify-center mb-8 shadow-lg shadow-[#67A9AF]/40"
+          >
             <Image
               source={Images.LogoIcon}
-              style={styles.logo}
+              className="w-[100px] h-[100px]"
               resizeMode="contain"
             />
           </View>
 
-          <Text style={styles.mainTitle} className='font-sans-semibold'>Your Health,{'\n'}Our Priority</Text>
-          <Text style={styles.mainSubtitle} className='font-sans'>
+          <Text className="text-[38px] leading-[46px] text-gray-900 text-center mb-4 font-sans-semibold">
+            Your Health,{'\n'}Our Priority
+          </Text>
+          <Text className="text-[17px] text-gray-500 text-center leading-[26px] px-5 font-sans">
             Experience seamless healthcare management with ZydaCare
           </Text>
         </View>
 
         {/* Info Cards */}
-        <View style={styles.cardsSection}>
-          <View style={styles.infoCard} className='bg-secondary/10'>
-            <View style={styles.iconCircle} className='bg-secondary/20'>
-              <Ionicons name="people" size={28} color="#D65C1E" />
+        <View className="px-6">
+          <View className="flex-row items-center bg-primary/10 border border-[#67A9AF] p-5 rounded-[20px] mb-6">
+            <View className="w-[56px] h-[56px] rounded-[16px] bg-primary/20 items-center justify-center mr-4">
+              <Ionicons name="people" size={28} color="#67A9AF" />
             </View>
-            <View style={styles.cardTextContainer}>
-              <Text style={styles.cardTitle} className='font-sans-semibold'>Expert Doctors</Text>
-              <Text style={styles.cardText} className='font-sans'>Connect with qualified professionals</Text>
-            </View>
-          </View>
-
-          <View style={styles.infoCard} className='bg-secondary/10'>
-            <View style={styles.iconCircle} className='bg-secondary/20'>
-              <Ionicons name="calendar-sharp" size={28} color="#D65C1E" />
-            </View>
-            <View style={styles.cardTextContainer}>
-              <Text style={styles.cardTitle} className='font-sans-semibold'>Easy Scheduling</Text>
-              <Text style={styles.cardText} className='font-sans'>Book appointments in seconds</Text>
+            <View className="flex-1">
+              <Text className="text-[17px] text-gray-900 mb-1 font-sans-semibold">
+                Expert Doctors
+              </Text>
+              <Text className="text-[14px] text-gray-500 leading-[20px] font-sans">
+                Connect with qualified professionals
+              </Text>
             </View>
           </View>
 
-          <View style={styles.infoCard} className='bg-secondary/10'>
-            <View style={styles.iconCircle} className='bg-secondary/20'>
-              <Ionicons name="shield-checkmark" size={28} color="#D65C1E" />
+          <View className="flex-row items-center bg-primary/10 border border-[#67A9AF] p-5 rounded-[20px] mb-6">
+            <View className="w-[56px] h-[56px] rounded-[16px] bg-primary/20 items-center justify-center mr-4">
+              <Ionicons name="calendar-sharp" size={28} color="#67A9AF" />
             </View>
-            <View style={styles.cardTextContainer}>
-              <Text style={styles.cardTitle} className='font-sans-semibold'>Secure & Private</Text>
-              <Text style={styles.cardText} className='font-sans'>Your health data is protected</Text>
+            <View className="flex-1">
+              <Text className="text-[17px] text-gray-900 mb-1 font-sans-semibold">
+                Easy Scheduling
+              </Text>
+              <Text className="text-[14px] text-gray-500 leading-[20px] font-sans">
+                Book appointments in seconds
+              </Text>
+            </View>
+          </View>
+
+          <View className="flex-row items-center bg-primary/10 border border-[#67A9AF] p-5 rounded-[20px] mb-4">
+            <View className="w-[56px] h-[56px] rounded-[16px] bg-primary/20 items-center justify-center mr-4">
+              <Ionicons name="shield-checkmark" size={28} color="#67A9AF" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-[17px] text-gray-900 mb-1 font-sans-semibold">
+                Secure & Private
+              </Text>
+              <Text className="text-[14px] text-gray-500 leading-[20px] font-sans">
+                Your health data is protected
+              </Text>
             </View>
           </View>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View className="h-10" />
       </ScrollView>
 
       {/* Bottom Section */}
-      <View style={styles.bottomContainer}>
+      <View className="px-6 pt-5 pb-8 bg-white border-t border-gray-100">
         <Button
           variant="secondary"
           size="lg"
@@ -77,127 +92,21 @@ export default function Welcome() {
           onPress={() => router.push("/(auth)/signup")}
           className="w-full mb-4"
           textClassName="text-base font-sans-semibold"
-        > 
+        >
           Get Started
         </Button>
 
-        <View style={styles.signInRow}>
-          <Text style={styles.signInText} className='font-sans'>Already have an account? </Text>
+        <View className="flex-row justify-center items-center">
+          <Text className="text-[14px] text-gray-500 font-sans">
+            Already have an account?{' '}
+          </Text>
           <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
-            <Text style={styles.signInLink} className='font-sans-semibold'>Sign In</Text>
+            <Text className="text-[14px] text-[#67A9AF] font-sans-semibold">
+              Sign In
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    // paddingBottom: 20,
-  },
-  heroSection: {
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    alignItems: 'center',
-  },
-  logoContainer: {
-    width: 110,
-    height: 110,
-    borderRadius: 28,
-    backgroundColor: '#67A9AF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-    shadowColor: '#67A9AF',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    // tintColor: '#fff',
-  },
-  mainTitle: {
-    fontSize: 38,
-    // fontWeight: '800',
-    color: '#1F2937',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 46,
-  },
-  mainSubtitle: {
-    fontSize: 17,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 26,
-    paddingHorizontal: 20,
-  },
-  cardsSection: {
-    paddingHorizontal: 24,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    // backgroundColor: '#D65C1E',
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#D65C1E',
-  },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  cardTextContainer: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 17,
-    // fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  cardText: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  bottomContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 32,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  signInRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  signInText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  signInLink: {
-    fontSize: 14,
-    color: '#67A9AF',
-    // fontWeight: '700',
-  },
-});

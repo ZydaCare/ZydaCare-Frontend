@@ -11,7 +11,6 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
-
  
 export async function registerForPushNotificationsAsync() {
   if (!Device.isDevice) {

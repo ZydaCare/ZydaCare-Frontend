@@ -17,10 +17,13 @@ export interface User {
   city: string;
   address: string;
   zipCode: string;
-  role: 'patient' | 'doctor';
+  role: 'patient' | 'doctor' | 'support_admin' | 'admin' | 'super_admin';
   isEmailVerified: boolean;
   createdAt: string;
   updatedAt: string;
+  isAdmin: boolean;
+  isSupportAdmin: boolean;
+  isActive: boolean;
 }
 
 export interface AuthState {
@@ -41,7 +44,7 @@ export interface RegisterData {
   lastName: string;
   email: string;
   password: string;
-  role: 'patient' | 'doctor';
+  role: 'patient' | 'doctor' | 'support_admin' | 'admin' | 'super_admin';
 }
 
 export interface ForgotPasswordData {

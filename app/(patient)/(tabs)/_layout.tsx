@@ -196,6 +196,7 @@ export default function RootLayout() {
                     ),
                 }}
             />
+
             <Tabs.Screen
                 name="profile"
                 options={{

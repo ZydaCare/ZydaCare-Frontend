@@ -19,8 +19,8 @@ export default function App() {
               router.replace('/(doctor)/(tabs)/home');
             } else if (user.role === 'patient') {
               router.replace('/(patient)/(tabs)/home');
-            } else if (user.role === 'admin') {
-              router.replace('/(admin)/(tabs)/home');
+            } else if (user.role === 'admin' || user.role === 'super_admin' || user.role === 'support_admin') {
+              router.replace('/(admin)/(tabs)/dashboard');
             }
           } else {
             // User is not logged in, redirect to welcome screen
