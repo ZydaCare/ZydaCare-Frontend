@@ -28,6 +28,7 @@ export default function Signup() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [agreeToTerms, setAgreeToTerms] = useState(false);
     const { register } = useAuth();
     const { showToast } = useToast();
 
@@ -48,6 +49,10 @@ export default function Signup() {
     };
 
     const handleSignup = async () => {
+        if (!agreeToTerms) {
+            showToast('Please accept the Privacy Policy and Terms & Conditions', 'error');
+            return;
+        }
         if (!validateForm()) return;
         try {
             setLoading(true);
@@ -167,6 +172,37 @@ export default function Signup() {
                             <Text className="text-gray-600 text-xs mb-6">
                                 Password must be at least 8 characters long
                             </Text>
+
+                            {/* Privacy Policy / Terms & Conditions */}
+                            <View className="flex-row items-center mb-6">
+                                <TouchableOpacity 
+                                    className="p-1"
+                                    onPress={() => setAgreeToTerms(!agreeToTerms)}
+                                >
+                                    <View className={`w-5 h-5 border-2 ${agreeToTerms ? 'bg-primary border-primary' : 'border-gray-300'} rounded-sm items-center justify-center`}>
+                                        {agreeToTerms && (
+                                            <Ionicons name="checkmark" size={14} color="white" />
+                                        )}
+                                    </View>
+                                </TouchableOpacity>
+                                <Text className="text-gray-600 font-sans text-[12px] ml-2 flex-1">
+                                    I agree to the{' '}
+                                    <Text 
+                                        className="text-primary font-sans-medium"
+                                        onPress={() => router.push('/(policy)/privacyPolicy')}
+                                    >
+                                        Privacy Policy
+                                    </Text>{' '}
+                                    and{' '}
+                                    <Text 
+                                        className="text-primary font-sans-medium"
+                                        onPress={() => router.push('/(policy)/terms&Condition')}
+                                    >
+                                        Terms & Conditions
+                                    </Text>
+                                </Text>
+                            </View>
+                            
 
                             {/* Signup Button */}
                             <TouchableOpacity

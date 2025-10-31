@@ -56,6 +56,8 @@ function RootLayoutNav() {
       <Stack.Screen name="(patient)" />
       <Stack.Screen name="(doctor)" />
       <Stack.Screen name="(admin)" />
+      <Stack.Screen name="(policy)/privacyPolicy" />
+      <Stack.Screen name="(policy)/terms&Condition" />
     </Stack>
   );
 }
