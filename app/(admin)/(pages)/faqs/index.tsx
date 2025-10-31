@@ -496,36 +496,83 @@ const FAQListScreen = () => {
   );
 };
 
-// Stat Card Component
+// Stat Card Component with Modern Design
 interface StatCardProps {
-  icon: React.ReactNode;
+  icon: string;
   label: string;
   value: string | number;
   color?: 'primary' | 'blue' | 'green' | 'amber' | 'red';
 }
 
 const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color = 'primary' }) => {
-  // Define color classes based on the color prop
-  const bgColor = color === 'primary' ? 'bg-primary/10' : 
-                 color === 'blue' ? 'bg-blue-100' :
-                 color === 'green' ? 'bg-green-100' :
-                 color === 'amber' ? 'bg-amber-100' : 'bg-red-100';
-                 
-  const textColor = color === 'primary' ? 'text-primary' : 
-                   color === 'blue' ? 'text-blue-700' :
-                   color === 'green' ? 'text-green-700' :
-                   color === 'amber' ? 'text-amber-700' : 'text-red-700';
-  
+  // Define color schemes for different card types with hex colors for icons
+  const colorSchemes = {
+    primary: {
+      bg: 'bg-gradient-to-br from-primary/5 to-primary/10',
+      iconBg: 'bg-primary/10',
+      iconColor: '#3B82F6', // blue-500
+      text: 'text-gray-700',
+      value: 'text-gray-900',
+      border: 'border-l-4 border-primary',
+    },
+    blue: {
+      bg: 'bg-gradient-to-br from-blue-50 to-blue-100',
+      iconBg: 'bg-blue-100',
+      iconColor: '#2563EB', // blue-600
+      text: 'text-blue-700',
+      value: 'text-blue-900',
+      border: 'border-l-4 border-blue-500',
+    },
+    green: {
+      bg: 'bg-gradient-to-br from-green-50 to-green-100',
+      iconBg: 'bg-green-100',
+      iconColor: '#16A34A', // green-600
+      text: 'text-green-700',
+      value: 'text-green-900',
+      border: 'border-l-4 border-green-500',
+    },
+    amber: {
+      bg: 'bg-gradient-to-br from-amber-50 to-amber-100',
+      iconBg: 'bg-amber-100',
+      iconColor: '#D97706', // amber-600
+      text: 'text-amber-700',
+      value: 'text-amber-900',
+      border: 'border-l-4 border-amber-500',
+    },
+    red: {
+      bg: 'bg-gradient-to-br from-red-50 to-red-100',
+      iconBg: 'bg-red-100',
+      iconColor: '#DC2626', // red-600
+      text: 'text-red-700',
+      value: 'text-red-900',
+      border: 'border-l-4 border-red-500',
+    },
+  };
+
+  const scheme = colorSchemes[color];
+
   return (
-    <View className="w-1/2 p-2">
-      <View className={`p-4 rounded-xl ${bgColor}`}>
-        <View className="flex-row items-center justify-between">
-          <View className="p-2 rounded-lg bg-white/20">
-            <Ionicons name="help-circle" size={20} color={textColor} />
+    <View className="w-1/2 p-1.5">
+      <View className={`${scheme.bg} rounded-xl p-4 ${scheme.border} shadow-sm hover:shadow-md transition-shadow duration-200`}>
+        <View className="flex-row items-start justify-between">
+          <View className={`p-2.5 rounded-lg ${scheme.iconBg} shadow-sm`}>
+            <Ionicons name={icon as any} size={20} color={scheme.iconColor} />
           </View>
-          <Text className={`text-xs font-sans-medium ${textColor} opacity-80`}>{label}</Text>
+          <View className="items-end">
+            <Text className={`text-2xl font-sans-bold ${scheme.value}`}>
+              {value}
+            </Text>
+            <Text className={`text-xs font-sans-medium ${scheme.text} mt-1`}>
+              {label}
+            </Text>
+          </View>
         </View>
-        <Text className={`mt-2 text-2xl font-sans-bold ${textColor}`}>{value}</Text>
+        <View className="mt-3 h-1 w-full bg-white/30 rounded-full overflow-hidden">
+          <View 
+            className={`h-full ${scheme.border.replace('border-l-4', 'bg-')} rounded-full`}
+            style={{ width: '100%' }}
+          />
+        </View>
       </View>
     </View>
   );
