@@ -1,11 +1,11 @@
 import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import { View } from "react-native";
 
 export default function RootLayout() {
     return (
-        <Tabs 
-            screenOptions={{ 
+        <Tabs
+            screenOptions={{
                 headerShown: false,
                 tabBarStyle: {
                     backgroundColor: '#f8fafc',
@@ -30,8 +30,8 @@ export default function RootLayout() {
                 },
             }}
         >
-            <Tabs.Screen 
-                name="dashboard" 
+            <Tabs.Screen
+                name="dashboard"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <View className="items-center justify-center">
@@ -40,10 +40,10 @@ export default function RootLayout() {
                                     elevation: focused ? 8 : 0,
                                 }}
                             >
-                                <Ionicons 
-                                    name={focused ? "home" : "home-outline"} 
-                                    size={24} 
-                                    color={focused ? 'white' : color} 
+                                <Ionicons
+                                    name={focused ? "home" : "home-outline"}
+                                    size={24}
+                                    color={focused ? 'white' : color}
                                 />
                             </View>
                             {focused && (
@@ -53,8 +53,8 @@ export default function RootLayout() {
                     ),
                 }}
             />
-            <Tabs.Screen 
-                name="patients" 
+            <Tabs.Screen
+                name="patients"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <View className="items-center justify-center">
@@ -63,10 +63,10 @@ export default function RootLayout() {
                                     elevation: focused ? 8 : 0,
                                 }}
                             >
-                                <Ionicons 
-                                    name={focused ? "people" : "people-outline"} 
-                                    size={24} 
-                                    color={focused ? 'white' : color} 
+                                <Ionicons
+                                    name={focused ? "people" : "people-outline"}
+                                    size={24}
+                                    color={focused ? 'white' : color}
                                 />
                             </View>
                             {focused && (
@@ -76,8 +76,8 @@ export default function RootLayout() {
                     ),
                 }}
             />
-            <Tabs.Screen 
-                name="doctors" 
+            <Tabs.Screen
+                name="doctors"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <View className="items-center justify-center">
@@ -86,10 +86,10 @@ export default function RootLayout() {
                                     elevation: focused ? 8 : 0,
                                 }}
                             >
-                                <Ionicons 
-                                    name={focused ? "people" : "people-outline"} 
-                                    size={24} 
-                                    color={focused ? 'white' : color} 
+                                <FontAwesome6
+                                    name="user-doctor"
+                                    size={24}
+                                    color={focused ? 'white' : color}
                                 />
                             </View>
                             {focused && (
@@ -99,8 +99,8 @@ export default function RootLayout() {
                     ),
                 }}
             />
-            <Tabs.Screen 
-                name="appointments" 
+            <Tabs.Screen
+                name="appointments"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <View className="items-center justify-center">
@@ -109,10 +109,10 @@ export default function RootLayout() {
                                     elevation: focused ? 8 : 0,
                                 }}
                             >
-                                <Ionicons 
-                                    name={focused ? "calendar" : "calendar-outline"} 
-                                    size={24} 
-                                    color={focused ? 'white' : color} 
+                                <Ionicons
+                                    name={focused ? "calendar" : "calendar-outline"}
+                                    size={24}
+                                    color={focused ? 'white' : color}
                                 />
                             </View>
                             {focused && (

@@ -88,13 +88,29 @@ export const suspendDoctor = async (id: string, reason?: string) => {
   return response.data.data;
 };
 
+export const unsuspendDoctor = async (id: string) => {
+  const token = await AsyncStorage.getItem('token');
+  const response = await axios.patch(
+    `${BASE_URL}/admin/doctors/${id}/unsuspend`,
+    {},
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return response.data.data;
+};
+
 export const deleteDoctor = async (id: string) => {
   const token = await AsyncStorage.getItem('token');
-  const response = await axios.delete(`${BASE_URL}/admin/doctors/${id}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+  const response = await axios.delete(`${BASE_URL}/admin/doctors/${id}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
   return response.data.data;
 };

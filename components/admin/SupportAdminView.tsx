@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { Sidebar } from './SideBar';
 
 interface User {
     _id: string;
@@ -64,8 +65,8 @@ const UserItem = ({ user, type, onPress }: UserItemProps) => {
                 <View style={styles.userLeftSection}>
                     <View style={styles.avatarContainer}>
                         {getProfileImage() ? (
-                            <Image 
-                                source={getProfileImage()} 
+                            <Image
+                                source={getProfileImage()}
                                 style={styles.avatarImage}
                                 resizeMode="cover"
                             />
@@ -131,6 +132,7 @@ export function SupportAdminView({ onUserPress }: { onUserPress?: (id: string, t
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const { user } = useAuth();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const fetchUsers = useCallback(async (tabType: 'doctors' | 'patients', pageNum: number, isRefresh = false) => {
         try {
@@ -266,9 +268,13 @@ export function SupportAdminView({ onUserPress }: { onUserPress?: (id: string, t
                         <Text style={styles.adminName} className='font-sans-medium'>{user?.firstName} {user?.lastName}</Text>
                         <Text style={styles.headerSubtitle} className='font-sans'>Support Dashboard</Text>
                     </View>
-                    <View style={styles.headerIcon}>
-                        <Ionicons name="shield-checkmark" size={32} color="#FFFFFF" />
-                    </View>
+                    <TouchableOpacity
+                        style={styles.headerIcon}
+                        onPress={() => setSidebarOpen(true)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="menu" size={32} color="#FFFFFF" />
+                    </TouchableOpacity>
                 </View>
             </LinearGradient>
 
@@ -306,10 +312,10 @@ export function SupportAdminView({ onUserPress }: { onUserPress?: (id: string, t
                     onPress={() => setActiveTab('doctors')}
                     activeOpacity={0.7}
                 >
-                    <Ionicons 
-                        name="medical" 
-                        size={20} 
-                        color={activeTab === 'doctors' ? '#67A9AF' : '#9CA3AF'} 
+                    <Ionicons
+                        name="medical"
+                        size={20}
+                        color={activeTab === 'doctors' ? '#67A9AF' : '#9CA3AF'}
                     />
                     <Text style={[styles.tabText, activeTab === 'doctors' && styles.tabTextActive]} className='font-sans'>
                         Doctors
@@ -320,10 +326,10 @@ export function SupportAdminView({ onUserPress }: { onUserPress?: (id: string, t
                     onPress={() => setActiveTab('patients')}
                     activeOpacity={0.7}
                 >
-                    <Ionicons 
-                        name="people" 
-                        size={20} 
-                        color={activeTab === 'patients' ? '#67A9AF' : '#9CA3AF'} 
+                    <Ionicons
+                        name="people"
+                        size={20}
+                        color={activeTab === 'patients' ? '#67A9AF' : '#9CA3AF'}
                     />
                     <Text style={[styles.tabText, activeTab === 'patients' && styles.tabTextActive]} className='font-sans'>
                         Patients
@@ -411,6 +417,8 @@ export function SupportAdminView({ onUserPress }: { onUserPress?: (id: string, t
                 )}
             </ScrollView>
             <View className='h-20' />
+
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         </View>
     );
 }

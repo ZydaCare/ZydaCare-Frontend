@@ -931,7 +931,7 @@ const PatientDetailsScreen = () => {
       </ScrollView>
 
       {/* Fixed Action Buttons */}
-      {user?.role === 'admin' || user?.role === 'super_admin' && (
+      {(user?.role === 'admin' || user?.role === 'super_admin') && (
         <View className="bg-white border-t border-gray-200 px-4 py-3">
           {patient.isActive ? (
             <TouchableOpacity

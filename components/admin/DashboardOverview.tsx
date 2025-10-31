@@ -50,14 +50,16 @@ const defaultDashboardStats: DashboardStats = {
 
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
-    case 'completed':
+    case 'paid':
       return { bg: 'bg-emerald-500', text: 'text-emerald-700', lightBg: 'bg-emerald-50' };
     case 'pending':
       return { bg: 'bg-amber-500', text: 'text-amber-700', lightBg: 'bg-amber-50' };
+    case 'accepted':
+      return { bg: 'bg-blue-500', text: 'text-blue-700', lightBg: 'bg-blue-50' };
     case 'cancelled':
       return { bg: 'bg-rose-500', text: 'text-rose-700', lightBg: 'bg-rose-50' };
-    case 'in_progress':
-      return { bg: 'bg-blue-500', text: 'text-blue-700', lightBg: 'bg-blue-50' };
+    case 'awaiting_payment':
+      return { bg: 'bg-primary', text: 'text-primary', lightBg: 'bg-primary/20' };
     default:
       return { bg: 'bg-gray-400', text: 'text-gray-700', lightBg: 'bg-gray-50' };
   }
@@ -104,7 +106,7 @@ export function DashboardOverview() {
   const [data, setData] = useState<DashboardStats>(defaultDashboardStats);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
@@ -147,7 +149,7 @@ export function DashboardOverview() {
     return (
       <View className="flex-1 items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
         <ActivityIndicator size="large" color="#67A9AF" />
-        <Text className="text-gray-600 mt-4 font-sans-medium">Loading dashboard...</Text>
+        {/* <Text className="text-gray-600 mt-4 font-sans-medium">Loading dashboard...</Text> */}
       </View>
     );
   }
@@ -253,6 +255,14 @@ export function DashboardOverview() {
     greetingIcon = '🌙';
   }
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
@@ -283,8 +293,9 @@ export function DashboardOverview() {
             <Text className="text-white text-3xl font-sans-bold mb-2">{user?.firstName} {user?.lastName}</Text>
             <Text className="text-white/90 font-sans-medium">Here's your ZydaCare overview</Text>
           </View>
-          <TouchableOpacity className="bg-white/20 p-3 rounded-full backdrop-blur">
-            <Ionicons name="notifications-outline" size={24} color="white" />
+          <TouchableOpacity className="bg-white/20 p-3 rounded-full backdrop-blur flex-row items-center gap-2" onPress={handleLogout}>
+            <Ionicons name="log-out" size={20} color="white" />
+            <Text className="text-white font-sans-medium">Logout</Text>
           </TouchableOpacity>
         </View>
 
@@ -350,7 +361,7 @@ export function DashboardOverview() {
               <Text className="text-xl font-sans-bold text-gray-800">Booking Analytics</Text>
               <Text className="text-gray-500 text-sm font-sans mt-1">Status breakdown</Text>
             </View>
-            <TouchableOpacity className="bg-primary/10 px-4 py-2 rounded-xl">
+            <TouchableOpacity className="bg-primary/10 px-4 py-2 rounded-xl" onPress={() => router.push('/(admin)/(pages)/analytics')}>
               <Text className="text-primary text-sm font-sans-bold">View All</Text>
             </TouchableOpacity>
           </View>
@@ -428,15 +439,15 @@ export function DashboardOverview() {
         <View className="mb-6 mt-5">
           <Text className="text-xl font-sans-bold text-gray-800 mb-4">Quick Actions</Text>
           <View className="flex-row flex-wrap gap-3">
-            {user?.role === 'admin' || user?.role === 'super_admin' && (
-              <TouchableOpacity className="px-10 bg-white rounded-2xl p-4 shadow-2xl items-center" style={{ elevation: 2 }}>
+            {(user?.role === 'admin' || user?.role === 'super_admin') && (
+              <TouchableOpacity className="px-10 bg-white rounded-2xl p-4 shadow-2xl items-center" style={{ elevation: 2 }} onPress={() => router.push('/(admin)/(pages)/payments')}>
                 <View className="bg-primary/10 p-3 rounded-xl mb-2">
                   <MaterialIcons name="payment" size={24} color="#67A9AF" />
                 </View>
                 <Text className="text-gray-700 font-sans-semibold text-xs text-center">Payment</Text>
               </TouchableOpacity>
             )}
-            {user?.role === 'admin' || user?.role === 'super_admin' && (
+            {(user?.role === 'admin' || user?.role === 'super_admin') && (
               <TouchableOpacity className="px-10 bg-white rounded-2xl p-4 shadow-2xl items-center" style={{ elevation: 2 }} onPress={() => router.push('/(admin)/(pages)/analytics')}>
                 <View className="bg-orange-500/10 p-3 rounded-xl mb-2">
                   <Ionicons name="document-text" size={24} color="#F97316" />
@@ -444,21 +455,21 @@ export function DashboardOverview() {
                 <Text className="text-gray-700 font-sans-semibold text-xs text-center">Analytics</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity className="px-10 bg-white rounded-2xl p-4 shadow-2xl items-center" style={{ elevation: 2 }}>
+            <TouchableOpacity className="px-10 bg-white rounded-2xl p-4 shadow-2xl items-center" style={{ elevation: 2 }} onPress={() => router.push('/(admin)/(pages)/settings')}>
               <View className="bg-indigo-500/10 p-3 rounded-xl mb-2">
                 <Ionicons name="settings" size={24} color="#6366F1" />
               </View>
               <Text className="text-gray-700 font-sans-semibold text-xs text-center">Settings</Text>
             </TouchableOpacity>
-            <TouchableOpacity className="px-10 bg-white rounded-2xl p-4 shadow-2xl items-center" style={{ elevation: 2 }}>
-              <View className="bg-indigo-500/10 p-3 rounded-xl mb-2">
-                <Ionicons name="help-circle" size={24} color="#6366F1" />
+            <TouchableOpacity className="px-10 bg-white rounded-2xl p-4 shadow-2xl items-center" style={{ elevation: 2 }} onPress={() => router.push('/(admin)/(pages)/faqs')}>
+              <View className="bg-gray-500/10 p-3 rounded-xl mb-2">
+                <Ionicons name="help-circle" size={24} color="#333" />
               </View>
               <Text className="text-gray-700 font-sans-semibold text-xs text-center">FAQs</Text>
             </TouchableOpacity>
-            <TouchableOpacity className="px-10 bg-white rounded-2xl p-4 shadow-2xl items-center" style={{ elevation: 2 }}>
-              <View className="bg-indigo-500/10 p-3 rounded-xl mb-2">
-                <Ionicons name="notifications" size={24} color="#6366F1" />
+            <TouchableOpacity className="px-8 bg-white rounded-2xl p-4 shadow-2xl items-center" style={{ elevation: 2 }} onPress={() => router.push('/(admin)/(pages)/notifications')}>
+              <View className="bg-emerald-500/10 p-3 rounded-xl mb-2">
+                <Ionicons name="notifications" size={24} color="#10B981" />
               </View>
               <Text className="text-gray-700 font-sans-semibold text-xs text-center">Notifications</Text>
             </TouchableOpacity>

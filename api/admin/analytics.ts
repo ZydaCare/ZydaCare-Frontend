@@ -44,8 +44,8 @@ export interface RevenueAnalytics {
 
 export interface AppointmentAnalytics {
   status: {
-    completed: number;
-    pending: number;
+    paid: number;
+    awaiting_payment: number;
     cancelled: number;
   };
   total: number;
@@ -161,8 +161,8 @@ const defaultRevenueAnalytics: RevenueAnalytics = {
 
 const defaultAppointmentAnalytics: AppointmentAnalytics = {
   status: {
-    completed: 0,
-    pending: 0,
+    paid: 0,
+    awaiting_payment: 0,
     cancelled: 0,
   },
   total: 0,

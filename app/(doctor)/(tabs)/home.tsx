@@ -324,7 +324,7 @@ export default function DoctorHome() {
                 title: 'Availability',
                 icon: 'time',
                 color: '#F59E0B',
-                onPress: () => router.push('/(doctor)/availability'),
+                onPress: () => router.push('/(doctor)/(pages)/schedule-availability'),
               },
               {
                 title: 'Earnings',
@@ -333,10 +333,10 @@ export default function DoctorHome() {
                 onPress: () => router.push('/(doctor)/(tabs)/earnings'),
               },
               {
-                title: 'Messages',
-                icon: 'chatbubbles',
+                title: 'FAQ',
+                icon: 'help-circle-outline',
                 color: '#3B82F6',
-                onPress: () => router.push('/(doctor)/messages'),
+                onPress: () => router.push('/(doctor)/(pages)/faq'),
               },
               {
                 title: 'Profile',

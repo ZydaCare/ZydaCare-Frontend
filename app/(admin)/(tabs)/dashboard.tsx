@@ -6,13 +6,13 @@ import { SupportAdminView } from '@/components/admin/SupportAdminView';
 export default function DashboardScreen() {
   const { user, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#3b82f6" />
-      </View>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <View className="flex-1 items-center justify-center">
+  //       <ActivityIndicator size="large" color="#67A9AF" />
+  //     </View>
+  //   );
+  // }
 
   // Check if user is support admin
   const isSupportAdmin = user?.role === 'support_admin';
@@ -26,7 +26,7 @@ export default function DashboardScreen() {
         <DashboardOverview />
       ) : (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#3b82f6" />
+          <ActivityIndicator size="large" color="#67A9AFr" />
         </View>
       )}
 

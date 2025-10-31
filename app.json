@@ -173,7 +173,8 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-maps"
     ],
     "experiments": {
       "typedRoutes": true,

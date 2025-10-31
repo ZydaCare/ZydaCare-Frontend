@@ -101,7 +101,8 @@ export default function AnalyticsScreen() {
           </TouchableOpacity> */}
                 </View>
                 {analytics?.overview?.recentUsers?.map((user: any, index: number) => (
-                    <View
+                    <TouchableOpacity
+                        onPress={() => router.push(`/(admin)/(pages)/patient/${user._id}`)}
                         key={user._id || index}
                         className={`py-3 ${index < analytics.overview.recentUsers.length - 1 ? 'border-b border-gray-100' : ''}`}
                     >
@@ -123,7 +124,7 @@ export default function AnalyticsScreen() {
                                 {format(new Date(user.createdAt), 'MMM d')}
                             </Text>
                         </View>
-                    </View>
+                    </TouchableOpacity>
                 ))}
             </View>
 
@@ -136,7 +137,8 @@ export default function AnalyticsScreen() {
           </TouchableOpacity> */}
                 </View>
                 {analytics?.overview?.recentTransactions?.map((txn: any, index: number) => (
-                    <View
+                    <TouchableOpacity
+                        onPress={() => router.push(`/(admin)/(pages)/transactions/${txn._id}`)}
                         key={txn._id || index}
                         className={`py-3 ${index < analytics.overview.recentTransactions.length - 1 ? 'border-b border-gray-100' : ''}`}
                     >
@@ -165,7 +167,7 @@ export default function AnalyticsScreen() {
                                 ₦{txn.amount?.toLocaleString()}
                             </Text>
                         </View>
-                    </View>
+                    </TouchableOpacity>
                 ))}
             </View>
         </View>
@@ -426,8 +428,8 @@ export default function AnalyticsScreen() {
 
         // Get status counts
         const statusDist = appointmentData?.statusDistribution || [];
-        const completedCount = statusDist.find((s: any) => s._id === 'completed')?.count || 0;
-        const pendingCount = statusDist.find((s: any) => s._id === 'pending')?.count || 0;
+        const completedCount = statusDist.find((s: any) => s._id === 'paid')?.count || 0;
+        const pendingCount = statusDist.find((s: any) => s._id === 'awaiting_payment')?.count || 0;
         const cancelledCount = statusDist.find((s: any) => s._id === 'cancelled')?.count || 0;
         const confirmedCount = statusDist.find((s: any) => s._id === 'confirmed')?.count || 0;
         const totalAppointments = statusDist.reduce((sum: number, s: any) => sum + s.count, 0);
@@ -439,7 +441,7 @@ export default function AnalyticsScreen() {
                     {[
                         { label: 'Total', value: totalAppointments, icon: 'calendar', color: '#3B82F6', bgColor: '#EFF6FF' },
                         { label: 'Completed', value: completedCount, icon: 'checkmark-done', color: '#10B981', bgColor: '#ECFDF5' },
-                        { label: 'Pending', value: pendingCount, icon: 'time', color: '#F59E0B', bgColor: '#FFFBEB' },
+                        { label: 'Awaiting Payment', value: pendingCount, icon: 'time', color: '#F59E0B', bgColor: '#FFFBEB' },
                         { label: 'Cancelled', value: cancelledCount, icon: 'close-circle', color: '#EF4444', bgColor: '#FEF2F2' },
                     ].map((stat, index) => (
                         <View key={index} className="w-1/2 px-2 mb-4">
@@ -520,13 +522,13 @@ export default function AnalyticsScreen() {
                                 <View className="flex-row items-center space-x-2">
                                     <View className="flex-1">
                                         <Text className="text-xs text-gray-500 font-sans mb-1">
-                                            Completed: {doctor.completed}
+                                            Completed: {doctor.paid}
                                         </Text>
                                         <View className="w-full bg-gray-100 rounded-full h-1.5">
                                             <View
                                                 className="h-1.5 rounded-full bg-green-500"
                                                 style={{
-                                                    width: `${doctor.totalAppointments > 0 ? (doctor.completed / doctor.totalAppointments) * 100 : 0}%`
+                                                    width: `${doctor.totalAppointments > 0 ? (doctor.paid / doctor.totalAppointments) * 100 : 0}%`
                                                 }}
                                             />
                                         </View>
@@ -565,11 +567,11 @@ export default function AnalyticsScreen() {
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
             <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-                <View className="px-6 pt-6 pb-4">
+                <View className="px-6 pt-2 pb-4">
                     <View className="mb-6 flex-row items-center gap-2">
-                        <TouchableOpacity onPress={() => router.back()}>
+                        {/* <TouchableOpacity onPress={() => router.back()}>
                             <Ionicons name="arrow-back" size={24} color="black" />
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                         <View>
                             <Text className="text-2xl font-sans-bold text-gray-900">Analytics Dashboard</Text>
                             <Text className="text-gray-500 font-sans">Overview of your platform's performance</Text>

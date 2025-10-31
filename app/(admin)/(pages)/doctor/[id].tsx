@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons, Ionicons, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
-import { getDoctor, approveDoctor, rejectDoctor, suspendDoctor, deleteDoctor } from '@/api/admin/doctors';
+import { getDoctor, approveDoctor, rejectDoctor, suspendDoctor, deleteDoctor, unsuspendDoctor } from '@/api/admin/doctors';
 import { Doctor as DoctorType } from '@/types/Doctor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/context/authContext';
@@ -113,6 +113,16 @@ const DoctorDetailsScreen = () => {
       showToast('Failed to suspend doctor', 'error');
     }
   };
+
+  const handleUnsuspendDoctor = async () => {
+    try {
+      await unsuspendDoctor(doctor?._id!);
+      showToast('Doctor has been unsuspended', 'success');
+      router.back();
+    } catch (error) {
+      showToast('Failed to unsuspend doctor', 'error');
+    }
+  }
 
   const handleDelete = () => {
     setDeleteModalVisible(true);
@@ -818,7 +828,7 @@ const DoctorDetailsScreen = () => {
       </ScrollView>
 
       {/* Fixed Action Buttons */}
-      {user?.role === 'admin' || user?.role === 'super_admin' && (
+      {(user?.role === 'admin' || user?.role === 'super_admin') && (
         <View className="bg-white border-t border-gray-200 px-4 py-3">
           {doctor.status === 'pending' ? (
             <View className="flex-row space-x-3">
@@ -839,13 +849,22 @@ const DoctorDetailsScreen = () => {
             </View>
           ) : (
             <View className="flex-row space-x-3">
-              {doctor.status !== 'suspended' && (
+              {doctor.isActive === true && (
                 <TouchableOpacity
                   onPress={handleSuspend}
                   className="flex-1 bg-secondary py-3.5 rounded-xl items-center flex-row justify-center mr-2 shadow-sm"
                 >
                   <Ionicons name="pause-circle" size={20} color="white" />
                   <Text className="text-white font-sans-bold ml-2">Suspend</Text>
+                </TouchableOpacity>
+              )}
+              {doctor.isActive === false && (
+                <TouchableOpacity
+                  onPress={handleUnsuspendDoctor}
+                  className="flex-1 bg-secondary py-3.5 rounded-xl items-center flex-row justify-center mr-2 shadow-sm"
+                >
+                  <Ionicons name="play-circle" size={20} color="white" />
+                  <Text className="text-white font-sans-bold ml-2">Unsuspend</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
