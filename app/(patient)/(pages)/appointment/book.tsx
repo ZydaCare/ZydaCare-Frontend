@@ -109,17 +109,25 @@ export default function BookAppointmentScreen() {
       showToast('Authentication required', 'error');
       return;
     }
-    
+
     try {
       setSharingProfile(true);
       const res = await shareProfile(token);
+
       if (!res?.success) {
         throw new Error(res?.message || 'Failed to share profile');
       }
+
       showToast('Profile shared successfully with doctor', 'success');
       setShareProfileWithDoctor(true);
     } catch (err: any) {
-      showToast(err?.message || 'Failed to share profile', 'error');
+      console.error('Profile share error:', err);
+      showToast(
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to share profile',
+        'error'
+      );
       setShareProfileWithDoctor(false);
     } finally {
       setSharingProfile(false);
@@ -131,16 +139,16 @@ export default function BookAppointmentScreen() {
 
     try {
       setSubmitting(true);
-      
-      // If user opted to share profile, do it before booking
-      if (shareProfileWithDoctor && !sharingProfile) {
-        try {
-          await shareProfile(token);
-        } catch (err) {
-          console.log('Profile share during booking failed:', err);
-          // Don't block booking if profile share fails
-        }
-      }
+
+      // // If user opted to share profile, do it before booking
+      // if (shareProfileWithDoctor && !sharingProfile) {
+      //   try {
+      //     await shareProfile(token);
+      //   } catch (err) {
+      //     console.log('Profile share during booking failed:', err);
+      //     // Don't block booking if profile share fails
+      //   }
+      // }
 
       const payload = {
         doctorId,
@@ -178,6 +186,8 @@ export default function BookAppointmentScreen() {
       setSubmitting(false);
     }
   };
+
+
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -363,26 +373,25 @@ export default function BookAppointmentScreen() {
         {/* Section: Share Profile */}
         <View className="bg-white mx-4 mt-4 rounded-2xl p-5 shadow-sm">
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Share Your Profile</Text>
-          
+
           <View className="bg-blue-50 p-4 rounded-xl mb-4">
             <View className="flex-row items-start gap-2">
               <Ionicons name="information-circle" size={20} color="#3B82F6" />
-              <Text className="text-xs font-sans text-blue-700 flex-1">
-                Sharing your complete profile helps the doctor provide better care by giving them access to your full medical history and records.
+              <Text className="text-[11.5px] font-sans text-blue-700 flex-1">
+                Click on the share profile button. By sharing your complete profile helps the doctor provide better care by giving them access to your full medical history and records.
               </Text>
             </View>
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={handleShareProfile}
             disabled={sharingProfile || shareProfileWithDoctor}
-            className={`flex-row items-center justify-center gap-2 py-3.5 rounded-xl ${
-              shareProfileWithDoctor 
-                ? 'bg-green-50 border border-green-200' 
-                : sharingProfile 
-                ? 'bg-gray-100' 
-                : 'bg-[#67A9AF]'
-            }`}
+            className={`flex-row items-center justify-center gap-2 py-3.5 rounded-xl ${shareProfileWithDoctor
+                ? 'bg-green-50 border border-green-200'
+                : sharingProfile
+                  ? 'bg-gray-100'
+                  : 'bg-[#67A9AF]'
+              }`}
           >
             {sharingProfile ? (
               <>
@@ -416,11 +425,15 @@ export default function BookAppointmentScreen() {
         <View className="bg-white mx-4 mt-4 rounded-2xl p-5 shadow-sm">
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Declarations</Text>
           <TouchableOpacity onPress={() => setIsAccurate((v) => !v)} className="flex-row items-start gap-3 mb-3">
-            <View className={`w-5 h-5 rounded border ${isAccurate ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`} />
+            <View className={`w-5 h-5 rounded border ${isAccurate ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`} >
+               <Ionicons name="checkmark" size={16} color="#fff" />
+            </View>
             <Text className="text-sm font-sans text-gray-700 flex-1">I confirm that the information provided is accurate to the best of my knowledge.</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setConsentToShare((v) => !v)} className="flex-row items-start gap-3">
-            <View className={`w-5 h-5 rounded border ${consentToShare ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`} />
+            <View className={`w-5 h-5 rounded border ${consentToShare ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`}>
+               <Ionicons name="checkmark" size={16} color="#fff" />
+            </View>
             <Text className="text-sm font-sans text-gray-700 flex-1">I consent to ZydaCare sharing this information securely with the attending doctor.</Text>
           </TouchableOpacity>
         </View>
@@ -430,10 +443,10 @@ export default function BookAppointmentScreen() {
 
       {/* Footer */}
       <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100">
-        <TouchableOpacity 
-          disabled={!canSubmit || submitting} 
-          onPress={handleSubmit} 
-          className="py-3.5 rounded-xl items-center justify-center" 
+        <TouchableOpacity
+          disabled={!canSubmit || submitting}
+          onPress={handleSubmit}
+          className="py-3.5 rounded-xl items-center justify-center"
           style={{ backgroundColor: canSubmit ? '#67A9AF' : '#9CA3AF' }}
         >
           {submitting ? (

@@ -264,7 +264,7 @@ export default function HealthMetricsTab() {
         {profileShared && (
           <View className="mt-3 bg-green-50 p-3 rounded-lg flex-row items-start gap-2">
             <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-            <Text className="text-xs text-green-700 flex-1">
+            <Text className="text-xs font-sans text-green-700 flex-1">
               Your health profile has been shared and is now accessible to your healthcare providers
             </Text>
           </View>
@@ -280,10 +280,10 @@ export default function HealthMetricsTab() {
 
         {/* Temperature */}
         <View className="mb-4">
-          <Text className="text-gray-700 font-medium mb-2">Temperature</Text>
+          <Text className="text-gray-700 font-medium mb-2 font-sans font-sans">Temperature</Text>
           <View className="flex-row items-center">
             <TextInput
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-3 mr-2"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-3 mr-2 font-sans"
               value={healthMetrics.temperature.value}
               onChangeText={(text) => setHealthMetrics({
                 ...healthMetrics,
@@ -300,7 +300,7 @@ export default function HealthMetricsTab() {
                   temperature: { ...healthMetrics.temperature, unit: 'C' }
                 })}
               >
-                <Text className={healthMetrics.temperature.unit === 'C' ? 'text-white font-medium' : 'text-gray-600'}>°C</Text>
+                <Text className={healthMetrics.temperature.unit === 'C' ? 'text-white font-sans-medium' : 'text-gray-600'}>°C</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className={`px-4 py-2 rounded ${healthMetrics.temperature.unit === 'F' ? 'bg-primary' : ''}`}
@@ -309,7 +309,7 @@ export default function HealthMetricsTab() {
                   temperature: { ...healthMetrics.temperature, unit: 'F' }
                 })}
               >
-                <Text className={healthMetrics.temperature.unit === 'F' ? 'text-white font-medium' : 'text-gray-600'}>°F</Text>
+                <Text className={healthMetrics.temperature.unit === 'F' ? 'text-white font-sans-medium' : 'text-gray-600'}>°F</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -317,12 +317,12 @@ export default function HealthMetricsTab() {
 
         {/* Blood Pressure */}
         <View className="mb-4">
-          <Text className="text-gray-700 font-medium mb-2">Blood Pressure (mmHg)</Text>
+          <Text className="text-gray-700 font-medium mb-2 font-sans">Blood Pressure (mmHg)</Text>
           <View className="flex-row items-center">
             <View className="flex-1 mr-2">
               <Text className="text-xs text-gray-500 mb-1">Systolic</Text>
               <TextInput
-                className="border border-gray-200 rounded-lg px-3 py-3 text-center"
+                className="border border-gray-200 rounded-lg px-3 py-3 text-center font-sans"
                 value={healthMetrics.bloodPressure.systolic}
                 onChangeText={(text) => setHealthMetrics({
                   ...healthMetrics,
@@ -332,11 +332,11 @@ export default function HealthMetricsTab() {
                 placeholder="120"
               />
             </View>
-            <Text className="text-2xl text-gray-400 mx-2">/</Text>
+            <Text className="text-2xl text-gray-400 mx-2 font-sans">/</Text>
             <View className="flex-1 ml-2">
-              <Text className="text-xs text-gray-500 mb-1">Diastolic</Text>
+              <Text className="text-xs text-gray-500 mb-1 font-sans">Diastolic</Text>
               <TextInput
-                className="border border-gray-200 rounded-lg px-3 py-3 text-center"
+                className="border border-gray-200 rounded-lg px-3 py-3 text-center font-sans"
                 value={healthMetrics.bloodPressure.diastolic}
                 onChangeText={(text) => setHealthMetrics({
                   ...healthMetrics,
@@ -351,9 +351,9 @@ export default function HealthMetricsTab() {
 
         {/* Pulse Rate */}
         <View className="mb-4">
-          <Text className="text-gray-700 font-medium mb-2">Pulse Rate (bpm)</Text>
+          <Text className="text-gray-700 font-medium mb-2 font-sans">Pulse Rate (bpm)</Text>
           <TextInput
-            className="border border-gray-200 rounded-lg px-3 py-3"
+            className="border border-gray-200 rounded-lg px-3 py-3 font-sans"
             value={healthMetrics.pulseRate}
             onChangeText={(text) => setHealthMetrics({ ...healthMetrics, pulseRate: text })}
             keyboardType="numeric"
@@ -363,9 +363,9 @@ export default function HealthMetricsTab() {
 
         {/* Blood Oxygen */}
         <View className="mb-4">
-          <Text className="text-gray-700 font-medium mb-2">Blood Oxygen SpO₂ (%)</Text>
+          <Text className="text-gray-700 font-medium mb-2 font-sans">Blood Oxygen SpO₂ (%)</Text>
           <TextInput
-            className="border border-gray-200 rounded-lg px-3 py-3"
+            className="border border-gray-200 rounded-lg px-3 py-3 font-sans"
             value={healthMetrics.bloodOxygen}
             onChangeText={(text) => setHealthMetrics({ ...healthMetrics, bloodOxygen: text })}
             keyboardType="numeric"
@@ -378,15 +378,15 @@ export default function HealthMetricsTab() {
       <View className="bg-white rounded-xl p-4 mb-4 shadow-sm">
         <View className="flex-row items-center mb-4">
           <Ionicons name="body-outline" size={22} color="#67A9AF" />
-          <Text className="text-lg font-sans-semibold ml-2">Physical Measurements</Text>
+          <Text className="text-lg font-sans-semibold ml-2 font-sans">Physical Measurements</Text>
         </View>
 
         {/* Height */}
         <View className="mb-4">
-          <Text className="text-gray-700 font-medium mb-2">Height</Text>
+          <Text className="text-gray-700 font-medium mb-2 font-sans">Height</Text>
           <View className="flex-row items-center">
             <TextInput
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-3 mr-2"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-3 mr-2 font-sans"
               value={healthMetrics.height.value}
               onChangeText={(text) => setHealthMetrics({
                 ...healthMetrics,
@@ -403,7 +403,7 @@ export default function HealthMetricsTab() {
                   height: { ...healthMetrics.height, unit: 'cm' }
                 })}
               >
-                <Text className={healthMetrics.height.unit === 'cm' ? 'text-white font-medium' : 'text-gray-600'}>cm</Text>
+                <Text className={healthMetrics.height.unit === 'cm' ? 'text-white font-sans-medium' : 'text-gray-600'}>cm</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className={`px-4 py-2 rounded ${healthMetrics.height.unit === 'ft' ? 'bg-primary' : ''}`}
@@ -412,7 +412,7 @@ export default function HealthMetricsTab() {
                   height: { ...healthMetrics.height, unit: 'ft' }
                 })}
               >
-                <Text className={healthMetrics.height.unit === 'ft' ? 'text-white font-medium' : 'text-gray-600'}>ft</Text>
+                <Text className={healthMetrics.height.unit === 'ft' ? 'text-white font-sans-medium' : 'text-gray-600'}>ft</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -420,10 +420,10 @@ export default function HealthMetricsTab() {
 
         {/* Weight */}
         <View className="mb-4">
-          <Text className="text-gray-700 font-medium mb-2">Weight</Text>
+          <Text className="text-gray-700 font-medium mb-2 font-sans">Weight</Text>
           <View className="flex-row items-center">
             <TextInput
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-3 mr-2"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-3 mr-2 font-sans"
               value={healthMetrics.weight.value}
               onChangeText={(text) => setHealthMetrics({
                 ...healthMetrics,
@@ -440,7 +440,7 @@ export default function HealthMetricsTab() {
                   weight: { ...healthMetrics.weight, unit: 'kg' }
                 })}
               >
-                <Text className={healthMetrics.weight.unit === 'kg' ? 'text-white font-medium' : 'text-gray-600'}>kg</Text>
+                <Text className={healthMetrics.weight.unit === 'kg' ? 'text-white font-sans-medium' : 'text-gray-600'}>kg</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className={`px-4 py-2 rounded ${healthMetrics.weight.unit === 'lb' ? 'bg-primary' : ''}`}
@@ -449,7 +449,7 @@ export default function HealthMetricsTab() {
                   weight: { ...healthMetrics.weight, unit: 'lb' }
                 })}
               >
-                <Text className={healthMetrics.weight.unit === 'lb' ? 'text-white font-medium' : 'text-gray-600'}>lb</Text>
+                <Text className={healthMetrics.weight.unit === 'lb' ? 'text-white font-sans-medium' : 'text-gray-600'}>lb</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -460,12 +460,12 @@ export default function HealthMetricsTab() {
           <View className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
             <View className="flex-row justify-between items-center">
               <View>
-                <Text className="text-gray-700 font-medium mb-1">Body Mass Index (BMI)</Text>
-                <Text className="text-xs text-gray-500">Auto-calculated</Text>
+                <Text className="text-gray-700 font-sans-medium mb-1">Body Mass Index (BMI)</Text>
+                <Text className="text-xs text-gray-500 font-sans">Auto-calculated</Text>
               </View>
               <View className="items-end">
-                <Text className="text-2xl font-bold text-primary">{healthMetrics.bmi.value}</Text>
-                <Text className="text-sm text-gray-600 capitalize">
+                <Text className="text-2xl font-sans-bold text-primary">{healthMetrics.bmi.value}</Text>
+                <Text className="text-sm text-gray-600 capitalize font-sans">
                   {healthMetrics.bmi.category}
                 </Text>
               </View>
@@ -475,14 +475,14 @@ export default function HealthMetricsTab() {
 
         {/* Visual Acuity */}
         <View className="mb-4">
-          <Text className="text-gray-700 font-medium mb-2">Visual Acuity</Text>
+          <Text className="text-gray-700 font-medium mb-2 font-sans">Visual Acuity</Text>
           <View className="flex-row">
             <View className="flex-1 mr-2">
-              <Text className="text-xs text-gray-500 mb-1">Left Eye (20/...)</Text>
+              <Text className="text-xs text-gray-500 mb-1 font-sans">Left Eye (20/...)</Text>
               <View className="flex-row items-center border border-gray-200 rounded-lg px-3 py-3">
-                <Text className="mr-2 text-gray-600">20/</Text>
+                <Text className="mr-2 text-gray-600 font-sans">20/</Text>
                 <TextInput
-                  className="flex-1"
+                  className="flex-1 font-sans"
                   value={healthMetrics.visualAcuity.leftEye}
                   onChangeText={(text) => setHealthMetrics({
                     ...healthMetrics,
@@ -494,11 +494,11 @@ export default function HealthMetricsTab() {
               </View>
             </View>
             <View className="flex-1 ml-2">
-              <Text className="text-xs text-gray-500 mb-1">Right Eye (20/...)</Text>
+              <Text className="text-xs text-gray-500 mb-1 font-sans">Right Eye (20/...)</Text>
               <View className="flex-row items-center border border-gray-200 rounded-lg px-3 py-3">
-                <Text className="mr-2 text-gray-600">20/</Text>
+                <Text className="mr-2 text-gray-600 font-sans">20/</Text>
                 <TextInput
-                  className="flex-1"
+                  className="flex-1 font-sans"
                   value={healthMetrics.visualAcuity.rightEye}
                   onChangeText={(text) => setHealthMetrics({
                     ...healthMetrics,

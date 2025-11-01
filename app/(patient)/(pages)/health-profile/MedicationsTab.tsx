@@ -382,8 +382,8 @@ export default function MedicationsTab() {
           </View>
           {upcomingReminders.slice(0, 3).map((reminder) => (
             <View key={reminder._id} className="mb-2 bg-white rounded-lg p-3">
-              <Text className="text-blue-800 font-medium">{reminder.drugName}</Text>
-              <Text className="text-blue-600 text-sm">
+              <Text className="text-blue-800 font-sans-medium">{reminder.drugName}</Text>
+              <Text className="text-blue-600 text-sm font-sans">
                 {new Date(reminder.nextReminder).toLocaleString()} • {reminder.dosage}
               </Text>
             </View>
@@ -417,7 +417,7 @@ export default function MedicationsTab() {
             />
 
             <View className="mb-3">
-              <Text className="text-gray-700 mb-2 font-medium">Severity</Text>
+              <Text className="text-gray-700 mb-2 font-sans-medium">Severity</Text>
               <View className="border border-gray-300 rounded-lg bg-white">
                 <Picker
                   selectedValue={conditionSeverity}
@@ -450,13 +450,13 @@ export default function MedicationsTab() {
                   setConditionNotes('');
                 }}
               >
-                <Text className="text-center font-medium text-gray-700">Cancel</Text>
+                <Text className="text-center font-sans-medium text-gray-700">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className="flex-1 bg-primary py-3 rounded-lg"
                 onPress={handleAddCondition}
               >
-                <Text className="text-white text-center font-medium">Add Condition</Text>
+                <Text className="text-white text-center font-sans-medium">Add Condition</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -472,7 +472,7 @@ export default function MedicationsTab() {
                     condition.severity === 'moderate' ? 'bg-yellow-100' :
                       'bg-red-100'
                     }`}>
-                    <Text className={`text-xs font-medium ${condition.severity === 'mild' ? 'text-green-700' :
+                    <Text className={`text-xs font-sans-medium ${condition.severity === 'mild' ? 'text-green-700' :
                       condition.severity === 'moderate' ? 'text-yellow-700' :
                         'text-red-700'
                       }`}>
@@ -481,17 +481,17 @@ export default function MedicationsTab() {
                   </View>
                   {condition.isActive !== false && (
                     <View className="bg-blue-100 px-2 py-1 rounded">
-                      <Text className="text-xs text-blue-700 font-medium">ACTIVE</Text>
+                      <Text className="text-xs text-blue-700 font-sans-medium">ACTIVE</Text>
                     </View>
                   )}
                 </View>
                 {condition.diagnosisDate && (
-                  <Text className="text-gray-500 text-xs mt-2">
+                  <Text className="text-gray-500 font-sans text-xs mt-2">
                     📅 Diagnosed: {new Date(condition.diagnosisDate).toLocaleDateString()}
                   </Text>
                 )}
                 {condition.notes && (
-                  <Text className="text-gray-600 text-sm mt-2">{condition.notes}</Text>
+                  <Text className="text-gray-600 font-sans text-sm mt-2">{condition.notes}</Text>
                 )}
               </View>
               <TouchableOpacity
@@ -507,7 +507,7 @@ export default function MedicationsTab() {
         {conditions.length === 0 && !showConditionForm && (
           <View className="py-6 items-center">
             <Ionicons name="pulse-outline" size={40} color="#d1d5db" />
-            <Text className="text-gray-500 text-center mt-2 text-sm">
+            <Text className="text-gray-500 font-sans text-center mt-2 text-sm">
               No conditions added yet
             </Text>
           </View>
@@ -550,7 +550,7 @@ export default function MedicationsTab() {
             />
 
             <View className="mb-3">
-              <Text className="text-gray-700 mb-2 font-medium">Frequency</Text>
+              <Text className="text-gray-700 mb-2 font-sans-medium">Frequency</Text>
               <View className="border border-gray-300 rounded-lg bg-white">
                 <Picker
                   selectedValue={newMedication.frequency}
@@ -567,7 +567,7 @@ export default function MedicationsTab() {
 
             {newMedication.frequency === 'weekly' && (
               <View className="mb-3">
-                <Text className="text-gray-700 mb-2 font-medium">Select Days</Text>
+                <Text className="text-gray-700 mb-2 font-sans-medium">Select Days</Text>
                 <View className="flex-row flex-wrap gap-2">
                   {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
                     <TouchableOpacity
@@ -579,7 +579,7 @@ export default function MedicationsTab() {
                         setNewMedication({ ...newMedication, specificDays: newDays });
                       }}
                     >
-                      <Text className={newMedication.specificDays?.includes(day) ? 'text-white font-medium text-xs' : 'text-gray-700 text-xs'}>
+                      <Text className={newMedication.specificDays?.includes(day) ? 'text-white font-sans-medium text-xs' : 'text-gray-700 font-sans-medium text-xs'}>
                         {day.slice(0, 3).toUpperCase()}
                       </Text>
                     </TouchableOpacity>
@@ -590,7 +590,7 @@ export default function MedicationsTab() {
 
             {newMedication.frequency !== 'as_needed' && (
               <View className="mb-3">
-                <Text className="text-gray-700 mb-2 font-medium">Reminder Time</Text>
+                <Text className="text-gray-700 mb-2 font-sans-medium">Reminder Time</Text>
                 <TouchableOpacity
                   className="border border-gray-300 rounded-lg p-3 bg-white flex-row items-center justify-between"
                   onPress={showTimePicker}
@@ -617,7 +617,7 @@ export default function MedicationsTab() {
             />
 
             <View className="flex-row justify-between items-center mb-4 p-3 bg-white rounded-lg border border-gray-200">
-              <Text className="text-gray-700 font-medium">Enable Reminders</Text>
+              <Text className="text-gray-700 font-sans-medium">Enable Reminders</Text>
               <Switch
                 value={newMedication.enabled}
                 onValueChange={(value) => setNewMedication({ ...newMedication, enabled: value })}
@@ -637,13 +637,13 @@ export default function MedicationsTab() {
                   });
                 }}
               >
-                <Text className="text-center font-medium text-gray-700">Cancel</Text>
+                <Text className="text-center font-sans-medium text-gray-700">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className="flex-1 bg-primary py-3 rounded-lg"
                 onPress={handleAddMedication}
               >
-                <Text className="text-white text-center font-medium">Add Medication</Text>
+                <Text className="text-white text-center font-sans-medium">Add Medication</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -655,27 +655,27 @@ export default function MedicationsTab() {
             <View className="flex-row justify-between items-start mb-2">
               <View className="flex-1">
                 <Text className="font-sans-medium text-base">{med.drugName}</Text>
-                <Text className="text-gray-500 text-sm">{med.dosage} • {med.frequency}</Text>
+                <Text className="text-gray-500 font-sans text-sm">{med.dosage} • {med.frequency}</Text>
                 {med.time && (
-                  <Text className="text-gray-500 text-sm">⏰ {med.time}</Text>
+                  <Text className="text-gray-500 font-sans text-sm">⏰ {med.time}</Text>
                 )}
                 {med.specificDays && med.specificDays.length > 0 && (
-                  <Text className="text-gray-500 text-xs mt-1">
+                  <Text className="text-gray-500 font-sans text-xs mt-1">
                     📅 {med.specificDays.map(d => d.slice(0, 3).toUpperCase()).join(', ')}
                   </Text>
                 )}
                 {med.lastTaken && (
-                  <Text className="text-green-600 text-xs mt-1">
+                  <Text className="text-green-600 font-sans text-xs mt-1">
                     ✓ Last: {new Date(med.lastTaken).toLocaleString()}
                   </Text>
                 )}
                 {med.nextReminder && med.enabled && (
-                  <Text className="text-blue-600 text-xs">
+                  <Text className="text-blue-600 font-sans text-xs">
                     📅 Next: {new Date(med.nextReminder).toLocaleString()}
                   </Text>
                 )}
                 {med.notes && (
-                  <Text className="text-gray-600 text-sm mt-1">📝 {med.notes}</Text>
+                  <Text className="text-gray-600 font-sans text-sm mt-1">📝 {med.notes}</Text>
                 )}
               </View>
               <View className="flex-row items-center ml-2">
@@ -698,7 +698,7 @@ export default function MedicationsTab() {
                 className="bg-green-50 border border-green-200 py-2 px-3 rounded-lg"
                 onPress={() => handleMedicationTaken(med._id!)}
               >
-                <Text className="text-green-700 text-center text-sm font-medium">✓ Mark as Taken</Text>
+                <Text className="text-green-700 text-center text-sm font-sans-medium">✓ Mark as Taken</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -707,7 +707,7 @@ export default function MedicationsTab() {
         {medications.length === 0 && !showMedicationForm && (
           <View className="py-6 items-center">
             <Ionicons name="medical-outline" size={40} color="#d1d5db" />
-            <Text className="text-gray-500 text-center mt-2 text-sm">
+            <Text className="text-gray-500 text-center mt-2 font-sans text-sm">
               No medications added yet
             </Text>
           </View>
@@ -723,8 +723,8 @@ export default function MedicationsTab() {
 
         <View className="flex-row justify-between items-center mb-3 p-3 bg-gray-50 rounded-lg">
           <View className="flex-1">
-            <Text className="text-gray-700 font-medium">Medication Reminders</Text>
-            <Text className="text-gray-500 text-xs">Get notified for medications</Text>
+            <Text className="text-gray-700 font-sans-medium">Medication Reminders</Text>
+            <Text className="text-gray-500 font-sans text-xs">Get notified for medications</Text>
           </View>
           <Switch
             value={notificationPreferences.medicationReminders.enabled}
@@ -739,10 +739,10 @@ export default function MedicationsTab() {
 
         {notificationPreferences.medicationReminders.enabled && (
           <View className="mb-3 pl-4 border-l-2 border-primary/30 ml-2">
-            <Text className="text-gray-700 text-sm font-medium mb-2">Advance Notice</Text>
+            <Text className="text-gray-700 text-sm font-sans-medium mb-2">Advance Notice</Text>
             <View className="flex-row items-center">
               <TextInput
-                className="border border-gray-200 rounded-lg px-3 py-2 w-20 text-center mr-2 bg-white"
+                className="border border-gray-200 font-sans rounded-lg px-3 py-2 w-20 text-center mr-2 bg-white"
                 value={notificationPreferences.medicationReminders.advanceNotice.value.toString()}
                 onChangeText={(text) => {
                   const value = parseInt(text) || 0;
@@ -784,8 +784,8 @@ export default function MedicationsTab() {
 
         <View className="flex-row justify-between items-center mb-3 p-3 bg-gray-50 rounded-lg">
           <View className="flex-1">
-            <Text className="text-gray-700 font-medium">Health Alerts</Text>
-            <Text className="text-gray-500 text-xs">Important health notifications</Text>
+            <Text className="text-gray-700 font-sans-medium">Health Alerts</Text>
+            <Text className="text-gray-500 text-xs font-sans">Important health notifications</Text>
           </View>
           <Switch
             value={notificationPreferences.healthAlerts.enabled}

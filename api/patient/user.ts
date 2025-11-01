@@ -76,7 +76,7 @@ export interface KYCStatus {
  * Get KYC status
  */
 export const getKYCStatus = async (token: string): Promise<KYCStatus> => {
-  
+
   const response = await axios.get(`${BASE_URL}/auth/kyc/status`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -110,11 +110,11 @@ export const submitKYCDocuments = async (
 ): Promise<SubmitKYCResponse> => {
   try {
     const formData = new FormData();
-    
+
     // Add text fields
     formData.append('documentType', documentType);
     formData.append('documentNumber', documentNumber);
-    
+
     // Helper function to create a file object from URI
     const createFileFromUri = async (uri: string, name: string, type: string) => {
       const response = await fetch(uri);
@@ -131,26 +131,26 @@ export const submitKYCDocuments = async (
     const docFile = await createFileFromUri(documentImage.uri, 'documentImage', 'image/jpeg');
     const selfieFile = await createFileFromUri(selfieImage.uri, 'selfieImage', 'image/jpeg');
     const poaFile = await createFileFromUri(proofOfAddress.uri, 'proofOfAddress', 'image/jpeg');
-    
+
     // Append files to form data using React Native's FormData API
     formData.append('documentImage', {
       uri: docFile.uri,
       name: docFile.name,
       type: docFile.type,
     } as any);
-    
+
     formData.append('selfieImage', {
       uri: selfieFile.uri,
       name: selfieFile.name,
       type: selfieFile.type,
     } as any);
-    
+
     formData.append('proofOfAddress', {
       uri: poaFile.uri,
       name: poaFile.name,
       type: poaFile.type,
     } as any);
-    
+
     // Make the request
     const response = await fetch(`${BASE_URL}/auth/kyc`, {
       method: 'POST',
@@ -167,15 +167,15 @@ export const submitKYCDocuments = async (
       throw new Error(data.message || 'Failed to submit KYC documents');
     }
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: data.message || 'KYC submitted successfully',
       data: data.data
     };
   } catch (error: any) {
     console.error('Error submitting KYC documents:', error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: error.message || 'Failed to submit KYC documents'
     };
   }
@@ -183,15 +183,29 @@ export const submitKYCDocuments = async (
 
 export const shareProfile = async (token: string) => {
   try {
-    const response = await axios.get(`${BASE_URL}/auth/share-profile`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await axios.post(
+      `${BASE_URL}/auth/share-profile`,
+      { shareProfile: true }, // Add the required field
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sharing profile:', error);
-    return { success: false, message: 'Failed to share profile' };
+    if (error.response) {
+      return {
+        success: false,
+        message: error.response.data?.message || 'Failed to share profile'
+      };
+    }
+    return {
+      success: false,
+      message: error.message || 'Network error sharing profile'
+    };
   }
 };
 
@@ -199,7 +213,7 @@ export const shareProfile = async (token: string) => {
  * Apply to become a doctor
  */
 export const applyToBecomeDoctor = async (formData: FormData, token: string) => {
-  try {    
+  try {
     const response = await axios.post(
       `${BASE_URL}/doctors/apply`,
       formData,
@@ -263,14 +277,14 @@ export const getDoctorApplicationStatus = async (token: string): Promise<DoctorA
  */
 export const getAllDoctors = async (token: string) => {
   try {
-      const response = await axios.get(`${BASE_URL}/auth/doctors`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      return response.data;
+    const response = await axios.get(`${BASE_URL}/auth/doctors`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
   } catch (error: any) {
-      throw error.response?.data || { success: false, message: 'Failed to fetch doctors' };
+    throw error.response?.data || { success: false, message: 'Failed to fetch doctors' };
   }
 };
 

@@ -182,14 +182,14 @@ export default function MedicalHistoryScreen() {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="px-4 py-4">
           <Text className="text-2xl font-sans-bold text-gray-900 mb-2">Medical History</Text>
-          <Text className="text-sm text-gray-600 mb-6">Track and manage your health records</Text>
+          <Text className="text-sm font-sans text-gray-600 mb-6">Track and manage your health records</Text>
           
           {/* Stats Cards */}
           <View className="flex-row gap-3 mb-6">
             <View className="flex-1 bg-white rounded-xl p-4 shadow-sm">
               <View className="flex-row items-center justify-between">
                 <View>
-                  <Text className="text-xs text-gray-600 mb-1">Total</Text>
+                  <Text className="text-xs font-sans text-gray-600 mb-1">Total</Text>
                   <Text className="text-2xl font-sans-bold text-gray-900">{stats.total || 0}</Text>
                 </View>
                 <View className="bg-blue-100 w-10 h-10 rounded-lg items-center justify-center">
@@ -201,7 +201,7 @@ export default function MedicalHistoryScreen() {
             <View className="flex-1 bg-white rounded-xl p-4 shadow-sm">
               <View className="flex-row items-center justify-between">
                 <View>
-                  <Text className="text-xs text-gray-600 mb-1">Chronic</Text>
+                  <Text className="text-xs font-sans text-gray-600 mb-1">Chronic</Text>
                   <Text className="text-2xl font-sans-bold text-gray-900">{stats.chronic || 0}</Text>
                 </View>
                 <View className="bg-amber-100 w-10 h-10 rounded-lg items-center justify-center">
@@ -329,7 +329,7 @@ export default function MedicalHistoryScreen() {
                       <View className="flex-row items-center gap-3">
                         <View className="flex-row items-center">
                           <Ionicons name="calendar-outline" size={14} color="#6B7280" />
-                          <Text className="text-xs text-gray-600 ml-1">
+                          <Text className="text-xs text-gray-600 font-sans ml-1">
                             {new Date(record.date).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: 'short',
@@ -345,7 +345,7 @@ export default function MedicalHistoryScreen() {
                               size={14} 
                               color="#6B7280" 
                             />
-                            <Text className="text-xs text-gray-600 ml-1 capitalize">
+                            <Text className="text-xs font-sans text-gray-600 ml-1 capitalize">
                               {record.category}
                             </Text>
                           </View>
