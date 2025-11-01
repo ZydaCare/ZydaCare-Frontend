@@ -4,6 +4,7 @@ import { useAuth } from '@/context/authContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '@/components/ui/Toast';
 import { healthProfileApi } from '@/api/patient/healthProfile';
+import { shareProfile } from '@/api/patient/user';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface HealthMetricsState {
@@ -20,6 +21,8 @@ interface HealthMetricsState {
 export default function HealthMetricsTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sharingProfile, setSharingProfile] = useState(false);
+  const [profileShared, setProfileShared] = useState(false);
   const [healthMetrics, setHealthMetrics] = useState<HealthMetricsState>({
     temperature: { value: '', unit: 'C' },
     bloodPressure: { systolic: '', diastolic: '' },
@@ -30,7 +33,6 @@ export default function HealthMetricsTab() {
     visualAcuity: { leftEye: '20', rightEye: '20' },
   });
 
-  // const { token } = useAuth();
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -181,6 +183,29 @@ export default function HealthMetricsTab() {
     }
   };
 
+  const handleShareProfile = async () => {
+    const token = await AsyncStorage.getItem('token');
+    if (!token) {
+      showToast('Authentication required', 'error');
+      return;
+    }
+
+    try {
+      setSharingProfile(true);
+      const res = await shareProfile(token);
+      if (!res?.success) {
+        throw new Error(res?.message || 'Failed to share profile');
+      }
+      showToast('Profile shared successfully', 'success');
+      setProfileShared(true);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to share profile', 'error');
+      setProfileShared(false);
+    } finally {
+      setSharingProfile(false);
+    }
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center">
@@ -191,6 +216,61 @@ export default function HealthMetricsTab() {
 
   return (
     <ScrollView className="flex-1 p-4">
+      {/* Share Profile Card */}
+      <View className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+        <View className="flex-row items-center mb-3">
+          <Ionicons name="share-social-outline" size={22} color="#67A9AF" />
+          <Text className="text-lg font-sans-semibold ml-2">Share Health Profile</Text>
+        </View>
+
+        <View className="bg-blue-50 p-3 rounded-lg mb-3">
+          <View className="flex-row items-start gap-2">
+            <Ionicons name="information-circle" size={18} color="#3B82F6" />
+            <Text className="text-xs font-sans text-blue-700 flex-1">
+              Share your complete health profile with doctors to help them provide better care and make informed decisions about your treatment when you book an appointment.
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          onPress={handleShareProfile}
+          disabled={sharingProfile || profileShared}
+          className={`flex-row items-center justify-center gap-2 py-3.5 rounded-xl ${
+            profileShared
+              ? 'bg-green-50 border border-green-200'
+              : sharingProfile
+              ? 'bg-gray-100'
+              : 'bg-[#67A9AF]'
+          }`}
+        >
+          {sharingProfile ? (
+            <>
+              <ActivityIndicator color="#6B7280" size="small" />
+              <Text className="text-gray-600 font-sans-medium">Sharing Profile...</Text>
+            </>
+          ) : profileShared ? (
+            <>
+              <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+              <Text className="text-green-700 font-sans-medium">Profile Shared Successfully</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="share-outline" size={20} color="white" />
+              <Text className="text-white font-sans-medium">Share My Health Profile</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {profileShared && (
+          <View className="mt-3 bg-green-50 p-3 rounded-lg flex-row items-start gap-2">
+            <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+            <Text className="text-xs text-green-700 flex-1">
+              Your health profile has been shared and is now accessible to your healthcare providers
+            </Text>
+          </View>
+        )}
+      </View>
+
       {/* Vital Signs Card */}
       <View className="bg-white rounded-xl p-4 mb-4 shadow-sm">
         <View className="flex-row items-center mb-4">
