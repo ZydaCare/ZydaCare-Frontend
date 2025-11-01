@@ -292,20 +292,20 @@ export default function SecuritySettings() {
                     <View className="bg-white rounded-xl p-5 mb-6 shadow-sm">
                         <Text className="text-lg font-sans-semibold text-gray-900 mb-4">Privacy</Text>
 
-                        <TouchableOpacity className="py-3 flex-row justify-between items-center border-b border-gray-100">
+                        <TouchableOpacity className="py-3 flex-row justify-between items-center border-b border-gray-100" onPress={() => router.push('/(policy)/privacyPolicy')}>
                             <Text className="text-gray-900 font-sans">Privacy Policy</Text>
                             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
                         </TouchableOpacity>
 
-                        <TouchableOpacity className="py-3 flex-row justify-between items-center border-b border-gray-100">
+                        <TouchableOpacity className="py-3 flex-row justify-between items-center" onPress={() => router.push('/(policy)/terms&Condition')}>
                             <Text className="text-gray-900 font-sans">Terms of Service</Text>
                             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
                         </TouchableOpacity>
 
-                        <TouchableOpacity className="py-3 flex-row justify-between items-center">
+                        {/* <TouchableOpacity className="py-3 flex-row justify-between items-center">
                             <Text className="text-gray-900 font-sans">Data & Privacy</Text>
                             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                     </View>
 
                     {/* Version Info */}

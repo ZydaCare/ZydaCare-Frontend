@@ -53,7 +53,9 @@ export default function DoctorHome() {
   const fetchStats = async () => {
     try {
       const response = await getAppointmentStats();
+      console.log('Appointment stats response:', response);
       if (response.success) {
+        console.log('Setting stats with data:', response.data);
         setStats(response.data);
       }
     } catch (error) {
@@ -64,27 +66,36 @@ export default function DoctorHome() {
   const fetchAppointments = async () => {
     try {
       const now = new Date();
-      const todayStart = startOfDay(now).toISOString();
-      const futureDate = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString(); // 3 months ahead
+      const todayStart = startOfDay(now);
+      const todayEnd = endOfDay(now);
+      const futureDate = new Date(now.getFullYear(), now.getMonth() + 3, 0);
 
       const response = await getDoctorAppointments({
-        startDate: todayStart,
-        endDate: futureDate,
+        startDate: todayStart.toISOString(),
+        endDate: futureDate.toISOString(),
       });
 
+
       if (response.success) {
-        const appointments = response.data;
-        
+        const appointments = response.data || [];
+
         // Filter appointments into today and upcoming
         const today: Appointment[] = [];
         const upcoming: Appointment[] = [];
 
         appointments.forEach((appointment) => {
+          if (!appointment.appointmentDate) {
+            console.warn('Appointment missing date:', appointment);
+            return;
+          }
+
           const appointmentDate = parseISO(appointment.appointmentDate);
-          
-          if (isToday(appointmentDate)) {
+          const isAppointmentToday = appointmentDate >= todayStart && appointmentDate <= todayEnd;
+          const isAppointmentFuture = appointmentDate > todayEnd;
+
+          if (isAppointmentToday) {
             today.push(appointment);
-          } else if (isFuture(appointmentDate)) {
+          } else if (isAppointmentFuture) {
             upcoming.push(appointment);
           }
         });
@@ -198,7 +209,7 @@ export default function DoctorHome() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 pt-5">
+    <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       <ScrollView
         className="flex-1"
@@ -212,7 +223,7 @@ export default function DoctorHome() {
         }
       >
         {/* Header */}
-        <View className="bg-white px-6 pt-6 pb-4">
+        <View className="bg-white px-6 pt-10 pb-4">
           <View className="flex-row justify-between items-center mb-4">
             <View>
               <Text className="text-sm text-gray-500 font-sans-medium mb-1">{getGreeting()}</Text>
@@ -265,7 +276,7 @@ export default function DoctorHome() {
                   <Ionicons name="calendar" size={20} color="#67A9AF" />
                 </View>
                 <Text className="text-2xl font-sans-bold text-gray-900">
-                  {stats?.todayAppointments || 0}
+                  {todayAppointments.length}
                 </Text>
                 <Text className="text-xs font-sans-medium text-gray-500">Today</Text>
               </View>
@@ -354,7 +365,7 @@ export default function DoctorHome() {
                   className="w-14 h-14 rounded-2xl items-center justify-center mb-2"
                   style={{ backgroundColor: `${action.color}15` }}
                 >
-                  <Ionicons name={action.icon} size={24} color={action.color} />
+                  <Ionicons name={action.icon as any} size={24} color={action.color} />
                 </View>
                 <Text className="text-xs font-sans-medium text-center text-gray-700">
                   {action.title}

@@ -233,7 +233,7 @@ const ChatScreen = () => {
     }
   }, [roomId]);
 
-  const handleSend = async () => {
+ const handleSend = async () => {
     if (!message.trim() || isSending) return;
 
     const messageText = message.trim();

@@ -104,24 +104,25 @@ export default function AppointmentDetailScreen() {
 
   const formatted = useMemo(() => {
     if (!appt) return null;
-    const title = appt.doctor?.profile?.title || '';
-    const first = appt.doctor?.user?.firstName || '';
-    const last = appt.doctor?.user?.lastName || '';
-    const constructedName = `${title ? title + ' ' : ''}${first} ${last}`.trim();
-    const specialties = appt.doctor?.profile?.specialties;
-    const specialtyFromProfile = Array.isArray(specialties) && specialties.length > 0 ? specialties[0] : '';
-    const specialtyFromMedical = appt.medicalContext?.preferredDoctorOrSpecialty || '';
+    // const title = appt.doctor?.profile?.title || '';
+    // const first = appt.doctor?.user?.firstName || '';
+    // const last = appt.doctor?.user?.lastName || '';
+    // const constructedName = `${title ? title + ' ' : ''}${first} ${last}`.trim();
+    // const specialties = appt.doctor?.profile?.specialties;
+    // const specialtyFromProfile = Array.isArray(specialties) && specialties.length > 0 ? specialties[0] : '';
+    // const specialtyFromMedical = appt.medicalContext?.preferredDoctorOrSpecialty || '';
 
     return {
       id: appt._id || appt.id,
-      doctorName: appt.doctor?.profile?.fullName || appt.doctor?.profile?.name || constructedName || 'Doctor',
-      doctorImage: appt.doctor?.user?.profileImage?.url || appt.doctor?.profile?.profileImage?.url || null,
+      doctorTitle: appt.doctor?.profile?.title || '',
+      doctorName: appt.doctor?.fullName || 'Doctor',
+      doctorImage: appt.doctor?.profile?.profileImage?.url || null,
       speciality:
         appt.doctor?.speciality ||
-        appt.doctor?.practiceInfo?.speciality ||
-        appt.doctor?.practiceInfo?.specialty ||
-        specialtyFromProfile ||
-        specialtyFromMedical ||
+        // appt.doctor?.practiceInfo?.speciality ||
+        // appt.doctor?.practiceInfo?.specialty ||
+        // specialtyFromProfile ||
+        // specialtyFromMedical ||
         'General Practice',
       date: appt.appointmentDate ? formatDate(new Date(appt.appointmentDate), 'd MMMM yyyy') : '',
       time: appt.appointmentDate ? formatDate(new Date(appt.appointmentDate), 'h:mm a') : '',
@@ -224,7 +225,7 @@ export default function AppointmentDetailScreen() {
               <View className="flex-1">
                 <View className="flex-row items-start justify-between">
                   <View className="flex-1 mr-2">
-                    <Text className="text-xl font-sans-semibold text-gray-900 mb-1">{formatted.doctorName}</Text>
+                    <Text className="text-xl font-sans-semibold text-gray-900">{formatted.doctorTitle} {formatted.doctorName}</Text>
                     <Text className="text-gray-600 mb-1">{formatted.speciality}</Text>
                     {formatted.doctorExperience ? (
                       <Text className="text-xs font-sans text-gray-500">{formatted.doctorExperience} years experience</Text>

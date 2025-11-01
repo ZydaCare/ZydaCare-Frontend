@@ -128,6 +128,13 @@ export default function Appointment() {
     return items
   }, [appointments, selectedTab])
 
+  const handleBookAgain = (appointment: any) => {
+    router.push({
+      pathname: '/appointment/book',
+      params: { doctorId: appointment.doctor._id },
+    });
+  } 
+
   const AppointmentCard = ({ appointment }: any) => (
     <View className="bg-white rounded-2xl p-4 mb-4 mx-4 shadow-sm border border-gray-100">
       <View className="flex-row">
@@ -198,7 +205,7 @@ export default function Appointment() {
                 <Text className="text-white font-sans-semibold text-sm ml-1.5">Chat</Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity onPress={() => router.push({ pathname: '/(patient)/(pages)/appointment/[id]', params: { id: appointment._id } })} className="bg-primary px-3 py-2.5 rounded-lg flex-1">
+              <TouchableOpacity onPress={() => handleBookAgain(appointment)} className="bg-primary px-3 py-2.5 rounded-lg flex-1">
                 <Text className="text-white font-sans-semibold text-sm text-center">Book Again</Text>
               </TouchableOpacity>
             )}

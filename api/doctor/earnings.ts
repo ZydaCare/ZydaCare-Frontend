@@ -74,6 +74,16 @@ export const getTransactions = async (page = 1, limit = 10) => {
   return response.json();
 };
 
+export const getTransaction = async (id: string) => {
+  const token = await AsyncStorage.getItem('token');
+  const response = await fetch(`${BASE_URL}/payments/transactions/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.json();
+};
+
 export const getWithdrawals = async (page = 1, limit = 10) => {
   const token = await AsyncStorage.getItem('token');
   const response = await fetch(

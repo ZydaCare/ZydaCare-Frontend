@@ -27,7 +27,7 @@ const Profile = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const { showToast } = useToast();
   const [token, setToken] = useState<string | null>(null);
-  
+
   // Track if this is the first mount to prevent duplicate calls
   const isInitialMount = useRef(true);
   const lastFetchTime = useRef<number>(0);
@@ -69,7 +69,7 @@ const Profile = () => {
         console.error('JSON parsing error:', error);
       } else if (error instanceof Error) {
         console.error('Profile fetch error:', error.message);
-        
+
         // Show user-friendly error for rate limiting
         if (error.message.includes('429')) {
           showToast('Please wait before refreshing again', 'error');
@@ -96,9 +96,10 @@ const Profile = () => {
         isInitialMount.current = false;
         return;
       }
-      
-      // Only fetch if we have existing profile (returning from settings)
-      if (doctorProfile) {
+
+      // Only fetch when returning from specific routes (like profile-settings)
+      const shouldRefresh = router.canGoBack(); // or check specific routes
+      if (shouldRefresh && doctorProfile) {
         console.log('Screen focused - refreshing profile');
         fetchProfile();
       }
@@ -111,49 +112,50 @@ const Profile = () => {
     chevron: boolean;
     action?: () => void;
   }[] = [
-    {
-      icon: 'person-outline',
-      title: 'Profile Settings',
-      chevron: true,
-      action: () => router.push('/(doctor)/(pages)/profile-settings')
-    },
-    {
-      icon: 'time-outline',
-      title: 'Schedule & Availability',
-      chevron: true,
-      action: () => router.push('/(doctor)/(pages)/schedule-availability')
-    },
-    {
-      icon: 'wallet-outline',
-      title: 'Bank Account',
-      chevron: true,
-      action: () => router.push('/(doctor)/(pages)/bank-account')
-    },
-    {
-      icon: 'shield-outline',
-      title: 'Security Settings',
-      chevron: true,
-      action: () => router.push('/(doctor)/(pages)/security')
-    },
-    {
-      icon: 'chatbubble-ellipses-outline',
-      title: 'Help and Support',
-      chevron: true,
-      action: () => router.push('/(doctor)/(pages)/help')
-    },
-    {
-      icon: 'help-circle-outline',
-      title: 'FAQ',
-      chevron: true,
-      action: () => router.push('/(doctor)/(pages)/faq')
-    },
-    {
-      icon: 'log-out-outline',
-      title: 'Log out',
-      chevron: false,
-      action: () => setLogoutModalVisible(true),
-    },
-  ];
+      {
+        icon: 'person-outline',
+        title: 'Profile Settings',
+        chevron: true,
+        action: () => router.push('/(doctor)/(pages)/profile-settings')
+      },
+      {
+        icon: 'time-outline',
+        title: 'Schedule & Availability',
+        chevron: true,
+        action: () => router.push('/(doctor)/(pages)/schedule-availability')
+      },
+      {
+        icon: 'wallet-outline',
+        title: 'Bank Account',
+        chevron: true,
+        action: () => router.push('/(doctor)/(pages)/bank-account')
+      },
+      {
+        icon: 'shield-outline',
+        title: 'Security Settings',
+        chevron: true,
+        action: () => router.push('/(doctor)/(pages)/security')
+      },
+      {
+        icon: 'chatbubble-ellipses-outline',
+        title: 'Help and Support',
+        chevron: true,
+        action: () => router.push('/(doctor)/(pages)/help')
+      },
+      {
+        icon: 'help-circle-outline',
+        title: 'FAQ',
+        chevron: true,
+        action: () => router.push('/(doctor)/(pages)/faq')
+      },
+      {
+        icon: 'log-out-outline',
+        title: 'Log out',
+        chevron: false,
+        action: () => setLogoutModalVisible(true),
+        // disabled: isLoading || loadingProfile
+      },
+    ];
 
   const handleLogout = () => {
     setLogoutModalVisible(false);
@@ -218,7 +220,7 @@ const Profile = () => {
               key={index}
               className="flex-row items-center py-4 border-b border-gray-100"
               onPress={item.action}
-              disabled={isLoading || loadingProfile}
+            // disabled={isLoading || loadingProfile}
             >
               <View className="w-8">
                 <Ionicons name={item.icon} size={22} color="#6B7280" />

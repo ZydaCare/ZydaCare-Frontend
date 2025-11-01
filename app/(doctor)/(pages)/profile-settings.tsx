@@ -17,7 +17,7 @@ export default function ProfileSettings() {
   const { doctorProfile, updateDoctorProfile, user, getDoctorProfile } = useAuth();
   const [activeSection, setActiveSection] = useState<Section>('personal');
   const [isLoading, setIsLoading] = useState(false);
-  const { showToast } = useToast();
+  const { showToast } = useToast(); 
   
   // Form state
   const [formData, setFormData] = useState<Partial<DoctorProfile>>({
@@ -196,7 +196,7 @@ export default function ProfileSettings() {
           uri: imageUri,
           name: filename,
           type: type,
-        } as any);
+        } as any); 
         
         // Add other fields as individual fields
         formDataToSend.append('fullName', formData.fullName || '');
@@ -458,8 +458,6 @@ export default function ProfileSettings() {
           >
             <Picker.Item label="Male" value="Male" />
             <Picker.Item label="Female" value="Female" />
-            <Picker.Item label="Other" value="Other" />
-            <Picker.Item label="Prefer not to say" value="Prefer not to say" />
           </Picker>
         </View>
       </View>

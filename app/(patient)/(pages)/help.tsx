@@ -85,7 +85,7 @@ export default function HelpScreen() {
     }
   };
 
-   const openWhatsApp = () => { 
+  const openWhatsApp = () => {
     const phoneNumber = '+2349068937365';
     const url = `https://wa.me/${phoneNumber}`;
     Linking.openURL(url);
@@ -163,7 +163,7 @@ export default function HelpScreen() {
 
   const helpCategories = [
     {
-      id: 'appointments',
+      id: 'appointments', // Matches backend enum
       title: 'Appointments',
       icon: 'calendar-clock',
       color: '#67A9AF',
@@ -177,7 +177,7 @@ export default function HelpScreen() {
       description: 'Refills, status, and medication questions'
     },
     {
-      id: 'billing',
+      id: 'payments',
       title: 'Billing & Insurance',
       icon: 'credit-card-check',
       color: '#F4A261',
@@ -196,6 +196,20 @@ export default function HelpScreen() {
       icon: 'tools',
       color: '#E76F51',
       description: 'App issues and troubleshooting'
+    },
+    {
+      id: 'medical_records',
+      title: 'Medical Records',
+      icon: 'folder-outline',
+      color: '#6366F1',
+      description: 'Access and manage your medical records'
+    },
+    {
+      id: 'general',
+      title: 'General',
+      icon: 'information',
+      color: '#10B981',
+      description: 'General questions and information'
     }
   ];
 
@@ -204,7 +218,7 @@ export default function HelpScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#67A9AF" />
 
       {/* Header */}
-      <View className="bg-primary px-6 pt-8 pb-6 rounded-b-3xl">
+      <View className="bg-primary px-6 pt-10 pb-6 rounded-b-3xl">
         <View className="flex-row justify-between items-center mb-4">
           <View>
             <Text className="text-2xl font-sans-bold text-white">Help Center</Text>
@@ -263,15 +277,19 @@ export default function HelpScreen() {
             {/* Help Categories */}
             <View className="mb-8">
               <Text className="text-lg font-sans-bold text-gray-900 mb-4">Help Categories</Text>
-              <View className="flex-row flex-wrap -mx-2">
+              <View className="flex-row flex-wrap justify-between">
                 {helpCategories.map((category) => (
                   <TouchableOpacity
                     key={category.id}
-                    className="w-1/2 px-2 mb-4"
+                    className="w-[48%] mb-4"
                     onPress={() => handleCategoryPress(category.id)}
+                    activeOpacity={0.7}
                   >
-                    <View className="bg-white p-4 rounded-xl border border-gray-100 active:border-primary/30 active:bg-primary/5">
-                      <View className="w-10 h-10 rounded-lg items-center justify-center mb-2" style={{ backgroundColor: `${category.color}20` }}>
+                    <View className="bg-white p-4 rounded-xl border border-gray-100">
+                      <View
+                        className="w-10 h-10 rounded-lg items-center justify-center mb-2"
+                        style={{ backgroundColor: `${category.color}20` }}
+                      >
                         <MaterialCommunityIcons
                           name={category.icon as any}
                           size={24}

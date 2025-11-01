@@ -181,6 +181,20 @@ export const submitKYCDocuments = async (
   }
 };
 
+export const shareProfile = async (token: string) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/auth/share-profile`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error sharing profile:', error);
+    return { success: false, message: 'Failed to share profile' };
+  }
+};
+
 /**
  * Apply to become a doctor
  */

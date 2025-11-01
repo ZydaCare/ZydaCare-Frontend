@@ -646,7 +646,7 @@ export default function KYCVerificationScreen() {
             <StatusBar barStyle="dark-content" />
 
             {/* Header */}
-            <View className="flex-row items-center p-4 border-b border-gray-100 bg-white">
+            <View className="flex-row items-center p-4 border-b border-gray-100 bg-white pt-8">
                 <TouchableOpacity onPress={() => router.back()} className="p-2">
                     <Ionicons name="chevron-back" size={24} color="#374151" />
                 </TouchableOpacity>

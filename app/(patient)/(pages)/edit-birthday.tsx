@@ -99,7 +99,7 @@ export default function EditBirthdayScreen() {
             
             <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
                 {/* Header */}
-                <View className="flex-row items-center p-4 border-b border-gray-100 bg-white">
+                <View className="flex-row items-center p-4 border-b border-gray-100 bg-white pt-8">
                     <TouchableOpacity 
                         onPress={() => router.back()} 
                         className="p-2 -ml-2"

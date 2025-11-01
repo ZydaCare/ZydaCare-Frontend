@@ -11,7 +11,7 @@ export default function BankAccountScreen() {
   const router = useRouter();
   const { doctorProfile, getDoctorProfile } = useAuth();
   const { showToast } = useToast();
-  
+
   const [bankDetails, setBankDetails] = useState<{
     bankName?: string;
     bankCode?: string;
@@ -19,11 +19,11 @@ export default function BankAccountScreen() {
     accountName?: string;
     bankVerified?: boolean;
   } | null>(null);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     bankName: '',
@@ -31,7 +31,7 @@ export default function BankAccountScreen() {
     accountNumber: '',
     accountName: '',
   });
-  
+
   const [verificationError, setVerificationError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [banks, setBanks] = useState<Array<{ name: string; code: string }>>([]);
@@ -57,7 +57,7 @@ export default function BankAccountScreen() {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Load bank details from doctor profile
         if (doctorProfile) {
           const details = {
@@ -67,7 +67,7 @@ export default function BankAccountScreen() {
             accountName: doctorProfile.accountName,
             bankVerified: doctorProfile.bankVerified
           };
-          
+
           setBankDetails(details);
           setFormData({
             bankName: details.bankName || '',
@@ -76,7 +76,7 @@ export default function BankAccountScreen() {
             accountName: details.accountName || '',
           });
         }
-        
+
         // Load banks list if not already loaded
         if (banks.length === 0) {
           const banksResponse = await getBanks();
@@ -92,7 +92,7 @@ export default function BankAccountScreen() {
         setIsLoading(false);
       }
     };
-    
+
     loadData();
   }, []);
 
@@ -101,7 +101,7 @@ export default function BankAccountScreen() {
       ...prev,
       [field]: value
     }));
-    
+
     // Reset verification error when user makes changes
     if (verificationError) setVerificationError('');
   };
@@ -114,25 +114,27 @@ export default function BankAccountScreen() {
       accountName: '', // Reset account name when bank changes
     }));
     setShowBankModal(false);
-    
+
     // Auto-verify if we have an account number
     if (formData.accountNumber && formData.accountNumber.length === 10) {
       verifyAccount();
     }
   };
 
-  const verifyAccount = async (): Promise<boolean> => {
-    const { accountNumber, bankCode } = formData;
+  const verifyAccount = async (accountNum?: string): Promise<boolean> => {
+    const accountNumber = accountNum || formData.accountNumber;
+    const { bankCode } = formData;
+
     if (!accountNumber || !bankCode) {
       setVerificationError('Please select a bank and enter account number');
       return false;
     }
-    
+
     if (accountNumber.length !== 10) {
       setVerificationError('Account number must be 10 digits');
       return false;
     }
-    
+
     setIsVerifying(true);
     setVerificationError('');
 
@@ -157,20 +159,20 @@ export default function BankAccountScreen() {
     }
   };
 
-  const handleAccountNumberChange = (text: string) => {
+ const handleAccountNumberChange = (text: string) => {
     // Only allow numbers and limit to 10 digits
     const cleanedText = text.replace(/\D/g, '').slice(0, 10);
     handleInputChange('accountNumber', cleanedText);
     
     // Auto-verify when we have 10 digits and a bank code
     if (cleanedText.length === 10 && formData.bankCode) {
-      verifyAccount();
+      verifyAccount(cleanedText);  // Pass the cleaned text directly
     }
   };
 
   const handleSaveChanges = async () => {
     const { bankCode, accountNumber, accountName, bankName } = formData;
-    
+
     if (!bankCode || !accountNumber || !accountName || !bankName) {
       showToast('Please fill in all required fields', 'error');
       return;
@@ -239,7 +241,7 @@ export default function BankAccountScreen() {
             <View className="bg-white rounded-xl p-6 shadow-sm">
               <View className="flex-row justify-between items-center mb-6">
                 <Text className="text-lg font-sans-semibold text-gray-900">Bank Details</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setShowEditForm(true)}
                   className="p-2"
                 >
@@ -264,9 +266,9 @@ export default function BankAccountScreen() {
                   <View className="flex-row items-center">
                     <Text className="text-sm font-sans-medium text-gray-500">Verification Status: </Text>
                     <View className={`flex-row items-center ml-2 px-2 py-1 rounded-full ${bankDetails.bankVerified ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                      <Ionicons 
+                      <Ionicons
                         name={bankDetails.bankVerified ? 'checkmark-circle' : 'time'}
-                        size={16} 
+                        size={16}
                         color={bankDetails.bankVerified ? '#10B981' : '#F59E0B'}
                         style={{ marginRight: 4 }}
                       />
@@ -280,7 +282,7 @@ export default function BankAccountScreen() {
                 <View className="py-8 items-center">
                   <Ionicons name="card-outline" size={48} color="#9CA3AF" className="mb-3" />
                   <Text className="text-gray-500 font-sans text-center mb-4">No bank details added yet</Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setShowEditForm(true)}
                     className="bg-primary py-3 px-6 rounded-lg"
                   >
@@ -295,7 +297,7 @@ export default function BankAccountScreen() {
               <Text className="text-lg font-sans-semibold text-gray-900 mb-6">
                 {bankDetails?.accountNumber ? 'Update Bank Details' : 'Add Bank Details'}
               </Text>
-              
+
               {/* Bank Selection */}
               <View className="mb-4">
                 <Text className="text-sm font-sans-medium text-gray-700 mb-2">Bank Name</Text>
@@ -311,8 +313,8 @@ export default function BankAccountScreen() {
                 </TouchableOpacity>
               </View>
 
-             {/* Bank Selection Modal */}
-             <Modal
+              {/* Bank Selection Modal */}
+              <Modal
                 visible={showBankModal}
                 animationType="slide"
                 transparent={true}
@@ -327,7 +329,7 @@ export default function BankAccountScreen() {
                         <Ionicons name="close" size={24} color="#6B7280" />
                       </TouchableOpacity>
                     </View>
-                    
+
                     {/* Search Bar */}
                     <View className="px-5 pt-4 pb-2">
                       <View className="border border-gray-200 rounded-lg">
@@ -345,7 +347,7 @@ export default function BankAccountScreen() {
                             clearButtonMode="while-editing"
                           />
                           {searchQuery.length > 0 && (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                               onPress={() => setSearchQuery('')}
                               className="p-1"
                             >
@@ -387,11 +389,11 @@ export default function BankAccountScreen() {
               <View className="mb-4">
                 <Text className="text-sm font-sans-medium text-gray-700 mb-2">Account Number</Text>
                 <View className="border border-gray-200 rounded-lg p-3 flex-row items-center">
-                  <Ionicons 
-                    name={formData.accountName ? 'checkmark-circle' : 'card-outline'} 
-                    size={20} 
-                    color={formData.accountName ? '#10B981' : '#6B7280'} 
-                    style={{ marginRight: 8 }} 
+                  <Ionicons
+                    name={formData.accountName ? 'checkmark-circle' : 'card-outline'}
+                    size={20}
+                    color={formData.accountName ? '#10B981' : '#6B7280'}
+                    style={{ marginRight: 8 }}
                   />
                   <TextInput
                     placeholder="Enter 10-digit account number"
@@ -404,7 +406,7 @@ export default function BankAccountScreen() {
                   />
                   {isVerifying && <ActivityIndicator size="small" color="#67A9AF" />}
                 </View>
-                
+
                 {verificationError ? (
                   <Text className="text-red-500 font-sans text-xs mt-1">{verificationError}</Text>
                 ) : formData.accountName ? (
@@ -461,13 +463,12 @@ export default function BankAccountScreen() {
                 >
                   <Text className="text-gray-700 font-sans-medium">Cancel</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   onPress={handleSaveChanges}
                   disabled={isUpdating || isVerifying}
-                  className={`flex-1 rounded-lg py-3 items-center ${
-                    isUpdating || isVerifying ? 'bg-primary/70' : 'bg-primary'
-                  }`}
+                  className={`flex-1 rounded-lg py-3 items-center ${isUpdating || isVerifying ? 'bg-primary/70' : 'bg-primary'
+                    }`}
                 >
                   {isUpdating ? (
                     <ActivityIndicator color="white" />
@@ -484,7 +485,7 @@ export default function BankAccountScreen() {
             <View className="flex-row items-start mb-2">
               <Ionicons name="information-circle" size={18} color="#3B82F6" style={{ marginTop: 2, marginRight: 8 }} />
               <Text className="flex-1 font-sans text-sm text-blue-800">
-                Your bank details are securely encrypted and only used for processing payments. 
+                Your bank details are securely encrypted and only used for processing payments.
                 We'll never share this information with third parties.
               </Text>
             </View>

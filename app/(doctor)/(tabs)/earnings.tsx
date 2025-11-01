@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/Toast';
 import {
   getEarningsStats,
   getTransactions,
+  getTransaction,
   getWithdrawals,
   getBanks,
   addBankDetails,
@@ -109,6 +110,10 @@ export default function EarningsScreen() {
   const [transactionHasMore, setTransactionHasMore] = useState(true);
   const [withdrawalHasMore, setWithdrawalHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [loadingTransactionDetails, setLoadingTransactionDetails] = useState(false);
+  const [transactionDetails, setTransactionDetails] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<{
@@ -127,10 +132,10 @@ export default function EarningsScreen() {
   // Filter transactions and withdrawals based on search query
   const filterItems = (items: any[], query: string) => {
     if (!query) return items;
-    
+
     const lowerQuery = query.toLowerCase().trim();
     const normalizedQuery = normalizeAmount(lowerQuery);
-    
+
     return items.filter(item => {
       // Search in transaction fields
       if ('patient' in item && item.patient) {
@@ -138,18 +143,18 @@ export default function EarningsScreen() {
         const amount = formatCurrency(item.doctorEarning || 0).toLowerCase();
         const numericAmount = normalizeAmount(amount);
         const status = item.paymentStatus?.toLowerCase() || '';
-        
+
         return (
           patientName.includes(lowerQuery) ||
           amount.includes(lowerQuery) ||
           numericAmount.includes(normalizedQuery) ||
           status.includes(lowerQuery) ||
           item.reference?.toLowerCase().includes(lowerQuery) ||
-          (item.booking?.appointmentDate && 
+          (item.booking?.appointmentDate &&
             new Date(item.booking.appointmentDate).toLocaleDateString().toLowerCase().includes(lowerQuery))
         );
       }
-      
+
       // Search in withdrawal fields
       if ('status' in item) {
         const amount = formatCurrency(item.amount || 0).toLowerCase();
@@ -157,18 +162,18 @@ export default function EarningsScreen() {
         const status = item.status?.toLowerCase() || '';
         const reference = item.reference?.toLowerCase() || '';
         const bankName = item.bankName?.toLowerCase() || '';
-        
+
         return (
           amount.includes(lowerQuery) ||
           numericAmount.includes(normalizedQuery) ||
           status.includes(lowerQuery) ||
           reference.includes(lowerQuery) ||
           bankName.includes(lowerQuery) ||
-          (item.requestedAt && 
+          (item.requestedAt &&
             new Date(item.requestedAt).toLocaleDateString().toLowerCase().includes(lowerQuery))
         );
       }
-      
+
       return false;
     });
   };
@@ -287,14 +292,32 @@ export default function EarningsScreen() {
     }
   };
 
+  const fetchTransactionDetails = async (transactionId: string) => {
+    try {
+      setLoadingTransactionDetails(true);
+      const response = await getTransaction(transactionId);
+
+      if (response.success) {
+        setTransactionDetails(response.data);
+      } else {
+        showToast('Failed to load transaction details', 'error');
+      }
+    } catch (error) {
+      console.error('Error fetching transaction details:', error);
+      showToast('Error loading transaction details', 'error');
+    } finally {
+      setLoadingTransactionDetails(false);
+    }
+  };
+
   const loadMoreTransactions = async () => {
     if (loadingMore || !transactionHasMore) return;
-    
+
     try {
       setLoadingMore(true);
       const nextPage = transactionPage + 1;
       const response = await getTransactions(nextPage, pageSize);
-      
+
       if (response.success && response.data) {
         setTransactions(prev => [...prev, ...response.data]);
         setTransactionPage(nextPage);
@@ -312,12 +335,12 @@ export default function EarningsScreen() {
 
   const loadMoreWithdrawals = async () => {
     if (loadingMore || !withdrawalHasMore) return;
-    
+
     try {
       setLoadingMore(true);
       const nextPage = withdrawalPage + 1;
       const response = await getWithdrawals(nextPage, pageSize);
-      
+
       if (response.success && response.data) {
         setWithdrawals(prev => [...prev, ...response.data]);
         setWithdrawalPage(nextPage);
@@ -359,13 +382,13 @@ export default function EarningsScreen() {
   // Verify bank account before adding
   const verifyBankAccount = async (accountNumber: string, bankCode: string) => {
     if (!accountNumber || !bankCode) return false;
-    
+
     setIsVerifyingAccount(true);
     setVerificationError('');
-    
+
     try {
       const response = await resolveAccount(accountNumber, bankCode);
-      
+
       if (response.success && response.data) {
         setBankDetails(prev => ({
           ...prev,
@@ -393,7 +416,7 @@ export default function EarningsScreen() {
       accountNumber: text,
       verifiedAccountName: '' // Reset verification when account number changes
     }));
-    
+
     // Auto-verify when we have both account number and bank code
     if (text.length === 10 && bankDetails.bankCode) {
       await verifyBankAccount(text, bankDetails.bankCode);
@@ -409,7 +432,7 @@ export default function EarningsScreen() {
     }));
     setShowBankPicker(false);
     setBankSearchQuery('');
-    
+
     // Auto-verify if we have an account number
     if (bankDetails.accountNumber && bankDetails.accountNumber.length === 10) {
       await verifyBankAccount(bankDetails.accountNumber, bank.code);
@@ -480,7 +503,12 @@ export default function EarningsScreen() {
   };
 
   const renderTransactionItem = ({ item }: { item: Transaction }) => (
-    <View className="bg-white p-4 rounded-2xl mb-3 shadow-sm border border-gray-100">
+    <TouchableOpacity className="bg-white p-4 rounded-2xl mb-3 shadow-sm border border-gray-100"
+      onPress={() => {
+        setSelectedTransaction(item);
+        setShowTransactionModal(true);
+        fetchTransactionDetails(item._id);
+      }}>
       <View className="flex-row justify-between items-start mb-3">
         <View className="flex-1 mr-3">
           <Text className="font-sans-semibold text-gray-900 text-base mb-1">
@@ -503,7 +531,7 @@ export default function EarningsScreen() {
           </View>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderWithdrawalItem = ({ item }: { item: Withdrawal }) => (
@@ -527,10 +555,10 @@ export default function EarningsScreen() {
             {formatCurrency(item.amount)}
           </Text>
           <View className={`mt-1 px-2 py-1 rounded-full ${item.status === 'completed' ? 'bg-green-50' :
-              item.status === 'pending' ? 'bg-yellow-50' : 'bg-red-50'
+            item.status === 'pending' ? 'bg-yellow-50' : 'bg-red-50'
             }`}>
             <Text className={`text-xs font-sans-medium ${item.status === 'completed' ? 'text-green-700' :
-                item.status === 'pending' ? 'text-yellow-700' : 'text-red-700'
+              item.status === 'pending' ? 'text-yellow-700' : 'text-red-700'
               }`}>
               {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
             </Text>
@@ -570,91 +598,91 @@ export default function EarningsScreen() {
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       className="flex-1 bg-gray-50"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-    <View className="flex-1 bg-gray-50 pt-5">
-      {/* Header */}
-      <View className="bg-white px-6 pt-6 pb-4 shadow-sm">
-        <Text className="text-2xl font-sans-bold text-gray-900">Earnings</Text>
-        <Text className="text-sm font-sans text-gray-500 mt-1">
-          Manage your earnings and withdrawals
-        </Text>
-      </View>
+      <View className="flex-1 bg-gray-50 pt-5">
+        {/* Header */}
+        <View className="bg-white px-6 pt-6 pb-4 shadow-sm">
+          <Text className="text-2xl font-sans-bold text-gray-900">Earnings</Text>
+          <Text className="text-sm font-sans text-gray-500 mt-1">
+            Manage your earnings and withdrawals
+          </Text>
+        </View>
 
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#67A9AF']} />
-        }
-      >
-        {/* Earnings Overview */}
-        <View className="px-4 py-4">
-          <Text className="font-sans-semibold text-gray-700 text-base mb-3">Earnings Overview</Text>
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#67A9AF']} />
+          }
+        >
+          {/* Earnings Overview */}
+          <View className="px-4 py-4">
+            <Text className="font-sans-semibold text-gray-700 text-base mb-3">Earnings Overview</Text>
 
-          <View className="flex-row flex-wrap -mx-2">
-            <View className="w-1/2 px-2 mb-4">
-              <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-sm font-sans text-gray-500">Total Earnings</Text>
-                  <View className="bg-[#67A9AF]/10 rounded-full p-2">
-                    <Ionicons name="wallet-outline" size={16} color="#67A9AF" />
+            <View className="flex-row flex-wrap -mx-2">
+              <View className="w-1/2 px-2 mb-4">
+                <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <View className="flex-row items-center justify-between mb-2">
+                    <Text className="text-sm font-sans text-gray-500">Total Earnings</Text>
+                    <View className="bg-[#67A9AF]/10 rounded-full p-2">
+                      <Ionicons name="wallet-outline" size={16} color="#67A9AF" />
+                    </View>
                   </View>
+                  <Text className="text-xl font-sans-bold text-gray-900" testID="total-earnings">
+                    {formatCurrency(stats.totalEarnings)}
+                  </Text>
                 </View>
-                <Text className="text-xl font-sans-bold text-gray-900" testID="total-earnings">
-                  {formatCurrency(stats.totalEarnings)}
-                </Text>
               </View>
-            </View>
 
-            <View className="w-1/2 px-2 mb-4">
-              <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-sm font-sans text-gray-500">Available</Text>
-                  <View className="bg-green-100 rounded-full p-2">
-                    <Ionicons name="cash-outline" size={16} color="#10B981" />
+              <View className="w-1/2 px-2 mb-4">
+                <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <View className="flex-row items-center justify-between mb-2">
+                    <Text className="text-sm font-sans text-gray-500">Available</Text>
+                    <View className="bg-green-100 rounded-full p-2">
+                      <Ionicons name="cash-outline" size={16} color="#10B981" />
+                    </View>
                   </View>
+                  <Text className="text-xl font-sans-bold text-gray-900" testID="available-balance">
+                    {formatCurrency(stats.availableBalance)}
+                  </Text>
                 </View>
-                <Text className="text-xl font-sans-bold text-gray-900" testID="available-balance">
-                  {formatCurrency(stats.availableBalance)}
-                </Text>
               </View>
-            </View>
 
-            <View className="w-1/2 px-2">
-              <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-sm font-sans text-gray-500">Pending Balance</Text>
-                  <View className="bg-yellow-100 rounded-full p-2">
-                    <Ionicons name="time-outline" size={16} color="#F59E0B" />
+              <View className="w-1/2 px-2">
+                <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <View className="flex-row items-center justify-between mb-2">
+                    <Text className="text-sm font-sans text-gray-500">Pending Balance</Text>
+                    <View className="bg-yellow-100 rounded-full p-2">
+                      <Ionicons name="time-outline" size={16} color="#F59E0B" />
+                    </View>
                   </View>
+                  <Text className="text-xl font-sans-bold text-gray-900" testID="pending-balance">
+                    {formatCurrency(stats.pendingBalance)}
+                  </Text>
                 </View>
-                <Text className="text-xl font-sans-bold text-gray-900" testID="pending-balance">
-                  {formatCurrency(stats.pendingBalance)}
-                </Text>
               </View>
-            </View>
 
-            <View className="w-1/2 px-2">
-              <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-sm font-sans text-gray-500">Withdrawn</Text>
-                  <View className="bg-blue-100 rounded-full p-2">
-                    <Ionicons name="arrow-down-circle-outline" size={16} color="#3B82F6" />
+              <View className="w-1/2 px-2">
+                <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <View className="flex-row items-center justify-between mb-2">
+                    <Text className="text-sm font-sans text-gray-500">Withdrawn</Text>
+                    <View className="bg-blue-100 rounded-full p-2">
+                      <Ionicons name="arrow-down-circle-outline" size={16} color="#3B82F6" />
+                    </View>
                   </View>
+                  <Text className="text-xl font-sans-bold text-gray-900" testID="total-withdrawn">
+                    {formatCurrency(stats.withdrawnBalance)}
+                  </Text>
                 </View>
-                <Text className="text-xl font-sans-bold text-gray-900" testID="total-withdrawn">
-                  {formatCurrency(stats.withdrawnBalance)}
-                </Text>
               </View>
             </View>
           </View>
-        </View>
 
-        {/* Action Buttons */}
-        <View className="flex-row px-6 pb-4">
-          {/* <TouchableOpacity
+          {/* Action Buttons */}
+          <View className="flex-row px-6 pb-4">
+            {/* <TouchableOpacity
             className={`flex-1 py-4 rounded-xl items-center flex-row justify-center mr-2 shadow-sm ${!stats || stats.pendingBalance <= 0 ? 'bg-gray-300' : 'bg-[#67A9AF]'
               }`}
             onPress={() => setShowWithdrawModal(true)}
@@ -663,349 +691,550 @@ export default function EarningsScreen() {
             <Ionicons name="arrow-down-circle-outline" size={20} color="white" />
             <Text className="text-white font-sans-bold ml-2">Withdraw</Text>
           </TouchableOpacity> */}
-          <TouchableOpacity
-            className="bg-white border-2 border-[#67A9AF] flex-1 py-4 rounded-xl items-center flex-row justify-center ml-2 shadow-sm"
-            onPress={() => setShowBankModal(true)}
-          >
-            <Ionicons name="add-circle-outline" size={20} color="#67A9AF" />
-            <Text className="text-[#67A9AF] font-sans-bold ml-2">{doctorProfile?.bankVerified ? 'Edit Bank' : 'Add Bank'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Bar */}
-        <View className="px-6 mb-4">
-          <View className="bg-white rounded-xl p-3 flex-row items-center shadow-sm">
-            <Ionicons name="search" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
-            <TextInput
-              placeholder={`Search ${activeTab}...`}
-              value={searchQuery}
-              onChangeText={handleSearch}
-              className="flex-1 font-sans text-base text-gray-900"
-              placeholderTextColor="#9CA3AF"
-            />
-            {searchQuery ? (
-              <TouchableOpacity onPress={() => handleSearch('')}>
-                <Ionicons name="close-circle" size={20} color="#9CA3AF" />
-              </TouchableOpacity>
-            ) : null}
+            <TouchableOpacity
+              className="bg-white border-2 border-[#67A9AF] flex-1 py-4 rounded-xl items-center flex-row justify-center ml-2 shadow-sm"
+              onPress={() => setShowBankModal(true)}
+            >
+              <Ionicons name="add-circle-outline" size={20} color="#67A9AF" />
+              <Text className="text-[#67A9AF] font-sans-bold ml-2">{doctorProfile?.bankVerified ? 'Edit Bank' : 'Add Bank'}</Text>
+            </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Tabs */}
-        <View className="bg-white mx-6 rounded-xl p-1 flex-row shadow-sm mb-4">
-          <TouchableOpacity
-            className={`flex-1 py-3 rounded-lg ${activeTab === 'transactions' ? 'bg-[#67A9AF]' : 'bg-transparent'}`}
-            onPress={() => setActiveTab('transactions')}
-          >
-            <Text className={`font-sans-semibold text-center ${activeTab === 'transactions' ? 'text-white' : 'text-gray-500'}`}>
-              Transactions
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className={`flex-1 py-3 rounded-lg ${activeTab === 'withdrawals' ? 'bg-[#67A9AF]' : 'bg-transparent'}`}
-            onPress={() => setActiveTab('withdrawals')}
-          >
-            <Text className={`font-sans-semibold text-center ${activeTab === 'withdrawals' ? 'text-white' : 'text-gray-500'}`}>
-              Withdrawals
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Content */}
-        <View className="px-6">
-          {activeTab === 'transactions' ? (
-            (isSearching ? searchResults.transactions : transactions).length > 0 ? (
-              <FlatList
-                data={isSearching ? searchResults.transactions : transactions}
-                renderItem={renderTransactionItem}
-                keyExtractor={(item, index) => `tx-${item._id || 'tx'}-${item.createdAt || Date.now()}-${index}`}
-                scrollEnabled={false}
-                onEndReached={loadMoreTransactions}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={loadingMore ? (
-                  <View className="py-4 items-center">
-                    <ActivityIndicator size="small" color="#67A9AF" />
-                  </View>
-                ) : null}
+          {/* Search Bar */}
+          <View className="px-6 mb-4">
+            <View className="bg-white rounded-xl p-3 flex-row items-center shadow-sm">
+              <Ionicons name="search" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
+              <TextInput
+                placeholder={`Search ${activeTab}...`}
+                value={searchQuery}
+                onChangeText={handleSearch}
+                className="flex-1 font-sans text-base text-gray-900"
+                placeholderTextColor="#9CA3AF"
               />
-            ) : (
-              renderEmptyState('transactions')
-            )
-          ) : (
-            (isSearching ? searchResults.withdrawals : withdrawals).length > 0 ? (
-              <FlatList
-                data={isSearching ? searchResults.withdrawals : withdrawals}
-                renderItem={renderWithdrawalItem}
-                keyExtractor={(item, index) => `wd-${item._id || 'wd'}-${item.requestedAt || Date.now()}-${index}`}
-                scrollEnabled={false}
-                onEndReached={loadMoreWithdrawals}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={loadingMore ? (
-                  <View className="py-4 items-center">
-                    <ActivityIndicator size="small" color="#67A9AF" />
-                  </View>
-                ) : null}
-              />
-            ) : (
-              renderEmptyState('withdrawals')
-            )
-          )}
-        </View>
-      </ScrollView>
-
-      <View className='h-24' />
-
-      {/* Add Bank Modal */}
-      <Modal
-        visible={showBankModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowBankModal(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6 max-h-[90%]">
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-xl font-sans-bold text-gray-900">Add Bank Account</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowBankModal(false);
-                  setBankDetails({});
-                }}
-                className="bg-gray-100 rounded-full p-2"
-              >
-                <Ionicons name="close" size={20} color="#6B7280" />
-              </TouchableOpacity>
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => handleSearch('')}>
+                  <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+                </TouchableOpacity>
+              ) : null}
             </View>
+          </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View className="mb-4">
-                <Text className="text-sm font-sans-semibold text-gray-700 mb-2">Select Bank</Text>
+          {/* Tabs */}
+          <View className="bg-white mx-6 rounded-xl p-1 flex-row shadow-sm mb-4">
+            <TouchableOpacity
+              className={`flex-1 py-3 rounded-lg ${activeTab === 'transactions' ? 'bg-[#67A9AF]' : 'bg-transparent'}`}
+              onPress={() => setActiveTab('transactions')}
+            >
+              <Text className={`font-sans-semibold text-center ${activeTab === 'transactions' ? 'text-white' : 'text-gray-500'}`}>
+                Transactions
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className={`flex-1 py-3 rounded-lg ${activeTab === 'withdrawals' ? 'bg-[#67A9AF]' : 'bg-transparent'}`}
+              onPress={() => setActiveTab('withdrawals')}
+            >
+              <Text className={`font-sans-semibold text-center ${activeTab === 'withdrawals' ? 'text-white' : 'text-gray-500'}`}>
+                Withdrawals
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Content */}
+          <View className="px-6">
+            {activeTab === 'transactions' ? (
+              (isSearching ? searchResults.transactions : transactions).length > 0 ? (
+                <FlatList
+                  data={isSearching ? searchResults.transactions : transactions}
+                  renderItem={renderTransactionItem}
+                  keyExtractor={(item, index) => `tx-${item._id || 'tx'}-${item.createdAt || Date.now()}-${index}`}
+                  scrollEnabled={false}
+                  onEndReached={loadMoreTransactions}
+                  onEndReachedThreshold={0.5}
+                  ListFooterComponent={loadingMore ? (
+                    <View className="py-4 items-center">
+                      <ActivityIndicator size="small" color="#67A9AF" />
+                    </View>
+                  ) : null}
+                />
+              ) : (
+                renderEmptyState('transactions')
+              )
+            ) : (
+              (isSearching ? searchResults.withdrawals : withdrawals).length > 0 ? (
+                <FlatList
+                  data={isSearching ? searchResults.withdrawals : withdrawals}
+                  renderItem={renderWithdrawalItem}
+                  keyExtractor={(item, index) => `wd-${item._id || 'wd'}-${item.requestedAt || Date.now()}-${index}`}
+                  scrollEnabled={false}
+                  onEndReached={loadMoreWithdrawals}
+                  onEndReachedThreshold={0.5}
+                  ListFooterComponent={loadingMore ? (
+                    <View className="py-4 items-center">
+                      <ActivityIndicator size="small" color="#67A9AF" />
+                    </View>
+                  ) : null}
+                />
+              ) : (
+                renderEmptyState('withdrawals')
+              )
+            )}
+          </View>
+        </ScrollView>
+
+        <View className='h-24' />
+
+        {/* Add Bank Modal */}
+        <Modal
+          visible={showBankModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowBankModal(false)}
+        >
+          <View className="flex-1 bg-black/50 justify-end">
+            <View className="bg-white rounded-t-3xl p-6 max-h-[90%]">
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-xl font-sans-bold text-gray-900">Add Bank Account</Text>
                 <TouchableOpacity
-                  className={`border-2 border-gray-200 rounded-xl p-4 flex-row justify-between items-center`}
-                  onPress={() => setShowBankPicker(true)}
-                  disabled={isVerifyingAccount}
+                  onPress={() => {
+                    setShowBankModal(false);
+                    setBankDetails({});
+                  }}
+                  className="bg-gray-100 rounded-full p-2"
                 >
-                  <View className="flex-1">
-                    <Text className={`font-sans text-base ${bankDetails.bankName ? 'text-gray-900' : 'text-gray-400'}`}>
-                      {bankDetails.bankName || 'Choose your bank'}
-                    </Text>
-                    {/* {bankDetails.bankName && bankDetails.verifiedAccountName && (
+                  <Ionicons name="close" size={20} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View className="mb-4">
+                  <Text className="text-sm font-sans-semibold text-gray-700 mb-2">Select Bank</Text>
+                  <TouchableOpacity
+                    className={`border-2 border-gray-200 rounded-xl p-4 flex-row justify-between items-center`}
+                    onPress={() => setShowBankPicker(true)}
+                    disabled={isVerifyingAccount}
+                  >
+                    <View className="flex-1">
+                      <Text className={`font-sans text-base ${bankDetails.bankName ? 'text-gray-900' : 'text-gray-400'}`}>
+                        {bankDetails.bankName || 'Choose your bank'}
+                      </Text>
+                      {/* {bankDetails.bankName && bankDetails.verifiedAccountName && (
                       <Text className="text-xs text-green-600 mt-1">
                         Verified with {bankDetails.verifiedAccountName}
                       </Text>
                     )} */}
+                    </View>
+                    {isVerifyingAccount ? (
+                      <ActivityIndicator size="small" color="#67A9AF" />
+                    ) : (
+                      <Ionicons name="chevron-down" size={20} color="#6B7280" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                <View className="mb-4">
+                  <Text className="text-sm font-sans-semibold text-gray-700 mb-2">Account Number</Text>
+                  <View>
+                    <View className={`border-2 ${bankDetails.accountNumber && bankDetails.accountNumber.length === 10 ? (bankDetails.verifiedAccountName ? 'border-green-200' : 'border-red-200') : 'border-gray-200'} rounded-xl p-4 flex-row items-center`}>
+                      <Ionicons
+                        name={bankDetails.verifiedAccountName ? 'checkmark-circle' : 'card-outline'}
+                        size={20}
+                        color={bankDetails.verifiedAccountName ? '#10B981' : '#6B7280'}
+                        style={{ marginRight: 8 }}
+                      />
+                      <TextInput
+                        placeholder="Enter 10-digit account number"
+                        value={bankDetails.accountNumber}
+                        onChangeText={handleAccountNumberChange}
+                        keyboardType="number-pad"
+                        maxLength={10}
+                        editable={!isVerifyingAccount}
+                        className="flex-1 font-sans text-base text-gray-900"
+                      />
+                      {isVerifyingAccount && (
+                        <ActivityIndicator size="small" color="#67A9AF" />
+                      )}
+                    </View>
+                    {verificationError ? (
+                      <Text className="text-red-500 text-xs mt-1 ml-1">{verificationError}</Text>
+                    ) : bankDetails.accountNumber?.length === 10 && bankDetails.verifiedAccountName ? (
+                      <Text className="text-green-600 text-xs mt-1 ml-1">
+                        Account verified: {bankDetails.verifiedAccountName}
+                      </Text>
+                    ) : bankDetails.accountNumber?.length === 10 ? (
+                      <Text className="text-yellow-600 text-xs mt-1 ml-1">
+                        Verifying account...
+                      </Text>
+                    ) : bankDetails.accountNumber && bankDetails.accountNumber.length > 0 ? (
+                      <Text className="text-gray-500 text-xs mt-1 ml-1">
+                        Enter 10-digit account number
+                      </Text>
+                    ) : null}
                   </View>
-                  {isVerifyingAccount ? (
-                    <ActivityIndicator size="small" color="#67A9AF" />
+                </View>
+
+                {bankDetails.verifiedAccountName && (
+                  <View className="mb-6">
+                    <Text className="text-sm font-sans-semibold text-gray-700 mb-2">Account Name</Text>
+                    <View className="border-2 border-green-200 bg-green-50 rounded-xl p-4 flex-row items-center">
+                      <Ionicons name="checkmark-circle" size={20} color="#10B981" style={{ marginRight: 8 }} />
+                      <Text className="font-sans text-base text-gray-900">
+                        {bankDetails.verifiedAccountName}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  className={`py-4 rounded-xl items-center flex-row justify-center ${!bankDetails.verifiedAccountName || bankLoading ? 'bg-gray-300' : 'bg-[#67A9AF]'
+                    }`}
+                  onPress={handleAddBank}
+                  disabled={!bankDetails.verifiedAccountName || bankLoading}
+                >
+                  {bankLoading ? (
+                    <ActivityIndicator color="white" />
                   ) : (
-                    <Ionicons name="chevron-down" size={20} color="#6B7280" />
+                    <>
+                      <Ionicons name="checkmark-circle-outline" size={20} color="white" />
+                      <Text className="text-white font-sans-bold ml-2">
+                        {bankDetails.verifiedAccountName ? 'Link Bank Account' : 'Verify Account First'}
+                      </Text>
+                    </>
                   )}
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Bank Picker Modal */}
+        <Modal
+          visible={showBankPicker}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowBankPicker(false)}
+        >
+          <View className="flex-1 bg-black/50 justify-end">
+            <View className="bg-white rounded-t-3xl p-6" style={{ height: '75%' }}>
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-xl font-sans-bold text-gray-900">Select Bank</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowBankPicker(false);
+                    setBankSearchQuery('');
+                  }}
+                  className="bg-gray-100 rounded-full p-2"
+                >
+                  <Ionicons name="close" size={20} color="#6B7280" />
                 </TouchableOpacity>
               </View>
 
               <View className="mb-4">
-                <Text className="text-sm font-sans-semibold text-gray-700 mb-2">Account Number</Text>
-                <View>
-                  <View className={`border-2 ${bankDetails.accountNumber && bankDetails.accountNumber.length === 10 ? (bankDetails.verifiedAccountName ? 'border-green-200' : 'border-red-200') : 'border-gray-200'} rounded-xl p-4 flex-row items-center`}>
-                    <Ionicons 
-                      name={bankDetails.verifiedAccountName ? 'checkmark-circle' : 'card-outline'} 
-                      size={20} 
-                      color={bankDetails.verifiedAccountName ? '#10B981' : '#6B7280'} 
-                      style={{ marginRight: 8 }} 
-                    />
-                    <TextInput
-                      placeholder="Enter 10-digit account number"
-                      value={bankDetails.accountNumber}
-                      onChangeText={handleAccountNumberChange}
-                      keyboardType="number-pad"
-                      maxLength={10}
-                      editable={!isVerifyingAccount}
-                      className="flex-1 font-sans text-base text-gray-900"
-                    />
-                    {isVerifyingAccount && (
-                      <ActivityIndicator size="small" color="#67A9AF" />
-                    )}
-                  </View>
-                  {verificationError ? (
-                    <Text className="text-red-500 text-xs mt-1 ml-1">{verificationError}</Text>
-                  ) : bankDetails.accountNumber?.length === 10 && bankDetails.verifiedAccountName ? (
-                    <Text className="text-green-600 text-xs mt-1 ml-1">
-                      Account verified: {bankDetails.verifiedAccountName}
-                    </Text>
-                  ) : bankDetails.accountNumber?.length === 10 ? (
-                    <Text className="text-yellow-600 text-xs mt-1 ml-1">
-                      Verifying account...
-                    </Text>
-                  ) : bankDetails.accountNumber && bankDetails.accountNumber.length > 0 ? (
-                    <Text className="text-gray-500 text-xs mt-1 ml-1">
-                      Enter 10-digit account number
-                    </Text>
-                  ) : null}
+                <View className="border-2 border-gray-200 rounded-xl p-3 flex-row items-center">
+                  <Ionicons name="search-outline" size={20} color="#6B7280" style={{ marginRight: 8 }} />
+                  <TextInput
+                    placeholder="Search banks..."
+                    value={bankSearchQuery}
+                    onChangeText={setBankSearchQuery}
+                    className="flex-1 font-sans text-base text-gray-900"
+                  />
                 </View>
               </View>
 
-              {bankDetails.verifiedAccountName && (
-                <View className="mb-6">
-                  <Text className="text-sm font-sans-semibold text-gray-700 mb-2">Account Name</Text>
-                  <View className="border-2 border-green-200 bg-green-50 rounded-xl p-4 flex-row items-center">
-                    <Ionicons name="checkmark-circle" size={20} color="#10B981" style={{ marginRight: 8 }} />
-                    <Text className="font-sans text-base text-gray-900">
-                      {bankDetails.verifiedAccountName}
-                    </Text>
+              <FlatList
+                data={filteredBanks}
+                keyExtractor={(item) => `bank-${item.code}-${item.name}`}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    className="py-4 border-b border-gray-100"
+                    onPress={() => handleBankSelect(item)}
+                  >
+                    <Text className="font-sans text-base text-gray-900">{item.name}</Text>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <View className="py-8 items-center">
+                    <Text className="text-gray-500 font-sans">No banks found</Text>
                   </View>
+                }
+              />
+            </View>
+          </View>
+        </Modal>
+
+        {/* Withdraw Modal */}
+        <Modal
+          visible={showWithdrawModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowWithdrawModal(false)}
+        >
+          <View className="flex-1 bg-black/50 justify-end">
+            <View className="bg-white rounded-t-3xl p-6">
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-xl font-sans-bold text-gray-900">Withdraw Funds</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowWithdrawModal(false);
+                    setWithdrawAmount('');
+                  }}
+                  className="bg-gray-100 rounded-full p-2"
+                >
+                  <Ionicons name="close" size={20} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+
+              <View className="bg-[#67A9AF]/10 rounded-xl p-4 mb-6">
+                <Text className="text-sm font-sans text-gray-600 mb-1">Available Balance</Text>
+                <Text className="text-2xl font-sans-bold text-[#67A9AF]">
+                  {stats ? formatCurrency(stats.pendingBalance) : '₦0.00'}
+                </Text>
+              </View>
+
+              <View className="mb-6">
+                <Text className="text-sm font-sans-semibold text-gray-700 mb-2">Amount to Withdraw</Text>
+                <View className="border-2 border-gray-200 rounded-xl p-4 flex-row items-center">
+                  <Text className="text-gray-900 text-xl font-sans-bold mr-2">₦</Text>
+                  <TextInput
+                    placeholder="0.00"
+                    value={withdrawAmount}
+                    onChangeText={setWithdrawAmount}
+                    keyboardType="decimal-pad"
+                    className="flex-1 font-sans-bold text-xl text-gray-900"
+                  />
                 </View>
-              )}
+                <Text className="text-xs text-gray-500 mt-2 ml-1">
+                  Enter the amount you want to withdraw
+                </Text>
+              </View>
 
               <TouchableOpacity
-                className={`py-4 rounded-xl items-center flex-row justify-center ${
-                  !bankDetails.verifiedAccountName || bankLoading ? 'bg-gray-300' : 'bg-[#67A9AF]'
-                }`}
-                onPress={handleAddBank}
-                disabled={!bankDetails.verifiedAccountName || bankLoading}
+                className={`py-4 rounded-xl items-center flex-row justify-center mb-4 ${withdrawLoading ? 'bg-gray-300' : 'bg-[#67A9AF]'
+                  }`}
+                onPress={handleWithdraw}
+                disabled={withdrawLoading}
               >
-                {bankLoading ? (
+                {withdrawLoading ? (
                   <ActivityIndicator color="white" />
                 ) : (
                   <>
-                    <Ionicons name="checkmark-circle-outline" size={20} color="white" />
-                    <Text className="text-white font-sans-bold ml-2">
-                      {bankDetails.verifiedAccountName ? 'Link Bank Account' : 'Verify Account First'}
-                    </Text>
+                    <Ionicons name="arrow-down-circle" size={20} color="white" />
+                    <Text className="text-white font-sans-bold ml-2">Confirm Withdrawal</Text>
                   </>
                 )}
               </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
-      {/* Bank Picker Modal */}
-      <Modal
-        visible={showBankPicker}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowBankPicker(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6" style={{ height: '75%' }}>
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-sans-bold text-gray-900">Select Bank</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowBankPicker(false);
-                  setBankSearchQuery('');
-                }}
-                className="bg-gray-100 rounded-full p-2"
-              >
-                <Ionicons name="close" size={20} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View className="mb-4">
-              <View className="border-2 border-gray-200 rounded-xl p-3 flex-row items-center">
-                <Ionicons name="search-outline" size={20} color="#6B7280" style={{ marginRight: 8 }} />
-                <TextInput
-                  placeholder="Search banks..."
-                  value={bankSearchQuery}
-                  onChangeText={setBankSearchQuery}
-                  className="flex-1 font-sans text-base text-gray-900"
-                />
+              <View className="bg-blue-50 rounded-xl p-3 flex-row">
+                <Ionicons name="information-circle" size={20} color="#3B82F6" style={{ marginRight: 8, marginTop: 2 }} />
+                <Text className="text-xs text-blue-700 font-sans flex-1">
+                  Withdrawals are processed within 1-3 business days. You'll receive a notification once processed.
+                </Text>
               </View>
             </View>
+          </View>
+        </Modal>
 
-            <FlatList
-              data={filteredBanks}
-              keyExtractor={(item) => `bank-${item.code}-${item.name}`}
-              renderItem={({ item }) => (
+
+        {/* Transaction Details Modal */}
+        <Modal
+          visible={showTransactionModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => {
+            setShowTransactionModal(false);
+            setSelectedTransaction(null);
+            setTransactionDetails(null);
+          }}
+        >
+          <View className="flex-1 bg-black/50 justify-end">
+            <View className="bg-white rounded-t-3xl p-6 max-h-[90%]">
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-xl font-sans-bold text-gray-900">Transaction Details</Text>
                 <TouchableOpacity
-                  className="py-4 border-b border-gray-100"
-                  onPress={() => handleBankSelect(item)}
+                  onPress={() => {
+                    setShowTransactionModal(false);
+                    setSelectedTransaction(null);
+                    setTransactionDetails(null);
+                  }}
+                  className="bg-gray-100 rounded-full p-2"
                 >
-                  <Text className="font-sans text-base text-gray-900">{item.name}</Text>
+                  <Ionicons name="close" size={20} color="#6B7280" />
                 </TouchableOpacity>
-              )}
-              ListEmptyComponent={
-                <View className="py-8 items-center">
-                  <Text className="text-gray-500 font-sans">No banks found</Text>
-                </View>
-              }
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Withdraw Modal */}
-      <Modal
-        visible={showWithdrawModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowWithdrawModal(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6">
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-xl font-sans-bold text-gray-900">Withdraw Funds</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowWithdrawModal(false);
-                  setWithdrawAmount('');
-                }}
-                className="bg-gray-100 rounded-full p-2"
-              >
-                <Ionicons name="close" size={20} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View className="bg-[#67A9AF]/10 rounded-xl p-4 mb-6">
-              <Text className="text-sm font-sans text-gray-600 mb-1">Available Balance</Text>
-              <Text className="text-2xl font-sans-bold text-[#67A9AF]">
-                {stats ? formatCurrency(stats.pendingBalance) : '₦0.00'}
-              </Text>
-            </View>
-
-            <View className="mb-6">
-              <Text className="text-sm font-sans-semibold text-gray-700 mb-2">Amount to Withdraw</Text>
-              <View className="border-2 border-gray-200 rounded-xl p-4 flex-row items-center">
-                <Text className="text-gray-900 text-xl font-sans-bold mr-2">₦</Text>
-                <TextInput
-                  placeholder="0.00"
-                  value={withdrawAmount}
-                  onChangeText={setWithdrawAmount}
-                  keyboardType="decimal-pad"
-                  className="flex-1 font-sans-bold text-xl text-gray-900"
-                />
               </View>
-              <Text className="text-xs text-gray-500 mt-2 ml-1">
-                Enter the amount you want to withdraw
-              </Text>
-            </View>
 
-            <TouchableOpacity
-              className={`py-4 rounded-xl items-center flex-row justify-center mb-4 ${withdrawLoading ? 'bg-gray-300' : 'bg-[#67A9AF]'
-                }`}
-              onPress={handleWithdraw}
-              disabled={withdrawLoading}
-            >
-              {withdrawLoading ? (
-                <ActivityIndicator color="white" />
+              {loadingTransactionDetails ? (
+                <View className="py-12 items-center">
+                  <ActivityIndicator size="large" color="#67A9AF" />
+                  <Text className="text-gray-500 font-sans mt-3">Loading details...</Text>
+                </View>
+              ) : transactionDetails ? (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {/* Status Badge */}
+                  <View className="items-center mb-6">
+                    <View className={`w-16 h-16 rounded-full items-center justify-center mb-3 ${transactionDetails.status === 'success' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                      <Ionicons
+                        name={transactionDetails.status === 'success' ? 'checkmark-circle' : 'close-circle'}
+                        size={40}
+                        color={transactionDetails.status === 'success' ? '#10B981' : '#EF4444'}
+                      />
+                    </View>
+                    <Text className={`text-3xl font-sans-bold mb-1 ${transactionDetails.status === 'success' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                      {formatCurrency(transactionDetails.breakdown?.doctorEarning || transactionDetails.amount)}
+                    </Text>
+                    <Text className="text-sm text-gray-500 font-sans">Your Earning</Text>
+                  </View>
+
+                  {/* Patient Information */}
+                  <View className="bg-gray-50 rounded-xl p-4 mb-4">
+                    <View className="flex-row items-center mb-3">
+                      <View className="bg-primary/10 rounded-full p-2 mr-3">
+                        <Ionicons name="person-outline" size={20} color="#67A9AF" />
+                      </View>
+                      <Text className="font-sans-semibold text-gray-900 text-base">Patient Information</Text>
+                    </View>
+                    <View className="space-y-2">
+                      <View className="flex-row justify-between py-2">
+                        <Text className="text-gray-600 font-sans">Name</Text>
+                        <Text className="font-sans-medium text-gray-900">
+                          {transactionDetails.patient?.firstName} {transactionDetails.patient?.lastName}
+                        </Text>
+                      </View>
+                      <View className="flex-row justify-between py-2 border-t border-gray-200">
+                        <Text className="text-gray-600 font-sans">Email</Text>
+                        <Text className="font-sans-medium text-gray-900">
+                          {transactionDetails.patient?.email}
+                        </Text>
+                      </View>
+                      <View className="flex-row justify-between py-2 border-t border-gray-200">
+                        <Text className="text-gray-600 font-sans">Phone</Text>
+                        <Text className="font-sans-medium text-gray-900">
+                          {transactionDetails.patient?.phone}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Appointment Details */}
+                  <View className="bg-gray-50 rounded-xl p-4 mb-4">
+                    <View className="flex-row items-center mb-3">
+                      <View className="bg-blue-100 rounded-full p-2 mr-3">
+                        <Ionicons name="calendar-outline" size={20} color="#3B82F6" />
+                      </View>
+                      <Text className="font-sans-semibold text-gray-900 text-base">Appointment Details</Text>
+                    </View>
+                    <View className="space-y-2">
+                      <View className="flex-row justify-between py-2">
+                        <Text className="text-gray-600 font-sans">Date & Time</Text>
+                        <Text className="font-sans-medium text-gray-900">
+                          {transactionDetails.booking?.appointmentDate
+                            ? format(new Date(transactionDetails.booking.appointmentDate), 'MMM d, yyyy · h:mm a')
+                            : 'N/A'}
+                        </Text>
+                      </View>
+                      <View className="flex-row justify-between py-2 border-t border-gray-200">
+                        <Text className="text-gray-600 font-sans">Status</Text>
+                        <View className={`px-3 py-1 rounded-full ${transactionDetails.booking?.status === 'paid' ? 'bg-green-100' : 'bg-yellow-100'
+                          }`}>
+                          <Text className={`text-xs font-sans-medium ${transactionDetails.booking?.status === 'paid' ? 'text-green-700' : 'text-yellow-700'
+                            }`}>
+                            {transactionDetails.booking?.status?.toUpperCase()}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Payment Breakdown */}
+                  <View className="bg-gray-50 rounded-xl p-4 mb-4">
+                    <View className="flex-row items-center mb-3">
+                      <View className="bg-orange-100 rounded-full p-2 mr-3">
+                        <Ionicons name="receipt-outline" size={20} color="#F59E0B" />
+                      </View>
+                      <Text className="font-sans-semibold text-gray-900 text-base">Payment Breakdown</Text>
+                    </View>
+                    <View className="space-y-2">
+                      <View className="flex-row justify-between py-2">
+                        <Text className="text-gray-600 font-sans">Total Amount</Text>
+                        <Text className="font-sans-medium text-gray-900">
+                          {formatCurrency(transactionDetails.breakdown?.totalAmount || transactionDetails.amount)}
+                        </Text>
+                      </View>
+                      <View className="flex-row justify-between py-2 border-t border-gray-200">
+                        <Text className="text-gray-600 font-sans">
+                          Platform Fee ({transactionDetails.breakdown?.platformFeePercentage || 15}%)
+                        </Text>
+                        <Text className="font-sans-medium text-red-600">
+                          -{formatCurrency(transactionDetails.breakdown?.platformFee || 0)}
+                        </Text>
+                      </View>
+                      <View className="flex-row justify-between py-3 border-t-2 border-gray-300">
+                        <Text className="font-sans-semibold text-gray-900">Your Earning</Text>
+                        <Text className="font-sans-bold text-lg text-green-600">
+                          {formatCurrency(transactionDetails.breakdown?.doctorEarning || 0)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Transaction Information */}
+                  <View className="bg-gray-50 rounded-xl p-4 mb-4">
+                    <View className="flex-row items-center mb-3">
+                      <View className="bg-purple-100 rounded-full p-2 mr-3">
+                        <Ionicons name="information-circle-outline" size={20} color="#9C27B0" />
+                      </View>
+                      <Text className="font-sans-semibold text-gray-900 text-base">Transaction Information</Text>
+                    </View>
+                    <View className="space-y-2">
+                      <View className="flex-row justify-between py-2">
+                        <Text className="text-gray-600 font-sans">Reference</Text>
+                        <Text className="font-sans-medium text-gray-900 uppercase">
+                          {transactionDetails.reference}
+                        </Text>
+                      </View>
+                      <View className="flex-row justify-between py-2 border-t border-gray-200">
+                        <Text className="text-gray-600 font-sans">Payment Method</Text>
+                        <Text className="font-sans-medium text-gray-900">
+                          {transactionDetails.paymentMethod || 'N/A'}
+                        </Text>
+                      </View>
+                      <View className="flex-row justify-between py-2 border-t border-gray-200">
+                        <Text className="text-gray-600 font-sans">Split Type</Text>
+                        <Text className="font-sans-medium text-gray-900 capitalize">
+                          {transactionDetails.splitType}
+                        </Text>
+                      </View>
+                      <View className="flex-row justify-between py-2 border-t border-gray-200">
+                        <Text className="text-gray-600 font-sans">Transaction Date</Text>
+                        <Text className="font-sans-medium text-gray-900">
+                          {format(new Date(transactionDetails.date || transactionDetails.createdAt), 'MMM d, yyyy · h:mm a')}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Close Button */}
+                  <TouchableOpacity
+                    className="bg-[#67A9AF] py-4 rounded-xl items-center"
+                    onPress={() => {
+                      setShowTransactionModal(false);
+                      setSelectedTransaction(null);
+                      setTransactionDetails(null);
+                    }}
+                  >
+                    <Text className="text-white font-sans-bold">Close</Text>
+                  </TouchableOpacity>
+                </ScrollView>
               ) : (
-                <>
-                  <Ionicons name="arrow-down-circle" size={20} color="white" />
-                  <Text className="text-white font-sans-bold ml-2">Confirm Withdrawal</Text>
-                </>
+                <View className="py-12 items-center">
+                  <Ionicons name="alert-circle-outline" size={50} color="#9CA3AF" />
+                  <Text className="text-gray-500 font-sans mt-3">Failed to load transaction details</Text>
+                </View>
               )}
-            </TouchableOpacity>
-
-            <View className="bg-blue-50 rounded-xl p-3 flex-row">
-              <Ionicons name="information-circle" size={20} color="#3B82F6" style={{ marginRight: 8, marginTop: 2 }} />
-              <Text className="text-xs text-blue-700 font-sans flex-1">
-                Withdrawals are processed within 1-3 business days. You'll receive a notification once processed.
-              </Text>
             </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
     </KeyboardAvoidingView>
   );
 }

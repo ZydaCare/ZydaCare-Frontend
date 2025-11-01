@@ -23,25 +23,26 @@ interface CategoryItem {
 
 const categories: CategoryItem[] = [
   { id: 1, name: 'General Doctor', icon: 'medkit-outline' },
-  { id: 2, name: 'Dentist', icon: 'bandage-outline' },
-  { id: 3, name: 'Child Care', icon: 'happy-outline' },
-  { id: 4, name: 'Care Giver', icon: 'person-add-outline' },
-  { id: 5, name: 'Psychiatrist', icon: 'people-outline' },
-  { id: 6, name: 'Cardiologist', icon: 'heart-outline' },
-  { id: 7, name: 'Ophthalmologist', icon: 'eye-outline' },
-  { id: 8, name: 'Dermatologist', icon: 'sparkles-outline' },
-  { id: 9, name: 'Neurologist', icon: 'fitness-outline' },
-  { id: 10, name: 'Orthopedic', icon: 'body-outline' },
-  { id: 11, name: 'ENT Specialist', icon: 'ear-outline' },
-  { id: 12, name: 'Gynecologist', icon: 'woman-outline' },
-  { id: 13, name: 'Urologist', icon: 'male-female-outline' },
-  { id: 14, name: 'Nutritionist', icon: 'restaurant-outline' },
-  { id: 15, name: 'Psychologist', icon: 'happy-outline' },
-  { id: 16, name: 'Pediatrician', icon: 'medkit-outline' },
-  { id: 17, name: 'Pulmonologist', icon: 'pulse-outline' },
-  { id: 18, name: 'Radiologist', icon: 'radio-outline' },
-  { id: 19, name: 'Oncologist', icon: 'flame-outline' },
-  { id: 20, name: 'Nephrologist', icon: 'water-outline' },
+  { id: 2, name: 'Surgeon', icon: 'cut-outline' },
+  { id: 3, name: 'Dentist', icon: 'bandage-outline' },
+  { id: 4, name: 'Child Care', icon: 'happy-outline' },
+  { id: 5, name: 'Care Giver', icon: 'person-add-outline' },
+  { id: 6, name: 'Psychiatrist', icon: 'people-outline' },
+  { id: 7, name: 'Cardiologist', icon: 'heart-outline' },
+  { id: 8, name: 'Ophthalmologist', icon: 'eye-outline' },
+  { id: 9, name: 'Dermatologist', icon: 'sparkles-outline' },
+  { id: 10, name: 'Neurologist', icon: 'fitness-outline' },
+  { id: 11, name: 'Orthopedic', icon: 'body-outline' },
+  { id: 12, name: 'ENT Specialist', icon: 'ear-outline' },
+  { id: 13, name: 'Gynecologist', icon: 'woman-outline' },
+  { id: 14, name: 'Urologist', icon: 'male-female-outline' },
+  { id: 15, name: 'Nutritionist', icon: 'restaurant-outline' },
+  { id: 16, name: 'Psychologist', icon: 'happy-outline' },
+  { id: 17, name: 'Pediatrician', icon: 'medkit-outline' },
+  { id: 18, name: 'Pulmonologist', icon: 'pulse-outline' },
+  { id: 19, name: 'Radiologist', icon: 'radio-outline' },
+  { id: 20, name: 'Oncologist', icon: 'flame-outline' },
+  { id: 21, name: 'Nephrologist', icon: 'water-outline' },
 ]
 
 const Home = () => {
@@ -49,19 +50,6 @@ const Home = () => {
   const [upcomingAppointment, setUpcomingAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { isLoading, isAuthenticated } = useAuth();
-
-  // Wait for auth state to finish loading before checking token
-  // useEffect(() => {
-  //   if (!isLoading) {
-  //     if (!token || !isAuthenticated) {
-  //       console.log('No token found, going back to welcome screen');
-  //       router.replace('/welcome');
-  //     } else {
-  //       console.log('✅ Token found, staying on Home screen');
-  //     }
-  //   }
-  // }, [isLoading, token, isAuthenticated]);
-
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,18 +72,15 @@ const Home = () => {
       const res = await getMyAppointments(token);
       const now = new Date();
 
-      // Process and find the most relevant appointment
       const upcoming = (res.data || res || [])
         .map((appt: any) => {
           const apptDate = new Date(appt.appointmentDate);
-          const endTime = addMinutes(apptDate, 30); // Assuming 30 min appointments
+          const endTime = addMinutes(apptDate, 30);
 
-          // Calculate status based on both time and appointment status
           const status = String(appt.status || '').toLowerCase();
           const sameDay = isToday(apptDate);
           const startedOrNow = now >= apptDate;
 
-          // Derive status flags
           const isCancelled = status === 'cancelled';
           const isCompleted = status === 'paid';
           const isAccepted = status === 'accepted';
@@ -105,7 +90,6 @@ const Home = () => {
           const isOngoing = (!isCancelled && !isCompleted) && (isAccepted || isAwaitingPayment || (sameDay && startedOrNow))
           const isPast = apptDate && apptDate < now;
 
-          // Determine the final status to display
           let displayStatus: 'pending' | 'upcoming' | 'accepted' | 'awaiting_payment' | 'cancelled' | 'paid' | 'past' = 'upcoming';
           if (isOngoing) {
             displayStatus = 'accepted';
@@ -140,7 +124,7 @@ const Home = () => {
           appt.status === 'upcoming' ||
           (appt.status === 'ongoing' && isBefore(now, appt.endTime))
         )
-        .sort((a: any, b: any) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime())[0]; // Get the earliest upcoming/ongoing
+        .sort((a: any, b: any) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime())[0];
 
       setUpcomingAppointment(upcoming || null);
     } catch (error) {
@@ -160,14 +144,21 @@ const Home = () => {
     if (homeSearch.trim() !== '') {
       router.push({
         pathname: '/(patient)/(pages)/search',
-        params: { query: homeSearch }, // ✅ pass query to search screen
+        params: { query: homeSearch },
       })
     }
   }
 
-  // Calculate screen width for responsive design
+  // Handle category press - navigate to search with category
+  const handleCategoryPress = (categoryName: string) => {
+    router.push({
+      pathname: '/(patient)/(pages)/search',
+      params: { category: categoryName },
+    });
+  };
+
   const { width } = Dimensions.get('window');
-  const cardWidth = (width - 48) / 2 - 8; // 48 = padding * 2, 8 = gap
+  const cardWidth = (width - 48) / 2 - 8;
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -184,7 +175,7 @@ const Home = () => {
               placeholderTextColor="#B4B4B4"
               value={homeSearch}
               onChangeText={setHomeSearch}
-              onSubmitEditing={handleSearch} // press Enter
+              onSubmitEditing={handleSearch}
               returnKeyType="search"
             />
             <TouchableOpacity onPress={handleSearch}>
@@ -193,19 +184,10 @@ const Home = () => {
           </View>
         </View>
 
-        {/* Categories header */}
-        {/* <View className="mt-2">
-          <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-lg font-sans-semibold text-gray-800">Categories</Text>
-            <Text className="text-sm font-normal font-sans text-primary">view more</Text>
-          </View>
-        </View> */}
-
         {/* Horizontal 2-row pill slider */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-
           contentContainerStyle={{ paddingHorizontal: 12 }}
         >
           <View className="flex-col">
@@ -215,6 +197,7 @@ const Home = () => {
                 <TouchableOpacity
                   key={item.id}
                   activeOpacity={0.85}
+                  onPress={() => handleCategoryPress(item.name)}
                   className="bg-white rounded-full px-3 py-2 mr-3 flex-row items-center border border-gray-200"
                   style={{ minWidth: 160 }}
                 >
@@ -235,6 +218,7 @@ const Home = () => {
                 <TouchableOpacity
                   key={item.id}
                   activeOpacity={0.85}
+                  onPress={() => handleCategoryPress(item.name)}
                   className="bg-white rounded-full px-3 py-2 mr-3 flex-row items-center border border-gray-200"
                   style={{ minWidth: 160 }}
                 >
@@ -254,12 +238,10 @@ const Home = () => {
         {/* Doctor Application Prompt */}
         <View className="mx-4 mt-4 bg-white rounded-xl px-5 py-6 shadow-sm border border-gray-100">
           <View className="flex-row items-start">
-            {/* Icon */}
             <View className="bg-primary/10 p-3 rounded-lg mr-4">
               <MaterialIcons name="medical-services" size={26} color="#67A9AF" />
             </View>
 
-            {/* Content */}
             <View className="flex-1">
               <Text className="font-sans-semibold text-gray-800 text-base">
                 Become a Doctor on ZydaCare
@@ -284,7 +266,6 @@ const Home = () => {
             </View>
           </View>
         </View>
-
 
         {/* Quick Actions Section */}
         <View className="px-4 mt-6 mb-4">

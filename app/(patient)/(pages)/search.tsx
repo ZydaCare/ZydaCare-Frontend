@@ -35,10 +35,9 @@ export default function Search() {
     // const { user, token } = useAuth();
     const { showToast } = useToast();
     const params = useLocalSearchParams();
-
-    const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
     const [searchQuery, setSearchQuery] = useState<string>(params.query as string || '');
-    const [selectedCategory, setSelectedCategory] = useState<string>('All');
+    const [selectedCategory, setSelectedCategory] = useState<string>(params.category as string || 'All');
+    const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
     const [selectedDoctor, setSelectedDoctor] = useState<TransformedDoctor | null>(null);
     const [isScanning, setIsScanning] = useState(false);
     const [rawDoctors, setRawDoctors] = useState<any[]>([]);
@@ -101,6 +100,17 @@ export default function Search() {
             showToast('Failed to get your location', 'error');
         }
     };
+
+    useEffect(() => {
+        if (params.category) {
+            setSelectedCategory(params.category as string);
+            setSearchQuery(''); // Clear search when category is selected
+        }
+        if (params.query) {
+            setSearchQuery(params.query as string);
+            setSelectedCategory('All'); // Reset category when searching
+        }
+    }, [params.category, params.query]);
 
     // Fetch doctors
     useEffect(() => {
@@ -672,12 +682,12 @@ export default function Search() {
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
             {/* Header */}
-            <View className="bg-white px-4 py-3">
-                <View className="flex-row items-center gap-3 mb-3">
+            <View className="bg-white px-4 py-3 pt-12">
+                <View className="flex-row items-center gap-1 mb-3">
                     <TouchableOpacity onPress={() => router.back()} className="bg-white rounded-full p-2 shadow-sm">
                         <Ionicons name="chevron-back" size={20} color="#374151" />
                     </TouchableOpacity>
-                    <View className="flex-1 flex-row items-center bg-gray-100 rounded-full px-4 py-2">
+                    <View className="flex-1 flex-row items-center bg-gray-100 rounded-full px-4 py-1">
                         <TextInput
                             className="flex-1 text-gray-800 text-sm font-sans-medium"
                             placeholder="Search doctors, specialists, hospitals..."

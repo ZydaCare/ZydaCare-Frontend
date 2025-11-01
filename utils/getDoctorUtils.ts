@@ -232,76 +232,53 @@ export const transformDoctorData = (
 * Filter doctors by search query and category
 */
 export const filterDoctors = (
-    doctors: TransformedDoctor[],
-    searchQuery: string,
-    selectedCategory: string,
-    viewMode: 'list' | 'map'
+  doctors: TransformedDoctor[],
+  searchQuery: string,
+  selectedCategory: string,
+  viewMode: 'list' | 'map'
 ): TransformedDoctor[] => {
-    const query = searchQuery.toLowerCase().trim();
+  const query = searchQuery.toLowerCase().trim();
 
-    console.log('=== FILTER DEBUG ===');
-    console.log('View Mode:', viewMode);
-    console.log('Search Query:', query);
-    console.log('Total Doctors:', doctors.length);
+  // Filter out doctors with invalid coordinates in map view
+  const validDoctors = viewMode === 'map'
+    ? doctors.filter(d => d.latitude !== 0 && d.longitude !== 0)
+    : doctors;
 
-    // Filter out doctors with invalid coordinates (0,0) in map view
-    const validDoctors = viewMode === 'map'
-        ? doctors.filter(d => {
-            const isValid = d.latitude !== 0 && d.longitude !== 0;
-            if (!isValid) {
-                console.log(`Filtered out ${d.fullName} - invalid coordinates: [${d.longitude}, ${d.latitude}]`);
-            }
-            return isValid;
-        })
-        : doctors;
+  // If there's a search query, filter by query
+  if (query !== '') {
+    return validDoctors.filter(doctor => {
+      const fullNameMatch = doctor.fullName.toLowerCase().includes(query);
+      const titleMatch = doctor.title.toLowerCase().includes(query);
+      const specialityMatch = doctor.speciality.toLowerCase().includes(query);
+      const hospitalMatch = doctor.hospital?.toLowerCase().includes(query);
 
-    console.log('Valid Doctors after coordinate check:', validDoctors.length);
+      return fullNameMatch || titleMatch || specialityMatch || hospitalMatch;
+    });
+  }
 
-    // In map view with search query
-    if (viewMode === 'map' && query !== '') {
-        const filtered = validDoctors.filter(doctor => {
-            const fullNameMatch = doctor.fullName.toLowerCase().includes(query);
-            const titleMatch = doctor.title.toLowerCase().includes(query);
-            const specialityMatch = doctor.speciality.toLowerCase().includes(query);
-            const hospitalMatch = doctor.hospital?.toLowerCase().includes(query);
+  // Filter by category (if not "All")
+  if (selectedCategory !== 'All') {
+    return validDoctors.filter(doctor => {
+      // Flexible matching for categories
+      const categoryLower = selectedCategory.toLowerCase();
+      const specialityLower = doctor.speciality.toLowerCase();
+      
+      // Direct match
+      if (specialityLower === categoryLower) return true;
+      
+      // Partial match for common variations
+      if (categoryLower.includes('doctor') && specialityLower.includes('general')) return true;
+      if (categoryLower.includes('child care') && specialityLower.includes('pediatric')) return true;
+      if (categoryLower.includes('care giver') && specialityLower.includes('nurse')) return true;
+      
+      // Check if category is contained in speciality
+      if (specialityLower.includes(categoryLower)) return true;
+      
+      return false;
+    });
+  }
 
-            console.log(`Doctor: ${doctor.fullName}`);
-            console.log(`  Full Name Match: ${fullNameMatch}`);
-            console.log(`  Title Match: ${titleMatch}`);
-            console.log(`  Speciality Match: ${specialityMatch}`);
-            console.log(`  Hospital Match: ${hospitalMatch}`);
-            console.log(`  Coordinates: [${doctor.longitude}, ${doctor.latitude}]`);
-
-            return fullNameMatch || titleMatch || specialityMatch || hospitalMatch;
-        });
-
-        console.log('Filtered Results:', filtered.length);
-        return filtered;
-    }
-
-    // In map view without search - show all doctors with valid coordinates
-    if (viewMode === 'map' && query === '') {
-        return validDoctors;
-    }
-
-    // In list view, filter by search query
-    if (query !== '') {
-        return validDoctors.filter(doctor => {
-            const fullNameMatch = doctor.fullName.toLowerCase().includes(query);
-            const titleMatch = doctor.title.toLowerCase().includes(query);
-            const specialityMatch = doctor.speciality.toLowerCase().includes(query);
-            const hospitalMatch = doctor.hospital?.toLowerCase().includes(query);
-
-            return fullNameMatch || titleMatch || specialityMatch || hospitalMatch;
-        });
-    }
-
-    // Filter by category (if not "All")
-    if (selectedCategory === 'All') {
-        return validDoctors;
-    }
-
-    return validDoctors.filter(doctor => doctor.speciality === selectedCategory);
+  return validDoctors;
 };
 
 /**

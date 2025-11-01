@@ -74,14 +74,14 @@ export default function HelpAndSupportScreen() {
       title: 'Privacy Policy',
       icon: 'shield-checkmark-outline',
       description: 'Review our privacy policy',
-      action: () => router.push('/(doctor)/(pages)/privacy'),
+      action: () => router.push('/(policy)/privacyPolicy'),
     },
     {
       id: 'terms',
       title: 'Terms of Service',
       icon: 'document-text-outline',
       description: 'Read our terms and conditions',
-      action: () => router.push('/(doctor)/(pages)/terms'),
+      action: () => router.push('/(policy)/terms&Condition'),
     },
   ];
 

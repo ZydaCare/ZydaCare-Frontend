@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import { getFAQs, getFeaturedFAQs, getPopularFAQs, FAQItem } from '@/api/patient/faq';
 import { useToast } from '@/components/ui/Toast';
+import { useLocalSearchParams } from 'expo-router';
 
 interface FAQCategory {
   title: string;
@@ -43,6 +44,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function FAQScreen() {
+  const params = useLocalSearchParams();
+  const selectedCategory = params.category as string | undefined;
   const [categories, setCategories] = useState<FAQCategory[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<FAQCategory[]>([]);
   const [featuredFAQs, setFeaturedFAQs] = useState<FAQItem[]>([]);
@@ -53,32 +56,60 @@ export default function FAQScreen() {
   const { showToast } = useToast();
   const router = useRouter();
 
+  // this effect to handle category filtering when coming from help screen
+  useEffect(() => {
+    if (selectedCategory && categories.length > 0) {
+      // Filter categories to show only the selected one
+      const filtered = categories.filter(cat =>
+        cat.title.toLowerCase().replace(/\s+/g, '_') === selectedCategory.toLowerCase() ||
+        cat.title.toLowerCase() === selectedCategory.toLowerCase()
+      );
+
+      if (filtered.length > 0) {
+        setFilteredCategories(filtered);
+      } else {
+        // If no exact match, show all categories
+        setFilteredCategories(categories);
+      }
+    }
+  }, [selectedCategory, categories]);
+
   const fetchFAQs = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch all data in parallel
       const [faqsResponse, featuredResponse, popularResponse] = await Promise.all([
-        getFAQs(undefined, undefined, 'patient'),
+        getFAQs(selectedCategory, undefined, 'patient'), // Pass selectedCategory here
         getFeaturedFAQs('patient', 3),
         getPopularFAQs('patient', 5)
       ]);
-      
+
       if (faqsResponse.success) {
         const faqCategories: FAQCategory[] = Object.entries(faqsResponse.data).map(([category, items]) => ({
           title: category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' '),
           icon: CATEGORY_ICONS[category] || CATEGORY_ICONS['default'],
           items: items as FAQItem[]
         }));
-        
+
         setCategories(faqCategories);
-        setFilteredCategories(faqCategories);
+
+        // If there's a selected category, filter immediately
+        if (selectedCategory) {
+          const filtered = faqCategories.filter(cat =>
+            cat.title.toLowerCase().replace(/\s+/g, '_') === selectedCategory.toLowerCase() ||
+            cat.title.toLowerCase() === selectedCategory.toLowerCase()
+          );
+          setFilteredCategories(filtered.length > 0 ? filtered : faqCategories);
+        } else {
+          setFilteredCategories(faqCategories);
+        }
       }
-      
+
       if (featuredResponse.success) {
         setFeaturedFAQs(featuredResponse.data);
       }
-      
+
       if (popularResponse.success) {
         setPopularFAQs(popularResponse.data);
       }
@@ -93,18 +124,18 @@ export default function FAQScreen() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    
+
     if (query.trim() === '') {
       setFilteredCategories(categories);
       return;
     }
 
     const searchLower = query.toLowerCase().trim();
-    
+
     const filtered = categories
       .map(category => ({
         ...category,
-        items: category.items.filter(faq => 
+        items: category.items.filter(faq =>
           faq.question.toLowerCase().includes(searchLower) ||
           faq.answer.toLowerCase().includes(searchLower) ||
           (faq.shortAnswer && faq.shortAnswer.toLowerCase().includes(searchLower)) ||
@@ -112,7 +143,7 @@ export default function FAQScreen() {
         )
       }))
       .filter(category => category.items.length > 0);
-    
+
     setFilteredCategories(filtered);
   };
 
@@ -158,7 +189,7 @@ export default function FAQScreen() {
         <Text className="text-sm font-sans text-gray-500">Find answers to your questions</Text>
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -184,7 +215,7 @@ export default function FAQScreen() {
               returnKeyType="search"
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => handleSearch('')}
                 className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
               >
@@ -193,6 +224,28 @@ export default function FAQScreen() {
             )}
           </View>
         </View>
+
+        {selectedCategory && (
+          <View className="px-6 pb-2">
+            <View className="flex-row items-center justify-between bg-primary/10 rounded-xl p-3 border border-primary/20">
+              <View className="flex-row items-center flex-1">
+                <Ionicons name="filter" size={18} color="#67A9AF" />
+                <Text className="text-sm font-sans-medium text-primary ml-2">
+                  Filtering by: {selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1).replace(/_/g, ' ')}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  router.setParams({ category: undefined });
+                  setFilteredCategories(categories);
+                }}
+                className="bg-primary rounded-full px-3 py-1"
+              >
+                <Text className="text-white font-sans-medium text-xs">Clear</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Featured FAQs Section */}
         {featuredFAQs.length > 0 && !searchQuery && (
@@ -306,27 +359,27 @@ export default function FAQScreen() {
                   </Text>
                 </View>
               )}
-              
+
               {!searchQuery && (
                 <View className="flex-row items-center mb-4 mt-4">
                   <View className="w-1 h-6 bg-primary rounded-full mr-3" />
                   <Text className="text-lg font-sans-bold text-gray-900">Browse by Category</Text>
                 </View>
               )}
-              
+
               {filteredCategories.map((category) => {
                 const categoryColor = getCategoryColor(category.title);
                 return (
                   <View key={category.title} className="mb-8">
                     {/* Category Header */}
                     <View className="flex-row items-center mb-4">
-                      <View 
+                      <View
                         className="w-12 h-12 rounded-2xl items-center justify-center mr-3"
                         style={{ backgroundColor: `${categoryColor}15` }}
                       >
-                        <Ionicons 
-                          name={category.icon as any} 
-                          size={24} 
+                        <Ionicons
+                          name={category.icon as any}
+                          size={24}
                           color={categoryColor}
                         />
                       </View>
@@ -339,12 +392,12 @@ export default function FAQScreen() {
                         </Text>
                       </View>
                     </View>
-                    
+
                     {/* FAQ Items */}
                     <View className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
                       {category.items.map((faq, index) => (
-                        <TouchableOpacity 
-                          key={faq._id} 
+                        <TouchableOpacity
+                          key={faq._id}
                           onPress={() => navigateToFAQ(faq._id)}
                           className={`px-5 py-4 ${index !== category.items.length - 1 ? 'border-b border-gray-100' : ''}`}
                           activeOpacity={0.7}
@@ -369,13 +422,13 @@ export default function FAQScreen() {
                                 </View>
                               )}
                             </View>
-                            <View 
+                            <View
                               className="w-8 h-8 rounded-full items-center justify-center"
                               style={{ backgroundColor: `${categoryColor}10` }}
                             >
-                              <Ionicons 
-                                name="chevron-forward" 
-                                size={18} 
+                              <Ionicons
+                                name="chevron-forward"
+                                size={18}
                                 color={categoryColor}
                               />
                             </View>
@@ -390,22 +443,22 @@ export default function FAQScreen() {
           ) : (
             <View className="items-center justify-center py-16 px-6">
               <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-6">
-                <Ionicons 
-                  name={searchQuery ? "search" : "help-circle-outline"} 
-                  size={48} 
-                  color="#D1D5DB" 
+                <Ionicons
+                  name={searchQuery ? "search" : "help-circle-outline"}
+                  size={48}
+                  color="#D1D5DB"
                 />
               </View>
               <Text className="text-xl font-sans-semibold text-gray-900 mb-2 text-center">
                 {searchQuery ? 'No Results Found' : 'No FAQs Available'}
               </Text>
               <Text className="text-base text-gray-500 font-sans text-center mb-6">
-                {searchQuery 
+                {searchQuery
                   ? `We couldn't find any FAQs matching "${searchQuery}"`
                   : 'FAQs will appear here once available'}
               </Text>
               {searchQuery && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => handleSearch('')}
                   className="bg-primary px-6 py-3 rounded-xl flex-row items-center"
                 >
@@ -415,7 +468,7 @@ export default function FAQScreen() {
               )}
             </View>
           )}
-          
+
           {/* Contact Support Card */}
           <View className="mt-6 mb-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-6 border border-primary/20">
             <View className="flex-row items-start mb-4">

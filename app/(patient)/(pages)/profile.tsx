@@ -136,7 +136,7 @@ export default function ProfileScreen() {
             <StatusBar barStyle="dark-content" />
 
             {/* Header */}
-            <View className="flex-row items-center">
+            <View className="flex-row items-center pt-8">
                 <TouchableOpacity onPress={() => router.back()} className="bg-white rounded-full p-2 shadow-sm">
                     <Ionicons name="chevron-back" size={20} color="#374151" />
                 </TouchableOpacity>

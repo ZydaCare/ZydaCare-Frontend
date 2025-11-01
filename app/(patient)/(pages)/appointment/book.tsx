@@ -1,16 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-// Removed external browser usage; we navigate to an in-app WebView screen
 import { format as formatDate } from 'date-fns';
 
 import { useAuth } from '@/context/authContext';
 import { AppointmentType, createBooking } from '@/api/patient/appointments';
 import { getDoctorDetails } from '@/api/patient/user';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { shareProfile } from '@/api/patient/user';
+import { useToast } from '@/components/ui/Toast';
 
 export default function BookAppointmentScreen() {
   const router = useRouter();
@@ -40,39 +41,16 @@ export default function BookAppointmentScreen() {
   const [emergencyRedFlags, setEmergencyRedFlags] = useState<boolean>(false);
   const [isAccurate, setIsAccurate] = useState<boolean>(true);
   const [consentToShare, setConsentToShare] = useState<boolean>(true);
+  const [shareProfileWithDoctor, setShareProfileWithDoctor] = useState<boolean>(false);
 
   const [submitting, setSubmitting] = useState(false);
+  const [sharingProfile, setSharingProfile] = useState(false);
   const [showDOBPicker, setShowDOBPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const { showToast } = useToast();
 
-  // Fees fetched from doctor details
   const [fees, setFees] = useState<{ inPerson?: number; video?: number; homeVisit?: number } | null>(null);
   const [loadingFees, setLoadingFees] = useState<boolean>(false);
-
-  // Android helper: open date then time to compose a single Date
-  const openAndroidDateTime = () => {
-    // Step 1: pick date
-    DateTimePickerAndroid.open({
-      value: appointmentDate,
-      mode: 'date',
-      onChange: (_e, dateVal) => {
-        if (!dateVal) return;
-        const temp = new Date(appointmentDate);
-        temp.setFullYear(dateVal.getFullYear(), dateVal.getMonth(), dateVal.getDate());
-        // Step 2: pick time
-        DateTimePickerAndroid.open({
-          value: temp,
-          mode: 'time',
-          onChange: (_e2, timeVal) => {
-            if (!timeVal) return;
-            const combined = new Date(temp);
-            combined.setHours(timeVal.getHours(), timeVal.getMinutes(), 0, 0);
-            setAppointmentDate(combined);
-          },
-        });
-      },
-    });
-  };
 
   const [token, setToken] = useState<string | null>(null);
 
@@ -89,8 +67,6 @@ export default function BookAppointmentScreen() {
     loadToken();
   }, []);
 
-
-  // Fetch doctor's consultation fees
   useEffect(() => {
     const run = async () => {
       if (!doctorId || !token) return;
@@ -110,7 +86,6 @@ export default function BookAppointmentScreen() {
     run();
   }, [doctorId, token]);
 
-  // Compute payable amount based on appointment type
   const amount = useMemo(() => {
     if (!fees) return 0;
     switch (appointmentType) {
@@ -129,12 +104,44 @@ export default function BookAppointmentScreen() {
     return !!token && !!doctorId && !!fullName && !!appointmentType && !!appointmentDate && isAccurate && consentToShare && amount > 0 && !loadingFees;
   }, [token, doctorId, fullName, appointmentType, appointmentDate, isAccurate, consentToShare, amount, loadingFees]);
 
+  const handleShareProfile = async () => {
+    if (!token) {
+      showToast('Authentication required', 'error');
+      return;
+    }
+    
+    try {
+      setSharingProfile(true);
+      const res = await shareProfile(token);
+      if (!res?.success) {
+        throw new Error(res?.message || 'Failed to share profile');
+      }
+      showToast('Profile shared successfully with doctor', 'success');
+      setShareProfileWithDoctor(true);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to share profile', 'error');
+      setShareProfileWithDoctor(false);
+    } finally {
+      setSharingProfile(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit || !doctorId || !token) return;
 
     try {
       setSubmitting(true);
-      // 1) Create booking
+      
+      // If user opted to share profile, do it before booking
+      if (shareProfileWithDoctor && !sharingProfile) {
+        try {
+          await shareProfile(token);
+        } catch (err) {
+          console.log('Profile share during booking failed:', err);
+          // Don't block booking if profile share fails
+        }
+      }
+
       const payload = {
         doctorId,
         appointmentDate: appointmentDate.toISOString(),
@@ -162,12 +169,11 @@ export default function BookAppointmentScreen() {
       if (!bookingRes?.success) {
         throw new Error(bookingRes?.message || 'Failed to create booking');
       }
-      const booking = bookingRes.data || bookingRes;
 
-      // 2) Navigate to Appointments tab
+      showToast('Appointment booked successfully', 'success');
       router.replace('/(patient)/(tabs)/appointment');
     } catch (err: any) {
-      alert(err?.message || 'Booking failed');
+      showToast(err?.message || 'Booking failed', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -189,33 +195,21 @@ export default function BookAppointmentScreen() {
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Appointment Details</Text>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Appointment Type</Text>
+            <Text className="text-xs text-gray-600 mb-1 font-sans">Appointment Type</Text>
             <View className="flex-row gap-2">
               {(['virtual', 'in-person', 'home'] as AppointmentType[]).map((t) => (
                 <TouchableOpacity key={t} onPress={() => setAppointmentType(t)} className={`px-3 py-2 rounded-xl ${appointmentType === t ? 'bg-emerald-50' : 'bg-gray-100'}`}>
-                  <Text className={`text-xs ${appointmentType === t ? 'text-emerald-700' : 'text-gray-700'}`}>{t}</Text>
+                  <Text className={`text-xs font-sans ${appointmentType === t ? 'text-emerald-700' : 'text-gray-700'}`}>{t}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            {/* <View className="mt-2">
-              {loadingFees ? (
-                <Text className="text-xs text-gray-500">Loading consultation fee...</Text>
-              ) : amount > 0 ? (
-                <Text className="text-xs font-sans-semibold" style={{ color: PRIMARY }}>
-                  Fee: ₦{amount.toLocaleString()}
-                </Text>
-              ) : (
-                <Text className="text-xs text-amber-600">Fee not available for this type. Please pick another type.</Text>
-              )}
-            </View> */}
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Date & Time</Text>
+            <Text className="text-xs text-gray-600 mb-1 font-sans">Date & Time</Text>
             <TouchableOpacity
               onPress={() => {
                 if (Platform.OS === 'android') {
-                  // Step 1: pick date, then time; combine into a single Date
                   DateTimePickerAndroid.open({
                     value: appointmentDate,
                     mode: 'date',
@@ -239,9 +233,9 @@ export default function BookAppointmentScreen() {
                   setShowDatePicker(true);
                 }
               }}
-              className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50"
+              className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 font-sans"
             >
-              <Text className="text-sm text-gray-800">{formatDate(appointmentDate, 'd MMMM yyyy h:mma')}</Text>
+              <Text className="text-sm text-gray-800 font-sans">{formatDate(appointmentDate, 'd MMMM yyyy h:mma')}</Text>
             </TouchableOpacity>
             {Platform.OS === 'ios' && showDatePicker && (
               <DateTimePicker
@@ -262,12 +256,12 @@ export default function BookAppointmentScreen() {
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Patient Information</Text>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Full Name</Text>
-            <TextInput value={fullName} onChangeText={setFullName} placeholder="Your full name" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50" />
+            <Text className="text-xs text-gray-600 mb-1 font-sans">Full Name</Text>
+            <TextInput value={fullName} onChangeText={setFullName} placeholder="Your full name" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 font-sans" />
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Date of Birth</Text>
+            <Text className="text-xs text-gray-600 mb-1 font-sans">Date of Birth</Text>
             <TouchableOpacity
               onPress={() => {
                 if (Platform.OS === 'android') {
@@ -282,9 +276,9 @@ export default function BookAppointmentScreen() {
                   setShowDOBPicker(true);
                 }
               }}
-              className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50"
+              className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 font-sans"
             >
-              <Text className="text-sm text-gray-800">{dateOfBirth ? dateOfBirth.toDateString() : 'Select date of birth'}</Text>
+              <Text className="text-sm text-gray-800 font-sans">{dateOfBirth ? dateOfBirth.toDateString() : 'Select date of birth'}</Text>
             </TouchableOpacity>
             {Platform.OS === 'ios' && showDOBPicker && (
               <DateTimePicker
@@ -300,29 +294,29 @@ export default function BookAppointmentScreen() {
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Age</Text>
-            <TextInput keyboardType="number-pad" value={age} onChangeText={setAge} placeholder="Age (optional)" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50" />
+            <Text className="text-xs text-gray-600 font-sans mb-1">Age</Text>
+            <TextInput keyboardType="number-pad" value={age} onChangeText={setAge} placeholder="Age (optional)" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 font-sans" />
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Gender</Text>
+            <Text className="text-xs text-gray-600 mb-1 font-sans">Gender</Text>
             <View className="flex-row gap-2">
               {(['Male', 'Female', 'Other'] as const).map(g => (
                 <TouchableOpacity key={g} onPress={() => setGender(g)} className={`px-3 py-2 rounded-xl ${gender === g ? 'bg-emerald-50' : 'bg-gray-100'}`}>
-                  <Text className={`text-xs ${gender === g ? 'text-emerald-700' : 'text-gray-700'}`}>{g}</Text>
+                  <Text className={`text-xs font-sans ${gender === g ? 'text-emerald-700' : 'text-gray-700'}`}>{g}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Phone</Text>
-            <TextInput keyboardType="phone-pad" value={contactPhone} onChangeText={setContactPhone} placeholder="Phone number" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50" />
+            <Text className="text-xs text-gray-600 font-sans mb-1">Phone</Text>
+            <TextInput keyboardType="phone-pad" value={contactPhone} onChangeText={setContactPhone} placeholder="Phone number" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 font-sans" />
           </View>
 
           <View className="mb-2">
-            <Text className="text-xs text-gray-600 mb-1">Email</Text>
-            <TextInput keyboardType="email-address" value={contactEmail} onChangeText={setContactEmail} placeholder="Email address" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50" />
+            <Text className="text-xs text-gray-600 font-sans mb-1">Email</Text>
+            <TextInput keyboardType="email-address" value={contactEmail} onChangeText={setContactEmail} placeholder="Email address" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 font-sans" />
           </View>
         </View>
 
@@ -331,39 +325,91 @@ export default function BookAppointmentScreen() {
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Medical Context</Text>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Reason for Appointment</Text>
+            <Text className="text-xs text-gray-600 font-sans mb-1">Reason for Appointment</Text>
             <TextInput value={reasonForAppointment} onChangeText={setReasonForAppointment} placeholder="Chief complaint" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50" />
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Current Symptoms</Text>
+            <Text className="text-xs text-gray-600 font-sans mb-1">Current Symptoms</Text>
             <TextInput multiline value={currentSymptoms} onChangeText={setCurrentSymptoms} placeholder="Short description" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 min-h-12" />
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Relevant Medical History</Text>
+            <Text className="text-xs text-gray-600 font-sans mb-1">Relevant Medical History</Text>
             <TextInput multiline value={medicalHistory} onChangeText={setMedicalHistory} placeholder="E.g., diabetes, hypertension, surgeries" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 min-h-12" />
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Current Medications</Text>
+            <Text className="text-xs text-gray-600 font-sans mb-1">Current Medications</Text>
             <TextInput multiline value={currentMedications} onChangeText={setCurrentMedications} placeholder="If any" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 min-h-12" />
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Allergies</Text>
+            <Text className="text-xs text-gray-600 font-sans mb-1">Allergies</Text>
             <TextInput multiline value={allergies} onChangeText={setAllergies} placeholder="Drug, food, environmental" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 min-h-12" />
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1">Previous Consultations (if relevant)</Text>
+            <Text className="text-xs text-gray-600 font-sans mb-1">Previous Consultations (if relevant)</Text>
             <TextInput multiline value={previousConsultations} onChangeText={setPreviousConsultations} placeholder="Optional" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 min-h-12" />
           </View>
 
           <View>
-            <Text className="text-xs text-gray-600 mb-1">Preferred Doctor / Specialty (optional)</Text>
+            <Text className="text-xs text-gray-600 font-sans mb-1">Preferred Doctor / Specialty (optional)</Text>
             <TextInput value={preferredDoctorOrSpecialty} onChangeText={setPreferredDoctorOrSpecialty} placeholder="Optional" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50" />
           </View>
+        </View>
+
+        {/* Section: Share Profile */}
+        <View className="bg-white mx-4 mt-4 rounded-2xl p-5 shadow-sm">
+          <Text className="text-base font-sans-semibold text-gray-900 mb-3">Share Your Profile</Text>
+          
+          <View className="bg-blue-50 p-4 rounded-xl mb-4">
+            <View className="flex-row items-start gap-2">
+              <Ionicons name="information-circle" size={20} color="#3B82F6" />
+              <Text className="text-xs font-sans text-blue-700 flex-1">
+                Sharing your complete profile helps the doctor provide better care by giving them access to your full medical history and records.
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            onPress={handleShareProfile}
+            disabled={sharingProfile || shareProfileWithDoctor}
+            className={`flex-row items-center justify-center gap-2 py-3.5 rounded-xl ${
+              shareProfileWithDoctor 
+                ? 'bg-green-50 border border-green-200' 
+                : sharingProfile 
+                ? 'bg-gray-100' 
+                : 'bg-[#67A9AF]'
+            }`}
+          >
+            {sharingProfile ? (
+              <>
+                <ActivityIndicator color="#6B7280" size="small" />
+                <Text className="text-gray-600 font-sans-medium">Sharing Profile...</Text>
+              </>
+            ) : shareProfileWithDoctor ? (
+              <>
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Text className="text-green-700 font-sans-medium">Profile Shared</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="share-outline" size={20} color="white" />
+                <Text className="text-white font-sans-medium">Share My Profile with Doctor</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {shareProfileWithDoctor && (
+            <View className="mt-3 flex-row items-start gap-2">
+              <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+              <Text className="text-xs font-sans text-gray-600 flex-1">
+                Your profile will be shared with the doctor when you book this appointment
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Section: Declarations */}
@@ -371,11 +417,11 @@ export default function BookAppointmentScreen() {
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Declarations</Text>
           <TouchableOpacity onPress={() => setIsAccurate((v) => !v)} className="flex-row items-start gap-3 mb-3">
             <View className={`w-5 h-5 rounded border ${isAccurate ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`} />
-            <Text className="text-sm text-gray-700 flex-1">I confirm that the information provided is accurate to the best of my knowledge.</Text>
+            <Text className="text-sm font-sans text-gray-700 flex-1">I confirm that the information provided is accurate to the best of my knowledge.</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setConsentToShare((v) => !v)} className="flex-row items-start gap-3">
             <View className={`w-5 h-5 rounded border ${consentToShare ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`} />
-            <Text className="text-sm text-gray-700 flex-1">I consent to ZydaCare sharing this information securely with the attending doctor.</Text>
+            <Text className="text-sm font-sans text-gray-700 flex-1">I consent to ZydaCare sharing this information securely with the attending doctor.</Text>
           </TouchableOpacity>
         </View>
 
@@ -384,8 +430,19 @@ export default function BookAppointmentScreen() {
 
       {/* Footer */}
       <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100">
-        <TouchableOpacity disabled={!canSubmit || submitting} onPress={handleSubmit} className="py-3.5 rounded-xl items-center justify-center" style={{ backgroundColor: canSubmit ? '#67A9AF' : '#9CA3AF' }}>
-          <Text className="text-white font-sans-semibold">{submitting ? 'Processing...' : `₦${amount.toLocaleString()} Book Appointment`}</Text>
+        <TouchableOpacity 
+          disabled={!canSubmit || submitting} 
+          onPress={handleSubmit} 
+          className="py-3.5 rounded-xl items-center justify-center" 
+          style={{ backgroundColor: canSubmit ? '#67A9AF' : '#9CA3AF' }}
+        >
+          {submitting ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-white font-sans-semibold">
+              ₦{amount.toLocaleString()} Book Appointment
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
