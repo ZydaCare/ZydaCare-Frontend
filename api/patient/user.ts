@@ -183,7 +183,7 @@ export const submitKYCDocuments = async (
 
 export const shareProfile = async (token: string) => {
   try {
-    const response = await axios.get(`${BASE_URL}/auth/share-profile`, {
+    const response = await axios.post(`${BASE_URL}/auth/share-profile`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
