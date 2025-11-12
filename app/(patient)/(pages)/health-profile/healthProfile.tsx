@@ -25,13 +25,13 @@ export default function ProfileScreen() {
       }}>
         <Text style={{ 
           fontSize: 24, 
-          fontWeight: '700', 
+          // fontWeight: '700', 
           color: '#111827',
           marginBottom: 4 
-        }}>
+        }} className='font-sans-medium'>
           Health Profile
         </Text>
-        <Text style={{ color: '#6b7280', marginBottom: 16 }}>
+        <Text style={{ color: '#6b7280', marginBottom: 16 }} className='font-sans'>
           Manage your health information
         </Text>
 
@@ -71,6 +71,7 @@ export default function ProfileScreen() {
                 fontWeight: '500',
                 color: activeTab === 'metrics' ? '#67A9AF' : '#6b7280'
               }}
+              className='font-sans-semibold'
             >
               Health Metrics
             </Text>
@@ -105,6 +106,7 @@ export default function ProfileScreen() {
                 fontWeight: '500',
                 color: activeTab === 'medications' ? '#67A9AF' : '#6b7280'
               }}
+              className='font-sans-semibold'
             >
               Medications
             </Text>

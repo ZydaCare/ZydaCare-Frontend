@@ -1,5 +1,5 @@
 import { router, Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { AntDesign, Ionicons } from "@expo/vector-icons";
 import { View } from "react-native";
 
 export default function RootLayout() {
@@ -155,7 +155,7 @@ export default function RootLayout() {
                 }}
             />
 
-            <Tabs.Screen
+            {/* <Tabs.Screen
                 name="support"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
@@ -179,6 +179,48 @@ export default function RootLayout() {
                             }}>
                                 <Ionicons
                                     name={focused ? "chatbubble" : "chatbubble-outline"}
+                                    size={24}
+                                    color={focused ? 'white' : color}
+                                />
+                            </View>
+                            {focused && (
+                                <View style={{
+                                    width: 6,
+                                    height: 6,
+                                    backgroundColor: '#67A9AF',
+                                    borderRadius: 3,
+                                    marginTop: 2,
+                                }} />
+                            )}
+                        </View>
+                    ),
+                }}
+            /> */}
+
+            <Tabs.Screen
+                name="insurance"
+                options={{
+                    tabBarIcon: ({ color, focused }) => (
+                        <View style={{
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <View style={{
+                                width: 50,
+                                height: 50,
+                                backgroundColor: focused ? '#67A9AF' : 'transparent',
+                                borderRadius: 15,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginBottom: 2,
+                                shadowColor: focused ? '#67A9AF' : 'transparent',
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: 0.3,
+                                shadowRadius: 8,
+                                elevation: focused ? 8 : 0,
+                            }}>
+                                <AntDesign
+                                    name="insurance"
                                     size={24}
                                     color={focused ? 'white' : color}
                                 />

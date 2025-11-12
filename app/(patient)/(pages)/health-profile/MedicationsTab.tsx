@@ -657,7 +657,7 @@ export default function MedicationsTab() {
                 <Text className="font-sans-medium text-base">{med.drugName}</Text>
                 <Text className="text-gray-500 font-sans text-sm">{med.dosage} • {med.frequency}</Text>
                 {med.time && (
-                  <Text className="text-gray-500 font-sans text-sm">⏰ {med.time}</Text>
+                  <Text className="text-gray-500 font-sans text-sm mt-1">⏰ {med.time}</Text>
                 )}
                 {med.specificDays && med.specificDays.length > 0 && (
                   <Text className="text-gray-500 font-sans text-xs mt-1">
@@ -670,7 +670,7 @@ export default function MedicationsTab() {
                   </Text>
                 )}
                 {med.nextReminder && med.enabled && (
-                  <Text className="text-blue-600 font-sans text-xs">
+                  <Text className="text-blue-600 font-sans text-xs mt-1">
                     📅 Next: {new Date(med.nextReminder).toLocaleString()}
                   </Text>
                 )}

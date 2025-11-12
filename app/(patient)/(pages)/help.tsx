@@ -394,7 +394,7 @@ export default function HelpScreen() {
                   </Text>
                   <TouchableOpacity
                     className="bg-primary rounded-full py-3 items-center flex-row justify-center"
-                    onPress={openWhatsApp}
+                    onPress={() => router.push('/(patient)/(pages)/support')}
                   >
                     <Ionicons name="chatbubble-ellipses" size={18} color="white" />
                     <Text className="text-white font-sans-semibold ml-2">Chat with Support</Text>

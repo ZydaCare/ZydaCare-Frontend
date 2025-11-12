@@ -13,6 +13,7 @@ export default function PatientPageLayout() {
             <Stack.Screen name="change-password" options={{ headerShown: false }} />
             <Stack.Screen name="supportChat" options={{ headerShown: false }} />
             <Stack.Screen name="help" options={{ headerShown: false }} />
+            <Stack.Screen name="support" options={{ headerShown: false }} />
             <Stack.Screen name="apply-doctor" options={{ headerShown: false }} />
             <Stack.Screen name="doctor/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="appointment/book" options={{ headerShown: false }} />
@@ -26,6 +27,9 @@ export default function PatientPageLayout() {
             <Stack.Screen name="medical-history/edit/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="health-profile/healthProfile" options={{ headerShown: false }} />
             <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="insurance/link" options={{ headerShown: false }} />
+            <Stack.Screen name="insurance/details" options={{ headerShown: false }} />
+            <Stack.Screen name="insurance/claims" options={{ headerShown: false }} />
         </Stack>
     );
 }

@@ -3,6 +3,22 @@ export interface ProfileImage {
   url: string;
 }
 
+export interface Insurance {
+  hasInsurance: Boolean,
+  provider: string,
+  policyNumber: string,
+  planName: string,
+  coverage: {
+    consultation: Boolean,
+    pharmacy: Boolean,
+    lab: Boolean,
+  },
+  expiryDate: Date, 
+  verificationStatus: string,
+  linkedAt: Date,
+  lastVerifiedAt: Date,
+}
+
 export interface User {
   _id: string;
   firstName: string;
@@ -24,6 +40,7 @@ export interface User {
   isAdmin: boolean;
   isSupportAdmin: boolean;
   isActive: boolean;
+  insurance: Insurance;
 }
 
 export interface AuthState {

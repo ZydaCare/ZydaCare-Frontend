@@ -47,7 +47,12 @@ export default function BookAppointmentScreen() {
   const [sharingProfile, setSharingProfile] = useState(false);
   const [showDOBPicker, setShowDOBPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'insurance' | 'outOfPocket'>('outOfPocket');
   const { showToast } = useToast();
+
+  // Update these lines in book.tsx
+  const hasInsurance = user?.insurance?.hasInsurance || false;
+  const insuranceProvider = user?.insurance?.provider || 'Insurance';
 
   const [fees, setFees] = useState<{ inPerson?: number; video?: number; homeVisit?: number } | null>(null);
   const [loadingFees, setLoadingFees] = useState<boolean>(false);
@@ -387,10 +392,10 @@ export default function BookAppointmentScreen() {
             onPress={handleShareProfile}
             disabled={sharingProfile || shareProfileWithDoctor}
             className={`flex-row items-center justify-center gap-2 py-3.5 rounded-xl ${shareProfileWithDoctor
-                ? 'bg-green-50 border border-green-200'
-                : sharingProfile
-                  ? 'bg-gray-100'
-                  : 'bg-[#67A9AF]'
+              ? 'bg-green-50 border border-green-200'
+              : sharingProfile
+                ? 'bg-gray-100'
+                : 'bg-[#67A9AF]'
               }`}
           >
             {sharingProfile ? (
@@ -426,37 +431,92 @@ export default function BookAppointmentScreen() {
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Declarations</Text>
           <TouchableOpacity onPress={() => setIsAccurate((v) => !v)} className="flex-row items-start gap-3 mb-3">
             <View className={`w-5 h-5 rounded border ${isAccurate ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`} >
-               <Ionicons name="checkmark" size={16} color="#fff" />
+              <Ionicons name="checkmark" size={16} color="#fff" />
             </View>
             <Text className="text-sm font-sans text-gray-700 flex-1">I confirm that the information provided is accurate to the best of my knowledge.</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setConsentToShare((v) => !v)} className="flex-row items-start gap-3">
             <View className={`w-5 h-5 rounded border ${consentToShare ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`}>
-               <Ionicons name="checkmark" size={16} color="#fff" />
+              <Ionicons name="checkmark" size={16} color="#fff" />
             </View>
             <Text className="text-sm font-sans text-gray-700 flex-1">I consent to ZydaCare sharing this information securely with the attending doctor.</Text>
           </TouchableOpacity>
         </View>
 
-        <View className="h-24" />
+        <View className="h-48" />
       </ScrollView>
 
       {/* Footer */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100">
-        <TouchableOpacity
-          disabled={!canSubmit || submitting}
-          onPress={handleSubmit}
-          className="py-3.5 rounded-xl items-center justify-center"
-          style={{ backgroundColor: canSubmit ? '#67A9AF' : '#9CA3AF' }}
-        >
-          {submitting ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text className="text-white font-sans-semibold">
-              ₦{amount.toLocaleString()} Book Appointment
+      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100">
+        {/* Payment Method Selector */}
+        {hasInsurance && (
+          <View className="px-4 pt-3">
+            <Text className="text-sm font-sans-medium text-gray-700 mb-2">Payment Method</Text>
+            <View className="flex-row border border-gray-200 rounded-lg overflow-hidden mb-3">
+              <TouchableOpacity
+                onPress={() => setPaymentMethod('insurance')}
+                className={`flex-1 py-2 px-5 justify-center items-center ${paymentMethod === 'insurance' ? 'bg-primary/10' : 'bg-white'}`}
+              >
+                <View className="flex-row items-center">
+                  <View className={`w-5 h-5 rounded-full border-2 mr-2 flex items-center justify-center ${paymentMethod === 'insurance' ? 'border-primary' : 'border-gray-300'}`}>
+                    {paymentMethod === 'insurance' && <View className="w-3 h-3 rounded-full bg-primary" />}
+                  </View>
+                  <Text className={`font-sans-medium text-[14px] ${paymentMethod === 'insurance' ? 'text-primary' : 'text-gray-600'}`}>
+                    Use Insurance ({insuranceProvider})
+                  </Text>
+                </View>
+                {/* {paymentMethod === 'insurance' && (
+                  <Text className="text-xs text-green-600 mt-1">Coverage verified</Text>
+                )} */}
+              </TouchableOpacity>
+
+              <View className="w-px bg-gray-200" />
+
+              <TouchableOpacity
+                onPress={() => setPaymentMethod('outOfPocket')}
+                className={`flex-1 py-2 px-5 justify-center items-center ${paymentMethod === 'outOfPocket' ? 'bg-primary/10' : 'bg-white'}`}
+              >
+                <View className="flex-row items-center">
+                  <View className={`w-5 h-5 rounded-full border-2 mr-2 flex items-center justify-center ${paymentMethod === 'outOfPocket' ? 'border-primary' : 'border-gray-300'}`}>
+                    {paymentMethod === 'outOfPocket' && <View className="w-3 h-3 rounded-full bg-primary" />}
+                  </View>
+                  <Text className={`font-sans-medium text-[14px] ${paymentMethod === 'outOfPocket' ? 'text-primary' : 'text-gray-600'}`}>
+                    Pay Out of Pocket
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Book Button */}
+        <View className="px-4 pb-4">
+          <TouchableOpacity
+            disabled={!canSubmit || submitting}
+            onPress={handleSubmit}
+            className="py-3.5 rounded-xl items-center justify-center"
+            style={{ backgroundColor: canSubmit ? '#67A9AF' : '#9CA3AF' }}
+          >
+            {submitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <View className="items-center">
+                <Text className="text-white font-sans-semibold text-lg">
+                  {paymentMethod === 'insurance' ? 'Book with Insurance' : 'Book ₦' + amount.toLocaleString()}
+                </Text>
+                {paymentMethod === 'insurance' && (
+                  <Text className="text-white/80 text-xs font-sans">No upfront payment required</Text>
+                )}
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {paymentMethod === 'insurance' && (
+            <Text className="text-xs text-gray-500 mt-2 font-sans text-center">
+              Your insurance will be billed directly. You may be responsible for copays or non-covered services.
             </Text>
           )}
-        </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
