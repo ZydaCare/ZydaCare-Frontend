@@ -258,7 +258,7 @@ export default function SecuritySettings() {
                     </View>
 
                     {/* Security Features */}
-                    <View className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+                    {/* <View className="bg-white rounded-xl p-5 mb-6 shadow-sm">
                         <Text className="text-lg font-sans-semibold text-gray-900 mb-4">Security Features</Text>
 
                         <View className="flex-row justify-between items-center py-3 border-b border-gray-100">
@@ -286,7 +286,7 @@ export default function SecuritySettings() {
                                 thumbColor="white"
                             />
                         </View>
-                    </View>
+                    </View> */}
 
                     {/* Privacy Settings */}
                     <View className="bg-white rounded-xl p-5 mb-6 shadow-sm">
@@ -307,11 +307,6 @@ export default function SecuritySettings() {
                             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
                         </TouchableOpacity> */}
                     </View>
-
-                    {/* Version Info */}
-                    <Text className="text-center font-sans-medium text-gray-400 text-sm">
-                        ZydaCare v1.0.0
-                    </Text>
                 </View>
             </ScrollView>
         </SafeAreaView>

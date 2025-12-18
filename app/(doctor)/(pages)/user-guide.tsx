@@ -110,7 +110,7 @@ Our average response time is less than 2 hours.`
   ];
 
    const openWhatsApp = () => { 
-      const phoneNumber = '+2349068937365';
+      const phoneNumber = '+2349161375954';
       const url = `https://wa.me/${phoneNumber}`;
       Linking.openURL(url);
     };

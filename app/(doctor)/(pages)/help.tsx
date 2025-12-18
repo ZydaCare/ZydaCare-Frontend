@@ -190,14 +190,14 @@ export default function HelpAndSupportScreen() {
           </View>
 
           {/* Footer */}
-          <View className="mt-10 mb-8 items-center">
+          {/* <View className="mt-10 mb-8 items-center">
             <Text className="text-sm text-gray-500 text-center font-sans">
-              ZydaCare v1.0.0
+              ZydaCare ${version}
             </Text>
             <Text className="text-xs text-gray-400 mt-1 font-sans">
               © {new Date().getFullYear()} ZydaCare. All rights reserved.
             </Text>
-          </View>
+          </View> */}
         </View>
       </ScrollView>
     </SafeAreaView>
