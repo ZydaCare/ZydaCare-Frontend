@@ -1,17 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
-import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { format as formatDate } from 'date-fns';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAuth } from '@/context/authContext';
 import { AppointmentType, createBooking } from '@/api/patient/appointments';
-import { getDoctorDetails } from '@/api/patient/user';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { shareProfile } from '@/api/patient/user';
+import { getDoctorDetails, shareProfile } from '@/api/patient/user';
 import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/context/authContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function BookAppointmentScreen() {
   const router = useRouter();
@@ -27,8 +26,9 @@ export default function BookAppointmentScreen() {
   const [contactPhone, setContactPhone] = useState(user?.phone || '');
   const [contactEmail, setContactEmail] = useState(user?.email || '');
 
+  const [appointmentDate, setAppointmentDate] = useState<Date>(() => new Date());
+
   const [appointmentType, setAppointmentType] = useState<AppointmentType>('virtual');
-  const [appointmentDate, setAppointmentDate] = useState<Date>(new Date(Date.now() + 60 * 60 * 1000));
 
   const [reasonForAppointment, setReasonForAppointment] = useState('');
   const [currentSymptoms, setCurrentSymptoms] = useState('');
@@ -44,18 +44,18 @@ export default function BookAppointmentScreen() {
   const [shareProfileWithDoctor, setShareProfileWithDoctor] = useState<boolean>(false);
 
   const [submitting, setSubmitting] = useState(false);
-  const [sharingProfile, setSharingProfile] = useState(false);
   const [showDOBPicker, setShowDOBPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'insurance' | 'outOfPocket'>('outOfPocket');
   const { showToast } = useToast();
 
-  // Update these lines in book.tsx
   const hasInsurance = user?.insurance?.hasInsurance || false;
   const insuranceProvider = user?.insurance?.provider || 'Insurance';
 
   const [fees, setFees] = useState<{ inPerson?: number; video?: number; homeVisit?: number } | null>(null);
   const [loadingFees, setLoadingFees] = useState<boolean>(false);
+  const [doctorAvailability, setDoctorAvailability] = useState<any>(null);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
 
   const [token, setToken] = useState<string | null>(null);
 
@@ -82,6 +82,23 @@ export default function BookAppointmentScreen() {
         const profile = data.profile || {};
         const consultationFees = profile.consultationFees || data.consultationFees || null;
         setFees(consultationFees);
+        
+        // Store doctor's availability
+        if (profile.availability) {
+          setDoctorAvailability(profile.availability);
+          
+          // Only adjust time if there's a notice period set
+          if (profile.availability.noticePeriod) {
+            const newAppointmentDate = new Date();
+            newAppointmentDate.setMinutes(newAppointmentDate.getMinutes() + profile.availability.noticePeriod);
+            // Round up to nearest 15 minutes
+            const minutes = newAppointmentDate.getMinutes();
+            newAppointmentDate.setMinutes(minutes + (15 - (minutes % 15)));
+            newAppointmentDate.setSeconds(0, 0);
+            setAppointmentDate(newAppointmentDate);
+          }
+          // If no notice period, keep the current time as is
+        }
       } catch (e) {
         setFees(null);
       } finally {
@@ -106,54 +123,101 @@ export default function BookAppointmentScreen() {
   }, [fees, appointmentType]);
 
   const canSubmit = useMemo(() => {
-    return !!token && !!doctorId && !!fullName && !!appointmentType && !!appointmentDate && isAccurate && consentToShare && amount > 0 && !loadingFees;
-  }, [token, doctorId, fullName, appointmentType, appointmentDate, isAccurate, consentToShare, amount, loadingFees]);
+    return !!token && !!doctorId && !!fullName && !!gender && !!contactPhone && !!reasonForAppointment && !!currentSymptoms && !!appointmentType && !!appointmentDate && isAccurate && consentToShare && amount > 0 && !loadingFees;
+  }, [token, doctorId, fullName, gender, contactPhone, reasonForAppointment, currentSymptoms, appointmentType, appointmentDate, isAccurate, consentToShare, amount, loadingFees]);
 
-  const handleShareProfile = async () => {
-    if (!token) {
-      showToast('Authentication required', 'error');
-      return;
+  // Check if the selected time slot is valid and available
+  const validateTimeSlot = (selectedDate: Date) => {
+    const now = new Date();
+    
+    // Check if the selected date is in the past
+    if (selectedDate < now) {
+      return { isValid: false, message: 'Cannot select a past date or time. Please choose a future time.' };
     }
-
-    try {
-      setSharingProfile(true);
-      const res = await shareProfile(token);
-
-      if (!res?.success) {
-        throw new Error(res?.message || 'Failed to share profile');
+    
+    // If doctor has a notice period set, enforce it
+    if (doctorAvailability?.noticePeriod) {
+      const noticePeriodMinutes = doctorAvailability.noticePeriod;
+      const minAllowedTime = new Date(now.getTime() + noticePeriodMinutes * 60000);
+      
+      // Check if the selected time is within the notice period
+      if (selectedDate < minAllowedTime) {
+        const formattedMinTime = minAllowedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return { 
+          isValid: false, 
+          message: `Appointments require a ${noticePeriodMinutes}-minute notice. Earliest available time is ${formattedMinTime}.`
+        };
       }
-
-      showToast('Profile shared successfully with doctor', 'success');
-      setShareProfileWithDoctor(true);
-    } catch (err: any) {
-      console.error('Profile share error:', err);
-      showToast(
-        err?.response?.data?.message ||
-        err?.message ||
-        'Failed to share profile',
-        'error'
-      );
-      setShareProfileWithDoctor(false);
-    } finally {
-      setSharingProfile(false);
     }
+    
+    // If no notice period is set, any future time is allowed
+    
+    // Check if the selected time is within working hours
+    if (!doctorAvailability?.workingDays) {
+      return { isValid: false, message: 'Doctor availability not found. Please try again later.' };
+    }
+    
+    const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const selectedTime = selectedDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    
+    const workingDay = doctorAvailability.workingDays.find((day: any) => day.day === dayOfWeek);
+    if (!workingDay?.slots?.length) {
+      return { isValid: false, message: 'Doctor is not available on this day. Please choose a different day.' };
+    }
+    
+    const isAvailable = workingDay.slots.some((slot: any) => {
+      if (!slot.isAvailable) return false;
+      
+      const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+      const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+      
+      const [selectedHour, selectedMinute] = selectedTime.split(':').map(Number);
+      const selectedTimeInMinutes = selectedHour * 60 + selectedMinute;
+      const startTimeInMinutes = startHour * 60 + startMinute;
+      const endTimeInMinutes = endHour * 60 + endMinute;
+      
+      return selectedTimeInMinutes >= startTimeInMinutes && selectedTimeInMinutes < endTimeInMinutes;
+    });
+    
+    if (!isAvailable) {
+      return { isValid: false, message: 'The doctor is not available at the selected time. Please choose a different time.' };
+    }
+    
+    return { isValid: true };
+  };
+  
+  // Helper function to check if time slot is available (for UI indicators)
+  const isTimeSlotAvailable = (selectedDate: Date) => {
+    const result = validateTimeSlot(selectedDate);
+    return result.isValid;
   };
 
   const handleSubmit = async () => {
     if (!canSubmit || !doctorId || !token) return;
 
+    // Validate the selected time slot
+    const validation = validateTimeSlot(appointmentDate);
+    if (!validation.isValid) {
+      setAvailabilityError(validation.message || 'The selected time is not available. Please choose a different time.');
+      return;
+    }
+
     try {
       setSubmitting(true);
+      setAvailabilityError(null);
 
-      // // If user opted to share profile, do it before booking
-      // if (shareProfileWithDoctor && !sharingProfile) {
-      //   try {
-      //     await shareProfile(token);
-      //   } catch (err) {
-      //     console.log('Profile share during booking failed:', err);
-      //     // Don't block booking if profile share fails
-      //   }
-      // }
+      // If user opted to share profile, do it before booking
+      if (shareProfileWithDoctor) {
+        try {
+          const res = await shareProfile(token);
+          if (!res?.success) {
+            showToast('Profile sharing failed, but continuing with booking', 'warning');
+          }
+        } catch (err) {
+          console.log('Profile share during booking failed:', err);
+          showToast('Profile sharing failed, but continuing with booking', 'warning');
+        }
+      }
 
       const payload = {
         doctorId,
@@ -192,8 +256,6 @@ export default function BookAppointmentScreen() {
     }
   };
 
-
-
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <View className="bg-white px-4 py-3 flex-row items-center justify-between border-b border-gray-100">
@@ -210,7 +272,7 @@ export default function BookAppointmentScreen() {
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Appointment Details</Text>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1 font-sans">Appointment Type</Text>
+            <Text className="text-xs text-gray-600 mb-1 font-sans">Appointment Type <Text className="text-red-500">*</Text></Text>
             <View className="flex-row gap-2">
               {(['virtual', 'in-person', 'home'] as AppointmentType[]).map((t) => (
                 <TouchableOpacity key={t} onPress={() => setAppointmentType(t)} className={`px-3 py-2 rounded-xl ${appointmentType === t ? 'bg-emerald-50' : 'bg-gray-100'}`}>
@@ -221,27 +283,41 @@ export default function BookAppointmentScreen() {
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1 font-sans">Date & Time</Text>
+            <Text className="text-xs text-gray-600 mb-1 font-sans">Date & Time <Text className="text-red-500">*</Text></Text>
             <TouchableOpacity
               onPress={() => {
                 if (Platform.OS === 'android') {
                   DateTimePickerAndroid.open({
                     value: appointmentDate,
                     mode: 'date',
-                    onChange: (_e, dateVal) => {
-                      if (!dateVal) return;
-                      const temp = new Date(appointmentDate);
-                      temp.setFullYear(dateVal.getFullYear(), dateVal.getMonth(), dateVal.getDate());
-                      DateTimePickerAndroid.open({
-                        value: temp,
-                        mode: 'time',
-                        onChange: (_e2, timeVal) => {
-                          if (!timeVal) return;
-                          const combined = new Date(temp);
-                          combined.setHours(timeVal.getHours(), timeVal.getMinutes(), 0, 0);
-                          setAppointmentDate(combined);
-                        },
-                      });
+                    minimumDate: new Date(),
+                    onChange: (_e, d) => {
+                      if (d) {
+                        const currentDate = new Date(appointmentDate);
+                        const now = new Date();
+                        if (d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+                          currentDate.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+                          DateTimePickerAndroid.open({
+                            value: currentDate,
+                            mode: 'time',
+                            minimumDate: new Date(),
+                            onChange: (_e2, timeVal) => {
+                              if (timeVal) {
+                                const now = new Date();
+                                const selectedDateTime = new Date(currentDate);
+                                selectedDateTime.setHours(timeVal.getHours(), timeVal.getMinutes(), 0, 0);
+                                
+                                if (selectedDateTime <= now) {
+                                  setAvailabilityError('Cannot select a time that has already passed. Please choose a future time.');
+                                } else {
+                                  setAppointmentDate(selectedDateTime);
+                                  setAvailabilityError(null);
+                                }
+                              }
+                            },
+                          });
+                        }
+                      }
                     },
                   });
                 } else {
@@ -250,18 +326,40 @@ export default function BookAppointmentScreen() {
               }}
               className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 font-sans"
             >
+              <View className="flex-row justify-between items-center">
               <Text className="text-sm text-gray-800 font-sans">{formatDate(appointmentDate, 'd MMMM yyyy h:mma')}</Text>
+              {doctorAvailability && (
+                <View className="flex-row items-center">
+                  <View className={`w-2 h-2 rounded-full mr-1 ${isTimeSlotAvailable(appointmentDate) ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                  <Text className="text-xs text-gray-500">
+                    {isTimeSlotAvailable(appointmentDate) ? 'Available' : 'Unavailable'}
+                  </Text>
+                </View>
+              )}
+            </View>
             </TouchableOpacity>
             {Platform.OS === 'ios' && showDatePicker && (
               <DateTimePicker
                 value={appointmentDate}
                 mode="datetime"
+                minimumDate={new Date()}
                 display={Platform.select({ ios: 'inline', android: 'default' })}
                 onChange={(_, d) => {
                   setShowDatePicker(false);
-                  if (d) setAppointmentDate(d);
+                  if (d) {
+                    const now = new Date();
+                    if (d <= now) {
+                      setAvailabilityError('Cannot select a time that has already passed. Please choose a future time.');
+                    } else {
+                      setAppointmentDate(d);
+                      setAvailabilityError(null);
+                    }
+                  }
                 }}
               />
+            )}
+            {availabilityError && (
+              <Text className="text-red-500 text-xs mt-1 font-sans">{availabilityError}</Text>
             )}
           </View>
         </View>
@@ -271,7 +369,7 @@ export default function BookAppointmentScreen() {
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Patient Information</Text>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1 font-sans">Full Name</Text>
+            <Text className="text-xs text-gray-600 mb-1 font-sans">Full Name <Text className="text-red-500">*</Text></Text>
             <TextInput value={fullName} onChangeText={setFullName} placeholder="Your full name" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 font-sans" />
           </View>
 
@@ -314,7 +412,7 @@ export default function BookAppointmentScreen() {
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 mb-1 font-sans">Gender</Text>
+            <Text className="text-xs text-gray-600 mb-1 font-sans">Gender <Text className="text-red-500">*</Text></Text>
             <View className="flex-row gap-2">
               {(['Male', 'Female', 'Other'] as const).map(g => (
                 <TouchableOpacity key={g} onPress={() => setGender(g)} className={`px-3 py-2 rounded-xl ${gender === g ? 'bg-emerald-50' : 'bg-gray-100'}`}>
@@ -325,7 +423,7 @@ export default function BookAppointmentScreen() {
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 font-sans mb-1">Phone</Text>
+            <Text className="text-xs text-gray-600 font-sans mb-1">Phone <Text className="text-red-500">*</Text></Text>
             <TextInput keyboardType="phone-pad" value={contactPhone} onChangeText={setContactPhone} placeholder="Phone number" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 font-sans" />
           </View>
 
@@ -340,12 +438,12 @@ export default function BookAppointmentScreen() {
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Medical Context</Text>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 font-sans mb-1">Reason for Appointment</Text>
+            <Text className="text-xs text-gray-600 font-sans mb-1">Reason for Appointment <Text className="text-red-500">*</Text></Text>
             <TextInput value={reasonForAppointment} onChangeText={setReasonForAppointment} placeholder="Chief complaint" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50" />
           </View>
 
           <View className="mb-3">
-            <Text className="text-xs text-gray-600 font-sans mb-1">Current Symptoms</Text>
+            <Text className="text-xs text-gray-600 font-sans mb-1">Current Symptoms <Text className="text-red-500">*</Text></Text>
             <TextInput multiline value={currentSymptoms} onChangeText={setCurrentSymptoms} placeholder="Short description" className="border border-gray-200 rounded-xl px-3 py-3 bg-gray-50 min-h-12" />
           </View>
 
@@ -375,71 +473,33 @@ export default function BookAppointmentScreen() {
           </View>
         </View>
 
-        {/* Section: Share Profile */}
-        <View className="bg-white mx-4 mt-4 rounded-2xl p-5 shadow-sm">
-          <Text className="text-base font-sans-semibold text-gray-900 mb-3">Share Your Profile</Text>
-
-          <View className="bg-blue-50 p-4 rounded-xl mb-4">
-            <View className="flex-row items-start gap-2">
-              <Ionicons name="information-circle" size={20} color="#3B82F6" />
-              <Text className="text-[11.5px] font-sans text-blue-700 flex-1">
-                Click on the share profile button. By sharing your complete profile helps the doctor provide better care by giving them access to your full medical history and records.
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleShareProfile}
-            disabled={sharingProfile || shareProfileWithDoctor}
-            className={`flex-row items-center justify-center gap-2 py-3.5 rounded-xl ${shareProfileWithDoctor
-              ? 'bg-green-50 border border-green-200'
-              : sharingProfile
-                ? 'bg-gray-100'
-                : 'bg-[#67A9AF]'
-              }`}
-          >
-            {sharingProfile ? (
-              <>
-                <ActivityIndicator color="#6B7280" size="small" />
-                <Text className="text-gray-600 font-sans-medium">Sharing Profile...</Text>
-              </>
-            ) : shareProfileWithDoctor ? (
-              <>
-                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                <Text className="text-green-700 font-sans-medium">Profile Shared</Text>
-              </>
-            ) : (
-              <>
-                <Ionicons name="share-outline" size={20} color="white" />
-                <Text className="text-white font-sans-medium">Share My Profile with Doctor</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {shareProfileWithDoctor && (
-            <View className="mt-3 flex-row items-start gap-2">
-              <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-              <Text className="text-xs font-sans text-gray-600 flex-1">
-                Your profile will be shared with the doctor when you book this appointment
-              </Text>
-            </View>
-          )}
-        </View>
-
         {/* Section: Declarations */}
         <View className="bg-white mx-4 mt-4 rounded-2xl p-5 shadow-sm">
           <Text className="text-base font-sans-semibold text-gray-900 mb-3">Declarations</Text>
+          
           <TouchableOpacity onPress={() => setIsAccurate((v) => !v)} className="flex-row items-start gap-3 mb-3">
             <View className={`w-5 h-5 rounded border ${isAccurate ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`} >
-              <Ionicons name="checkmark" size={16} color="#fff" />
+              {isAccurate && <Ionicons name="checkmark" size={16} color="#fff" />}
             </View>
-            <Text className="text-sm font-sans text-gray-700 flex-1">I confirm that the information provided is accurate to the best of my knowledge.</Text>
+            <Text className="text-sm font-sans text-gray-700 flex-1">I confirm that the information provided is accurate to the best of my knowledge. <Text className="text-red-500">*</Text></Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setConsentToShare((v) => !v)} className="flex-row items-start gap-3">
+          
+          <TouchableOpacity onPress={() => setConsentToShare((v) => !v)} className="flex-row items-start gap-3 mb-3">
             <View className={`w-5 h-5 rounded border ${consentToShare ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`}>
-              <Ionicons name="checkmark" size={16} color="#fff" />
+              {consentToShare && <Ionicons name="checkmark" size={16} color="#fff" />}
             </View>
-            <Text className="text-sm font-sans text-gray-700 flex-1">I consent to ZydaCare sharing this information securely with the attending doctor.</Text>
+            <Text className="text-sm font-sans text-gray-700 flex-1">I consent to ZydaCare sharing this information securely with the attending doctor. <Text className="text-red-500">*</Text></Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity onPress={() => setShareProfileWithDoctor((v) => !v)} className="flex-row items-start gap-3">
+            <View className={`w-5 h-5 rounded border ${shareProfileWithDoctor ? 'bg-emerald-500 border-emerald-600' : 'border-gray-300'}`}>
+              {shareProfileWithDoctor && <Ionicons name="checkmark" size={16} color="#fff" />}
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-sans text-gray-700">
+                <Text className="font-sans-medium">(Optional)</Text> Share my complete health profile with doctors I book appointments with. This gives them access to my full medical history and records for better care. I can turn this off anytime from my Health Profile screen.
+              </Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -465,9 +525,6 @@ export default function BookAppointmentScreen() {
                     Use Insurance ({insuranceProvider})
                   </Text>
                 </View>
-                {/* {paymentMethod === 'insurance' && (
-                  <Text className="text-xs text-green-600 mt-1">Coverage verified</Text>
-                )} */}
               </TouchableOpacity>
 
               <View className="w-px bg-gray-200" />

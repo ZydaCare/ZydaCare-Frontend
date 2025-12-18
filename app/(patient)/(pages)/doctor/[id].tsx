@@ -221,9 +221,9 @@ export default function DoctorDetailsScreen() {
                     <Ionicons name="arrow-back" size={22} color="#1F2937" />
                 </TouchableOpacity>
                 <Text className="text-base font-sans-semibold text-gray-900">Doctor Details</Text>
-                <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full bg-gray-50">
-                    <Ionicons name="share-outline" size={20} color="#1F2937" />
-                </TouchableOpacity>
+                <View className="w-10 h-10 items-center justify-center rounded-full bg-gray-50">
+                    {/* <Ionicons name="share-outline" size={20} color="#1F2937" /> */}
+                </View>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} className="flex-1">

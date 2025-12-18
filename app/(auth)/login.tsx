@@ -289,7 +289,7 @@ export default function Login() {
                                 <Text className="text-gray-700 text-sm font-sans-medium mb-2">Email</Text>
                                 <TextInput
                                     className="w-full h-12 px-4 text-gray-700 font-sans-medium bg-white rounded-lg border border-gray-200"
-                                    placeholder="Enter your username"
+                                    placeholder="Enter your email"
                                     placeholderTextColor="#9ca3af"
                                     value={email}
                                     onChangeText={setEmail}

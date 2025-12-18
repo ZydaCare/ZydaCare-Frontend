@@ -1,23 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Image,
-  TextInput,
-  ActivityIndicator,
-  SafeAreaView,
-  StatusBar,
-  Alert,
-} from 'react-native';
-import { useAuth } from '@/context/authContext';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { format, parseISO, isToday, isFuture, startOfDay, endOfDay } from 'date-fns';
+// app/(doctor)/(tabs)/home.tsx
+// Updated version with modal-based location control
+
 import { Appointment, AppointmentStats, getAppointmentStats, getDoctorAppointments } from '@/api/doctor/appointments';
+import { LocationSharingModal } from '@/components/LocationSharingModal';
+import { FloatingLocationButton } from '@/components/FloatingLocationButton';
 import HealthTipsSection from '@/components/HealthTipsSection';
+import { BASE_URL } from '@/config';
+import { useAuth } from '@/context/authContext';
+import { Ionicons } from '@expo/vector-icons';
+import { endOfDay, format, parseISO, startOfDay } from 'date-fns';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function DoctorHome() {
   const { user, doctorProfile, getDoctorProfile } = useAuth();
@@ -27,9 +33,12 @@ export default function DoctorHome() {
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Location sharing modal state
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [isLocationSharing, setIsLocationSharing] = useState(false);
 
   const handleSearchPress = () => {
-    // Navigate to the search screen when the search bar is pressed
     router.push('/(doctor)/(pages)/search');
   };
 
@@ -53,9 +62,7 @@ export default function DoctorHome() {
   const fetchStats = async () => {
     try {
       const response = await getAppointmentStats();
-      console.log('Appointment stats response:', response);
       if (response.success) {
-        console.log('Setting stats with data:', response.data);
         setStats(response.data);
       }
     } catch (error) {
@@ -75,19 +82,13 @@ export default function DoctorHome() {
         endDate: futureDate.toISOString(),
       });
 
-
       if (response.success) {
         const appointments = response.data || [];
-
-        // Filter appointments into today and upcoming
         const today: Appointment[] = [];
         const upcoming: Appointment[] = [];
 
         appointments.forEach((appointment) => {
-          if (!appointment.appointmentDate) {
-            console.warn('Appointment missing date:', appointment);
-            return;
-          }
+          if (!appointment.appointmentDate) return;
 
           const appointmentDate = parseISO(appointment.appointmentDate);
           const isAppointmentToday = appointmentDate >= todayStart && appointmentDate <= todayEnd;
@@ -100,7 +101,6 @@ export default function DoctorHome() {
           }
         });
 
-        // Sort by date/time
         today.sort((a, b) => parseISO(a.appointmentDate).getTime() - parseISO(b.appointmentDate).getTime());
         upcoming.sort((a, b) => parseISO(a.appointmentDate).getTime() - parseISO(b.appointmentDate).getTime());
 
@@ -153,7 +153,6 @@ export default function DoctorHome() {
   const renderAppointmentCard = (appointment: Appointment) => {
     const appointmentDate = parseISO(appointment.appointmentDate);
     const timeString = format(appointmentDate, 'h:mm a');
-    const dateString = format(appointmentDate, 'MMM d, yyyy');
 
     return (
       <TouchableOpacity
@@ -211,6 +210,7 @@ export default function DoctorHome() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -260,6 +260,29 @@ export default function DoctorHome() {
             />
           </View>
         </View>
+
+        {/* Location Sharing Status Banner (Optional - shows when sharing) */}
+        {isLocationSharing && (
+          <TouchableOpacity
+            onPress={() => setShowLocationModal(true)}
+            className="bg-green-50 border-l-4 border-green-500 mx-4 mt-4 p-4 rounded-lg"
+          >
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center flex-1">
+                <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                <View className="flex-1">
+                  <Text className="text-green-700 font-sans-semibold text-sm">
+                    You're Live & Visible
+                  </Text>
+                  <Text className="text-green-600 text-xs font-sans">
+                    Patients can see your real-time location
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#10b981" />
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* Stats Cards */}
         <View className="px-6 py-4">
@@ -393,7 +416,7 @@ export default function DoctorHome() {
                   </TouchableOpacity>
                 </View>
                 <View>
-                  {todayAppointments.slice(0, 3).map(renderAppointmentCard)}
+                  {todayAppointments.slice(0, 5).map(renderAppointmentCard)}
                 </View>
               </View>
             )}
@@ -407,7 +430,7 @@ export default function DoctorHome() {
                   </TouchableOpacity>
                 </View>
                 <View>
-                  {upcomingAppointments.slice(0, 3).map(renderAppointmentCard)}
+                  {upcomingAppointments.slice(0, 5).map(renderAppointmentCard)}
                 </View>
               </View>
             )}
@@ -427,9 +450,25 @@ export default function DoctorHome() {
         )}
 
         <HealthTipsSection />
-
-        <View className='h-24' />
+        <View className='h-32' />
       </ScrollView>
+
+      {/* Floating Location Button */}
+      <FloatingLocationButton
+        onPress={() => setShowLocationModal(true)}
+        isSharing={isLocationSharing}
+      />
+
+      {/* Location Sharing Modal */}
+      <LocationSharingModal
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        serverUrl={BASE_URL}
+        onSharingChange={(sharing) => {
+          setIsLocationSharing(sharing);
+          console.log(`Location sharing ${sharing ? 'started' : 'stopped'}`);
+        }}
+      />
     </SafeAreaView>
   );
 }

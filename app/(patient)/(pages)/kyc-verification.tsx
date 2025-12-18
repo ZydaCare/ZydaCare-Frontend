@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, StatusBar, Image, ScrollView, TextInput, ActivityIndicator } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import { useAuth } from '@/context/authContext';
+import { getKYCStatus, KYCStatus, submitKYCDocuments } from '@/api/patient/user';
 import { useToast } from '@/components/ui/Toast';
-import { getKYCStatus, submitKYCDocuments, KYCStatus } from '@/api/patient/user';
+import { useAuth } from '@/context/authContext';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, SafeAreaView, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 type VerificationDocument = {
     id: string;
@@ -14,7 +14,7 @@ type VerificationDocument = {
     title: string;
     description: string;
     icon: string;
-    status: 'pending' | 'verified' | 'rejected' | 'not_uploaded';
+    status: 'pending' | 'verified' | 'rejected' | 'not_submitted';
     imageUri?: string;
 };
 
@@ -35,7 +35,7 @@ export default function KYCVerificationScreen() {
             title: 'Government ID',
             description: 'Upload a valid government-issued ID (Passport, Driver\'s License, National ID)',
             icon: 'id-card',
-            status: 'not_uploaded',
+            status: 'not_submitted',
         },
         {
             id: '2',
@@ -43,7 +43,7 @@ export default function KYCVerificationScreen() {
             title: 'Selfie',
             description: 'Take a selfie for identity verification',
             icon: 'camera-reverse',
-            status: 'not_uploaded',
+            status: 'not_submitted',
         },
         {
             id: '3',
@@ -51,7 +51,7 @@ export default function KYCVerificationScreen() {
             title: 'Proof of Address',
             description: 'Upload a utility bill or bank statement (not older than 3 months)',
             icon: 'home',
-            status: 'not_uploaded',
+            status: 'not_submitted',
         },
     ]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -167,7 +167,7 @@ export default function KYCVerificationScreen() {
     };
 
     const handleSubmit = async () => {
-        const uploadedDocs = documents.filter(doc => doc.status !== 'not_uploaded');
+        const uploadedDocs = documents.filter(doc => doc.status !== 'not_submitted');
         if (uploadedDocs.length < documents.length) {
             showToast('Please upload all required documents', 'error');
             return;
@@ -532,13 +532,13 @@ export default function KYCVerificationScreen() {
                     <View
                         className="h-full bg-primary rounded-full"
                         style={{
-                            width: `${(documents.filter(d => d.status !== 'not_uploaded').length / documents.length) * 100}%`
+                            width: `${(documents.filter(d => d.status !== 'not_submitted').length / documents.length) * 100}%`
                         }}
                     />
                 </View>
 
                 <Text className="text-sm text-gray-600 font-sans text-center">
-                    {documents.filter(d => d.status !== 'not_uploaded').length} of {documents.length} steps completed
+                    {documents.filter(d => d.status !== 'not_submitted').length} of {documents.length} steps completed
                 </Text>
             </View>
 
@@ -553,7 +553,7 @@ export default function KYCVerificationScreen() {
                         <View className="flex-1">
                             <View className="flex-row justify-between items-start">
                                 <Text className="font-sans-bold text-gray-900">{doc.title}</Text>
-                                {doc.status !== 'not_uploaded' && (
+                                {doc.status !== 'not_submitted' && (
                                     <View className="bg-green-100 px-2 py-1 rounded-full">
                                         <Text className="text-xs font-sans-medium text-green-700">Uploaded</Text>
                                     </View>
@@ -657,15 +657,15 @@ export default function KYCVerificationScreen() {
             {kycStatus?.status === 'approved' && renderVerifiedView()}
             {kycStatus?.status === 'pending' && renderPendingView()}
             {kycStatus?.status === 'rejected' && renderRejectedView()}
-            {!kycStatus?.status && renderUploadView()}
+            {(!kycStatus?.status || kycStatus?.status === 'not_submitted') && renderUploadView()}
 
             {/* Submit Button - Only show for rejected or initial upload */}
             {(kycStatus?.status === 'rejected' || !kycStatus?.status) && (
                 <View className="p-4 border-t border-gray-100 bg-white">
                     <TouchableOpacity
                         onPress={handleSubmit}
-                        disabled={isSubmitting || documents.some(doc => doc.status === 'not_uploaded') || !documentNumber.trim()}
-                        className={`rounded-full py-4 items-center ${documents.some(doc => doc.status === 'not_uploaded') || !documentNumber.trim()
+                        disabled={isSubmitting || documents.some(doc => doc.status === 'not_submitted') || !documentNumber.trim()}
+                        className={`rounded-full py-4 items-center ${documents.some(doc => doc.status === 'not_submitted') || !documentNumber.trim()
                                 ? 'bg-gray-200'
                                 : 'bg-primary'
                             }`}

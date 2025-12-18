@@ -224,7 +224,7 @@ export default function SecuritySettingsScreen() {
                         iconBg="#D1FAE5"
                     />
 
-                    {biometricAvailable && (
+                    {/* {biometricAvailable && (
                         <SecurityItem
                             icon={<Ionicons name="finger-print" size={20} color="#3B82F6" />}
                             title="Biometric Login"
@@ -234,11 +234,11 @@ export default function SecuritySettingsScreen() {
                             onSwitchChange={handleBiometricToggle}
                             iconBg="#DBEAFE"
                         />
-                    )}
+                    )} */}
                 </View>
 
                 {/* App Security */}
-                <View className="bg-white rounded-lg mx-4 mt-4 mb-8 overflow-hidden">
+                {/* <View className="bg-white rounded-lg mx-4 mt-4 mb-8 overflow-hidden">
                     <Text className="text-gray-500 font-sans-medium text-xs px-4 pt-4 pb-2">APP SECURITY</Text>
 
                     <SecurityItem
@@ -261,10 +261,10 @@ export default function SecuritySettingsScreen() {
                         iconBg="#FCE7F3"
                         lastItem
                     />
-                </View>
+                </View> */}
 
                 {/* Security Tips */}
-                <View className="bg-blue-50 mx-4 p-4 rounded-lg mb-8">
+                <View className="bg-blue-50 mx-4 p-4 rounded-lg mb-8 mt-8">
                     <View className="flex-row items-start">
                         <Ionicons name="shield-checkmark" size={20} color="#3B82F6" style={{ marginTop: 2 }} />
                         <View className="ml-3 flex-1">

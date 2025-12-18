@@ -15,14 +15,14 @@ export default function SupportScreen() {
       title: 'Chat on WhatsApp',
       description: 'Instantly connect with our support team on WhatsApp',
       icon: <Ionicons name="logo-whatsapp" size={26} color="#25D366" />,
-      link: 'https://wa.me/2349068937365?text=Hi%20ZydaCare%20Support%2C%20I%20need%20help',
+      link: 'https://wa.me/2349161375954?text=Hi%20ZydaCare%20Support%2C%20I%20need%20help',
     },
     {
       id: 2,
       title: 'Message on Twitter',
       description: 'DM our support handle on X (Twitter)',
       icon: <Ionicons name="logo-twitter" size={26} color="#1DA1F2" />,
-      link: 'https://twitter.com/messages/compose?recipient_id=YOUR_TWITTER_ID',
+      link: 'https://x.com/ZydaCare',
     },
     {
       id: 3,

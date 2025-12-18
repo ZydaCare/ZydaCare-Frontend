@@ -1,21 +1,20 @@
-import { acceptAppointment, Appointment, cancelAppointment, completeAppointment, getAppointment } from '@/api/doctor/appointments';
+import { acceptAppointment, Appointment, cancelAppointment, completeAppointment, getAppointment, markDoctorJoined, getDoctorReview } from '@/api/doctor/appointments';
 import { useToast } from '@/components/ui/Toast';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
+import * as Linking from 'expo-linking';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   SafeAreaView,
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
-import ChatService from '@/api/chat'; // Add this import
 
 export default function AppointmentDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -27,7 +26,13 @@ export default function AppointmentDetailScreen() {
   const [accepting, setAccepting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [chatRoom, setChatRoom] = useState<any>(null)
+  const [chatRoom, setChatRoom] = useState<any>(null);
+  const [joiningCall, setJoiningCall] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [existingReview, setExistingReview] = useState<any>(null);
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -50,6 +55,111 @@ export default function AppointmentDetailScreen() {
       setLoading(false);
     }
   };
+
+  // Update the checkForExistingReview function
+  const checkForExistingReview = useCallback(async () => {
+    if (!appointment?.doctor?._id) return;
+
+    try {
+      const review = await getDoctorReview(appointment.doctor._id);
+      if (review) {
+        setHasReviewed(true);
+        setExistingReview(review);
+        setRating(review.rating);
+        setReview(review.comment || '');
+        setSelectedCategories(review.categories || []);
+      }
+    } catch (error) {
+      console.error('Error checking for existing review:', error);
+    }
+  }, [appointment?.doctor?._id]);
+
+  // Update the useEffect that calls checkForExistingReview
+  useEffect(() => {
+    if (appointment?.status && ['awaiting_payment', 'paid'].includes(appointment.status)) {
+      checkForExistingReview();
+    }
+  }, [appointment?.status, checkForExistingReview]);
+
+
+  const handleStartVideoCall = async () => {
+    console.log('Appointment data:', JSON.stringify(appointment, null, 2));
+    console.log('Virtual meeting data:', JSON.stringify(appointment?.virtualMeeting, null, 2));
+
+    if (!appointment?.virtualMeeting) {
+      console.log('No virtual meeting data available');
+      showToast('Virtual meeting not properly set up', 'error');
+      return;
+    }
+
+    if (!appointment.virtualMeeting.roomName) {
+      console.log('No roomName found in virtualMeeting');
+      showToast('Meeting room not properly set up. Please contact support.', 'error');
+      return;
+    }
+
+    try {
+      setJoiningCall(true);
+      console.log('Marking doctor as joined...');
+
+      try {
+        const response = await markDoctorJoined(appointment._id);
+        console.log('Doctor marked as joined:', response);
+      } catch (markError) {
+        console.warn('Failed to mark doctor as joined, but continuing with call:', markError);
+        // Continue with the call even if marking as joined fails
+      }
+
+      const meetingUrl = `https://meet.jit.si/${appointment.virtualMeeting.roomName}`;
+      console.log('Opening meeting URL:', meetingUrl);
+
+      await Linking.openURL(meetingUrl);
+
+      console.log('Updating local state...');
+      setAppointment(prev => ({
+        ...prev!,
+        virtualMeeting: {
+          ...prev!.virtualMeeting!,
+          doctorJoinedAt: new Date().toISOString()
+        }
+      }));
+    } catch (error) {
+      console.error('Error joining video call:', error);
+      showToast('Failed to join video call', 'error');
+    } finally {
+      setJoiningCall(false);
+    }
+  };
+  // const handleStartVideoCall = async () => {
+  //   if (!appointment?.virtualMeeting?.link) {
+  //     showToast('No meeting link available', 'error');
+  //     return;
+  //   }
+
+  //   try {
+  //     setJoiningCall(true);
+
+  //     // Mark doctor as joined in the backend
+  //     await markDoctorJoined(appointment._id);
+
+  //     // Open the meeting link in the browser
+  //     await Linking.openURL(appointment.virtualMeeting.link);
+
+  //     // Update local state to reflect doctor has joined
+  //     setAppointment(prev => ({
+  //       ...prev!,
+  //       virtualMeeting: {
+  //         ...prev!.virtualMeeting!,
+  //         doctorJoinedAt: new Date().toISOString()
+  //       }
+  //     }));
+  //   } catch (error) {
+  //     console.error('Error joining video call:', error);
+  //     showToast('Failed to join video call', 'error');
+  //   } finally {
+  //     setJoiningCall(false);
+  //   }
+  // };
 
   const handleCompleteAppointment = async () => {
     setShowCompleteModal(true);
@@ -392,6 +502,51 @@ export default function AppointmentDetailScreen() {
           </View>
         </View>
 
+        {/* Show review if exists, otherwise show rate button */}
+        <View className='mx-6'>
+          {hasReviewed && existingReview ? (
+          <View className="bg-white rounded-2xl p-5 shadow-sm">
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-lg font-sans-semibold text-gray-900">Patient's Review</Text>
+              <View className="flex-row">
+                {[...Array(5)].map((_, i) => (
+                  <Ionicons
+                    key={i}
+                    name={i < existingReview.rating ? 'star' : 'star-outline'}
+                    size={20}
+                    color={i < existingReview.rating ? '#F59E0B' : '#D1D5DB'}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {existingReview.comment ? (
+              <View className="mb-3">
+                <Text className="text-gray-700 font-sans">{existingReview.comment}</Text>
+              </View>
+            ) : null}
+
+            {existingReview.categories?.length > 0 && (
+              <View className="flex-row flex-wrap mt-2">
+                {existingReview.categories.map((category: string, index: number) => (
+                  <View key={index} className="bg-gray-100 rounded-full px-3 py-1 mr-2 mb-2">
+                    <Text className="text-sm font-sans text-gray-700">{category}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <Text className="text-xs text-gray-500 mt-2">
+              Reviewed on {new Date(existingReview.createdAt).toLocaleDateString()}
+            </Text>
+          </View>
+        ) : (
+          <View className="bg-white rounded-2xl p-5 shadow-sm mt-4">
+            <Text className="text-gray-700 font-sans">No review submitted by patient yet</Text>
+          </View>
+        )}
+        </View>
+
         {/* Action Buttons */}
         <View className="mx-6 mb-8">
           {/* Pending status: Show Accept Appointment button only */}
@@ -433,16 +588,26 @@ export default function AppointmentDetailScreen() {
           )}
 
 
-          {/* Accepted status: Show Complete + Video/Chat based on type */}
-          {appointment.status === 'accepted' && (
+          {/* Show video call and complete options for accepted appointments that are not awaiting payment or paid */}
+          {appointment.status === 'accepted' && appointment.status !== 'awaiting_payment' && appointment.status !== 'paid' && (
             <>
               {/* Show Video Call button for virtual appointments */}
               {appointment.appointmentType === 'virtual' && (
-                <TouchableOpacity className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center">
-                  <Ionicons name="videocam" size={20} color="white" />
-                  <Text className="text-white font-sans-bold text-base ml-2">
-                    Start Video Call
-                  </Text>
+                <TouchableOpacity
+                  className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center"
+                  onPress={handleStartVideoCall}
+                  disabled={joiningCall}
+                >
+                  {joiningCall ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <>
+                      <Ionicons name="videocam" size={20} color="white" />
+                      <Text className="text-white font-sans-bold text-base ml-2">
+                        {appointment.virtualMeeting?.doctorJoinedAt ? 'Rejoin Video Call' : 'Start Video Call'}
+                      </Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               )}
 
@@ -501,15 +666,25 @@ export default function AppointmentDetailScreen() {
             </>
           )}
 
-          {/* Awaiting Payment status: Show appointment type button only */}
-          {appointment.status === 'awaiting_payment' && (
+          {/* Awaiting Payment status: Don't show video call button */}
+          {false && appointment.status === 'awaiting_payment' && (
             <>
               {appointment.appointmentType === 'virtual' && (
-                <TouchableOpacity className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center">
-                  <Ionicons name="videocam" size={20} color="white" />
-                  <Text className="text-white font-sans-bold text-base ml-2">
-                    Start Video Call
-                  </Text>
+                <TouchableOpacity
+                  className="bg-[#67A9AF] py-4 rounded-xl items-center flex-row justify-center"
+                  onPress={handleStartVideoCall}
+                  disabled={joiningCall}
+                >
+                  {joiningCall ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <>
+                      <Ionicons name="videocam" size={20} color="white" />
+                      <Text className="text-white font-sans-bold text-base ml-2">
+                        {appointment.virtualMeeting?.doctorJoinedAt ? 'Rejoin Video Call' : 'Start Video Call'}
+                      </Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               )}
 

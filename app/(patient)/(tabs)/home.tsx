@@ -49,12 +49,27 @@ const Home = () => {
   const [homeSearch, setHomeSearch] = useState('');
   const [upcomingAppointment, setUpcomingAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { isLoading, isAuthenticated, user } = useAuth();
+  const { isLoading, isAuthenticated, user, getMe } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [showSOSModal, setShowSOSModal] = useState(false);
   const [sendingSOS, setSendingSOS] = useState(false);
   const { showToast } = useToast();
   const [greeting, setGreeting] = useState('');
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) {
+        setLoadingProfile(true)
+        try {
+          await getMe()
+        } finally {
+          setLoadingProfile(false)
+        }
+      }
+    }
+    fetchProfile()
+  }, [user])
 
   // Get personalized greeting
   useEffect(() => {
@@ -256,7 +271,7 @@ const Home = () => {
             {[
               { id: 1, title: 'Book Appointment', icon: 'calendar' as const, color: '#67A9AF', route: '/(patient)/(pages)/search' as const, bgColor: '#E8F4F5' },
               { id: 2, title: 'My Appointments', icon: 'time' as const, color: '#5B8DEF', route: '/(patient)/(tabs)/appointment' as const, bgColor: '#EBF2FE' },
-              { id: 3, title: 'Health Records', icon: 'heart-circle' as const, color: '#EF5B8D', route: '/(patient)/(pages)/medical-history/records' as const, bgColor: '#FEEBF2' },
+              { id: 3, title: 'Health Records', icon: 'folder-outline' as const, color: '#EF5B8D', route: '/(patient)/(pages)/medical-history/records' as const, bgColor: '#FEEBF2' },
               { id: 4, title: 'Get Support', icon: 'chatbubble-ellipses' as const, color: '#9B6BEF', route: '/(patient)/(pages)/support' as const, bgColor: '#F3EDFE' },
             ].map((item) => (
               <TouchableOpacity
@@ -287,7 +302,7 @@ const Home = () => {
               <Text className="text-sm font-sans-medium text-primary">See All</Text>
             </TouchableOpacity>
           </View>
-          
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}

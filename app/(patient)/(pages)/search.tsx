@@ -1,13 +1,13 @@
 import { getAllDoctors } from '@/api/patient/user';
 import { useToast } from '@/components/ui/Toast';
-import { useAuth } from '@/context/authContext';
+import { BASE_URL } from '@/config';
 import {
     filterDoctors,
     sortDoctorsByAvailability,
-    sortDoctorsByDistance,
     transformDoctorData,
-    TransformedDoctor,
+    TransformedDoctor
 } from '@/utils/getDoctorUtils';
+import { useLocationTracking } from '@/utils/useLocationTracking';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
@@ -18,14 +18,14 @@ import {
     Animated,
     Dimensions,
     Image,
+    PanResponder,
     SafeAreaView,
     ScrollView,
     StatusBar,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
-    PanResponder
+    View
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -52,10 +52,23 @@ export default function Search() {
     });
     const [locationPermission, setLocationPermission] = useState(false);
     const [mapReady, setMapReady] = useState(false);
+    const [locationLoading, setLocationLoading] = useState(false);
 
     const bottomSheetAnim = useRef(new Animated.Value(height)).current;
     const scanningAnim = useRef(new Animated.Value(0)).current;
     const webViewRef = useRef<WebView>(null);
+    const {
+        isConnected: trackingConnected,
+        activeDoctors: liveActiveDoctors,
+        requestDoctorLocations: requestLiveDoctors,
+        subscribeToDoctor,
+        unsubscribeFromDoctor,
+    } = useLocationTracking(`${BASE_URL}`, true); // Replace with your server URL
+
+    const [showLiveDoctors, setShowLiveDoctors] = useState(false);
+    const [subscribedDoctors, setSubscribedDoctors] = useState<Set<string>>(new Set());
+    const [nearestDoctorsRadius, setNearestDoctorsRadius] = useState(10); // km
+    const [mapDoctors, setMapDoctors] = useState<TransformedDoctor[]>([]);
 
     // const [token, setToken] = useState<string | null>(null);
 
@@ -72,6 +85,173 @@ export default function Search() {
     //     loadToken();
     // }, []);
 
+    useEffect(() => {
+        if (viewMode === 'map' && transformedDoctors.length > 0) {
+            // Get only nearest doctors within radius
+            const nearest = getNearestDoctors(
+                transformedDoctors,
+                nearestDoctorsRadius,
+                showLiveDoctors ? liveActiveDoctors : []
+            );
+            setMapDoctors(nearest);
+            console.log(`Showing ${nearest.length} nearest doctors within ${nearestDoctorsRadius}km`);
+        }
+    }, [viewMode, transformedDoctors, nearestDoctorsRadius, showLiveDoctors, liveActiveDoctors]);
+
+    const getNearestDoctors = (
+        doctors: TransformedDoctor[],
+        radiusKm: number,
+        liveDoctors: any[]
+    ): TransformedDoctor[] => {
+        // Filter doctors with valid coordinates
+        const validDoctors = doctors.filter(d =>
+            d.latitude !== 0 &&
+            d.longitude !== 0 &&
+            !isNaN(d.latitude) &&
+            !isNaN(d.longitude)
+        );
+
+        // If showing live doctors, prioritize them
+        if (showLiveDoctors && liveDoctors.length > 0) {
+            const liveDoctorIds = new Set(liveDoctors.map(d => d.doctorId));
+            const live = validDoctors.filter(d => liveDoctorIds.has(d._id));
+            const others = validDoctors
+                .filter(d => !liveDoctorIds.has(d._id) && d.distanceKm <= radiusKm)
+                .sort((a, b) => a.distanceKm - b.distanceKm)
+                .slice(0, 5); // Only show 5 nearest non-live doctors
+
+            return [...live, ...others];
+        }
+
+        // Otherwise, show doctors within radius, sorted by distance
+        return validDoctors
+            .filter(d => d.distanceKm <= radiusKm)
+            .sort((a, b) => a.distanceKm - b.distanceKm)
+            .slice(0, 10); // Limit to 10 nearest doctors
+    };
+
+    // 4. Add effect to update map with live doctors
+    useEffect(() => {
+        if (mapReady && viewMode === 'map' && showLiveDoctors && liveActiveDoctors.length > 0) {
+            updateMapWithLiveDoctors();
+        }
+    }, [liveActiveDoctors, mapReady, viewMode, showLiveDoctors]);
+
+    const updateMapWithNearestDoctors = (doctors: TransformedDoctor[], userLoc: { latitude: number; longitude: number }) => {
+    // Create markers for each doctor
+    const doctorMarkers = doctors.map(doc => ({
+      id: doc._id,
+      lat: doc.latitude,
+      lng: doc.longitude,
+      name: doc.fullName,
+      title: doc.title,
+      specialty: doc.speciality,
+      image: doc.profileImage?.url || null,
+      rating: doc.rating,
+      distance: formatDistance(doc.distanceKm * 1000), // Convert km to meters for formatting
+      available: doc.availabilityStatus?.isAvailable || false,
+      isLive: false,
+    }));
+
+    const data = {
+      userLat: userLoc.latitude,
+      userLng: userLoc.longitude,
+      doctors: doctorMarkers,
+      userLocation: {
+        lat: userLoc.latitude,
+        lng: userLoc.longitude,
+        name: 'Your Location',
+        isUser: true,
+      },
+    };
+
+    webViewRef.current?.postMessage(JSON.stringify({
+      type: 'updateMarkers',
+      data
+    }));
+  };
+
+  const updateMapWithLiveDoctors = () => {
+        const liveDoctorMarkers = liveActiveDoctors.map(doc => ({
+            id: doc.doctorId,
+            lat: doc.latitude,
+            lng: doc.longitude,
+            name: doc.doctorInfo.fullName,
+            specialty: doc.doctorInfo.speciality,
+            image: doc.doctorInfo.profileImage,
+            isLive: true,
+            lastUpdate: doc.timestamp,
+            distance: doc.distance ? formatDistance(doc.distance) : 'N/A',
+            available: true,
+        }));
+
+        // Add nearby non-live doctors
+        const nearbyDoctors = mapDoctors
+            .filter(doc => !liveActiveDoctors.some(d => d.doctorId === doc._id))
+            .slice(0, 5)
+            .map(doc => ({
+                id: doc._id,
+                lat: doc.latitude,
+                lng: doc.longitude,
+                name: doc.fullName,
+                title: doc.title,
+                specialty: doc.speciality,
+                image: doc.profileImage?.url || null,
+                rating: doc.rating,
+                distance: doc.distance,
+                available: doc.availabilityStatus?.isAvailable || false,
+                isLive: false,
+            }));
+
+        const allDoctors = showLiveDoctors
+            ? [...liveDoctorMarkers, ...nearbyDoctors]
+            : nearbyDoctors;
+
+        const data = {
+            userLat: userLocation.latitude,
+            userLng: userLocation.longitude,
+            doctors: allDoctors,
+            userLocation: {
+                lat: userLocation.latitude,
+                lng: userLocation.longitude,
+                name: 'Your Location',
+                isUser: true,
+            },
+        };
+
+        webViewRef.current?.postMessage(JSON.stringify({
+            type: 'updateMarkers',
+            data
+        }));
+    };
+
+    const toggleLiveTracking = async () => {
+        setShowLiveDoctors(!showLiveDoctors);
+        if (!showLiveDoctors && trackingConnected) {
+            await requestLiveDoctors(50);
+        }
+    };
+
+    // 7. Add function to subscribe to doctor
+    const handleSubscribeToDoctor = async (doctorId: string) => {
+        const success = await subscribeToDoctor(doctorId);
+        if (success) {
+            setSubscribedDoctors(prev => new Set([...prev, doctorId]));
+        }
+    };
+
+    // 8. Add function to unsubscribe from doctor
+    const handleUnsubscribeFromDoctor = async (doctorId: string) => {
+        const success = await unsubscribeFromDoctor(doctorId);
+        if (success) {
+            setSubscribedDoctors(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(doctorId);
+                return newSet;
+            });
+        }
+    };
+
 
     // Request location permission and get user's current location
     useEffect(() => {
@@ -80,6 +260,7 @@ export default function Search() {
 
     const requestLocationPermission = async () => {
         try {
+            setLocationLoading(true);
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
                 showToast('Location permission is required to find nearby doctors', 'error');
@@ -88,16 +269,35 @@ export default function Search() {
             }
 
             setLocationPermission(true);
-            const location = await Location.getCurrentPositionAsync({});
-            setUserLocation({
+            const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.High
+            });
+
+            const newLocation = {
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude,
                 latitudeDelta: 0.0922,
                 longitudeDelta: 0.0421,
-            });
+            };
+
+            setUserLocation(newLocation);
+
+            // If we're in map view, center on new location
+            if (viewMode === 'map' && mapReady) {
+                webViewRef.current?.postMessage(JSON.stringify({
+                    type: 'flyTo',
+                    data: {
+                        lat: newLocation.latitude,
+                        lng: newLocation.longitude,
+                        zoom: 14
+                    }
+                }));
+            }
         } catch (error) {
             console.error('Error getting location:', error);
             showToast('Failed to get your location', 'error');
+        } finally {
+            setLocationLoading(false);
         }
     };
 
@@ -120,22 +320,31 @@ export default function Search() {
     // Transform doctors when raw data or location changes
     useEffect(() => {
         if (rawDoctors.length > 0) {
-            const transformed = rawDoctors.map(doctor => {
-                console.log('Raw doctor:', doctor.fullName);
-                console.log('Raw coordinates:', doctor.profile?.location?.coordinates);
+            const transformed = rawDoctors
+                .map(doctor => {
+                    const result = transformDoctorData(
+                        doctor,
+                        userLocation.latitude,
+                        userLocation.longitude
+                    );
+                    return result;
+                })
+                // Filter out doctors without valid location
+                .filter(doctor =>
+                    doctor.latitude &&
+                    doctor.longitude &&
+                    !isNaN(doctor.latitude) &&
+                    !isNaN(doctor.longitude)
+                )
+                // Sort by distance
+                .sort((a, b) => {
+                    const distA = a.distance?.value || Number.MAX_SAFE_INTEGER;
+                    const distB = b.distance?.value || Number.MAX_SAFE_INTEGER;
+                    return distA - distB;
+                });
 
-                const result = transformDoctorData(
-                    doctor,
-                    userLocation.latitude,
-                    userLocation.longitude
-                );
-
-                console.log('Transformed:', result.fullName, result.latitude, result.longitude);
-                return result;
-            });
-
-            setTransformedDoctors(sortDoctorsByDistance(transformed));
-            console.log('Total transformed doctors:', transformed.length);
+            console.log(`Found ${transformed.length} doctors with valid locations`);
+            setTransformedDoctors(transformed);
         }
     }, [rawDoctors, userLocation]);
 
@@ -253,30 +462,45 @@ export default function Search() {
     }, [filteredDoctors, userLocation, mapReady, viewMode]);
 
     const updateMapMarkers = () => {
-        const doctors = filteredDoctors.map(doc => {
-            console.log('Mapping doctor:', doc.fullName, doc.latitude, doc.longitude);
+        if (!userLocation.latitude || !userLocation.longitude) return;
+
+        const doctors = mapDoctors.map(doc => {
+            // Check if doctor is live
+            const isLive = liveActiveDoctors.some(d => d.doctorId === doc._id);
+            const liveDoc = liveActiveDoctors.find(d => d.doctorId === doc._id);
+
             return {
                 id: doc._id,
-                lat: doc.latitude,
-                lng: doc.longitude,
+                lat: isLive && liveDoc ? liveDoc.latitude : doc.latitude,
+                lng: isLive && liveDoc ? liveDoc.longitude : doc.longitude,
                 name: doc.fullName,
                 title: doc.title,
                 specialty: doc.speciality,
                 image: doc.profileImage?.url || null,
                 rating: doc.rating,
                 distance: doc.distance,
-                available: doc.availabilityStatus.isAvailable
+                available: doc.availabilityStatus?.isAvailable || false,
+                isLive: isLive
             };
         });
 
         const data = {
             userLat: userLocation.latitude,
             userLng: userLocation.longitude,
-            doctors: doctors
+            doctors: doctors,
+            userLocation: {
+                lat: userLocation.latitude,
+                lng: userLocation.longitude,
+                name: 'Your Location',
+                isUser: true
+            }
         };
 
-        console.log('Sending to map:', JSON.stringify(data, null, 2));
-        webViewRef.current?.postMessage(JSON.stringify({ type: 'updateMarkers', data }));
+        console.log('Updating map with', doctors.length, 'doctors');
+        webViewRef.current?.postMessage(JSON.stringify({
+            type: 'updateMarkers',
+            data
+        }));
     };
 
     // Handle map search and recommendation
@@ -288,23 +512,45 @@ export default function Search() {
 
             const timer = setTimeout(() => {
                 setIsScanning(false);
-                const matchingDoctors = filteredDoctors;
+
+                // Search in all doctors, not just map doctors
+                const matchingDoctors = filterDoctors(
+                    transformedDoctors,
+                    searchQuery,
+                    selectedCategory,
+                    viewMode
+                );
 
                 if (matchingDoctors.length > 0) {
+                    // Sort by availability and distance
                     const sortedDoctors = sortDoctorsByAvailability(matchingDoctors);
                     const recommendedDoctor = sortedDoctors[0];
+
+                    // Check if doctor is live
+                    const liveDoctor = liveActiveDoctors.find(d => d.doctorId === recommendedDoctor._id);
+
                     setSelectedDoctor(recommendedDoctor);
                     showBottomSheet();
 
-                    // Animate to doctor location
+                    // Navigate to doctor's location (use live location if available)
+                    const targetLat = liveDoctor ? liveDoctor.latitude : recommendedDoctor.latitude;
+                    const targetLng = liveDoctor ? liveDoctor.longitude : recommendedDoctor.longitude;
+
                     webViewRef.current?.postMessage(JSON.stringify({
                         type: 'flyTo',
                         data: {
-                            lat: recommendedDoctor.latitude,
-                            lng: recommendedDoctor.longitude,
+                            lat: targetLat,
+                            lng: targetLng,
                             zoom: 15
                         }
                     }));
+
+                    // Temporarily add this doctor to the map if not already there
+                    if (!mapDoctors.find(d => d._id === recommendedDoctor._id)) {
+                        setMapDoctors(prev => [...prev, recommendedDoctor]);
+                    }
+                } else {
+                    showToast('No doctors found matching your search', 'info');
                 }
             }, 2000);
 
@@ -313,10 +559,32 @@ export default function Search() {
             setSelectedDoctor(null);
             hideBottomSheet();
         }
-    }, [searchQuery, viewMode, filteredDoctors]);
+    }, [searchQuery, viewMode, transformedDoctors]);
 
     const handleDoctorMarkerPress = (doctorId: string) => {
-        const doctor = filteredDoctors.find(d => d._id === doctorId);
+        // Check if it's a live doctor first
+        const liveDoctor = liveActiveDoctors.find(d => d.doctorId === doctorId);
+
+        let doctor: TransformedDoctor | undefined;
+
+        if (liveDoctor) {
+            // Find the doctor profile
+            doctor = transformedDoctors.find(d => d._id === doctorId);
+            if (doctor) {
+                // Update with live location
+                doctor = {
+                    ...doctor,
+                    latitude: liveDoctor.latitude,
+                    longitude: liveDoctor.longitude,
+                    distance: liveDoctor.distance
+                        ? formatDistance(liveDoctor.distance)
+                        : doctor.distance
+                };
+            }
+        } else {
+            doctor = mapDoctors.find(d => d._id === doctorId);
+        }
+
         if (doctor) {
             setSelectedDoctor(doctor);
             showBottomSheet();
@@ -331,15 +599,11 @@ export default function Search() {
         }
     };
 
-    const centerMapOnUser = () => {
-        webViewRef.current?.postMessage(JSON.stringify({
-            type: 'flyTo',
-            data: {
-                lat: userLocation.latitude,
-                lng: userLocation.longitude,
-                zoom: 13
-            }
-        }));
+    const formatDistance = (km: number): string => {
+        if (km < 1) {
+            return `${Math.round(km * 1000)}m`;
+        }
+        return `${km.toFixed(1)}km`;
     };
 
     const ViewDoctorProfile = () => {
@@ -348,6 +612,38 @@ export default function Search() {
                 pathname: '/doctor/[id]',
                 params: { id: selectedDoctor._id }
             });
+        }
+    };
+
+    const centerMapOnUser = async () => {
+        try {
+            setLocationLoading(true);
+            const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.High
+            });
+
+            const newLocation = {
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+            };
+
+            setUserLocation(newLocation);
+
+            webViewRef.current?.postMessage(JSON.stringify({
+                type: 'flyTo',
+                data: {
+                    lat: newLocation.latitude,
+                    lng: newLocation.longitude,
+                    zoom: 14
+                }
+            }));
+        } catch (error) {
+            console.error('Error centering on user location:', error);
+            showToast('Failed to get your current location', 'error');
+        } finally {
+            setLocationLoading(false);
         }
     };
 
@@ -363,6 +659,7 @@ export default function Search() {
     const DoctorCard = ({ doctor }: { doctor: TransformedDoctor }) => (
         <TouchableOpacity
             onPress={() => {
+                ViewDoctorProfile();
                 router.push(`/(patient)/(pages)/doctor/${doctor._id}`);
             }}
             className="bg-white rounded-2xl p-4 mb-4 shadow-sm mx-2"
@@ -616,7 +913,7 @@ export default function Search() {
                         
                         const markerHTML = doctor.image 
                             ? \`<div class="custom-marker">
-                                 <img src="\${doctor.image}" class="marker-image" onerror="this.parentElement.innerHTML='<div class=\\"marker-icon\\">👨‍⚕️</div>'" />
+                                 <img src="\${doctor.image}" class="marker-image" onerror="this.parentElement.innerHTML='<div class=\\"marker-icon\\">👨‍⚕️</div>
                                  <div class="status-indicator \${doctor.available ? 'available' : 'unavailable'}"></div>
                                </div>\`
                             : \`<div class="custom-marker">
@@ -765,9 +1062,47 @@ export default function Search() {
                         ))}
                     </ScrollView>
 
+                    {/* Live Doctors Section */}
+                    {/* {trackingConnected && liveActiveDoctors.length > 0 && (
+                        <View className="bg-green-50 border-l-4 border-green-500 p-4 mx-4 mb-4 rounded-lg">
+                            <View className="flex-row items-center justify-between mb-2">
+                                <View className="flex-row items-center">
+                                    <View className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
+                                    <Text className="text-green-700 font-sans-semibold">
+                                        {liveActiveDoctors.length} Doctors Live Nearby
+                                    </Text>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={() => setViewMode('map')}
+                                    className="bg-green-500 px-3 py-1 rounded-full"
+                                >
+                                    <Text className="text-white text-xs font-sans-medium">View Map</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <Text className="text-green-600 text-xs font-sans">
+                                These doctors are currently active and can respond instantly
+                            </Text>
+                        </View>
+                    )} */}
+
                     {/* Doctor Cards */}
                     {filteredDoctors.length > 0 ? (
-                        filteredDoctors.map((doctor) => <DoctorCard key={doctor._id} doctor={doctor} />)
+                        filteredDoctors.map((doctor) => {
+                            const isLive = liveActiveDoctors.some(d => d.doctorId === doctor._id);
+                            return (
+                                <View key={doctor._id}>
+                                    {isLive && (
+                                        <View className="absolute left-2 top-2 z-10">
+                                            <View className="bg-green-500 px-2 py-0.5 rounded-full flex-row items-center">
+                                                <View className="w-1.5 h-1.5 bg-white rounded-full mr-1 animate-pulse" />
+                                                <Text className="text-white text-[10px] font-sans-semibold">LIVE</Text>
+                                            </View>
+                                        </View>
+                                    )}
+                                    <DoctorCard doctor={doctor} />
+                                </View>
+                            );
+                        })
                     ) : (
                         <View className="items-center justify-center mt-20">
                             <Ionicons name="search-outline" size={50} color="#9CA3AF" />
@@ -873,6 +1208,29 @@ export default function Search() {
                         </View>
                     )}
 
+                    {/* Live Tracking Toggle */}
+                    <TouchableOpacity
+                        className={`absolute top-4 left-4 px-4 py-2 rounded-full shadow-lg flex-row items-center ${showLiveDoctors ? 'bg-green-500' : 'bg-white'
+                            }`}
+                        onPress={toggleLiveTracking}
+                    >
+                        <View className={`w-2 h-2 rounded-full mr-2 ${showLiveDoctors ? 'bg-white' : 'bg-green-500'
+                            }`} />
+                        <Text className={`text-sm font-sans-medium ${showLiveDoctors ? 'text-white' : 'text-gray-700'
+                            }`}>
+                            {showLiveDoctors ? `${liveActiveDoctors.length} Live` : 'Show Live Doctors'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* Connection Status */}
+                    {!trackingConnected && (
+                        <View className="absolute top-16 left-4 bg-yellow-500 px-4 py-2 rounded-full shadow-lg">
+                            <Text className="text-white text-xs font-sans-medium">
+                                ⚠️ Live tracking unavailable
+                            </Text>
+                        </View>
+                    )}
+
                     {/* My Location Button */}
                     <TouchableOpacity
                         className="absolute top-4 right-4 bg-white p-3 rounded-full shadow-lg"
@@ -949,7 +1307,15 @@ export default function Search() {
                                         </View>
                                     )}
                                     <View className="flex-1">
-                                        <Text className="font-sans-bold text-lg">{selectedDoctor.title}{selectedDoctor.fullName}</Text>
+                                        <View className="flex-row items-center">
+                                            <Text className="font-sans-bold text-lg">{selectedDoctor.title}{selectedDoctor.fullName}</Text>
+                                            {liveActiveDoctors.some(d => d.doctorId === selectedDoctor._id) && (
+                                                <View className="ml-2 bg-green-500 px-2 py-0.5 rounded-full flex-row items-center">
+                                                    <View className="w-1.5 h-1.5 bg-white rounded-full mr-1 animate-pulse" />
+                                                    <Text className="text-white text-[10px] font-sans-semibold">LIVE</Text>
+                                                </View>
+                                            )}
+                                        </View>
                                         <View className='flex-row items-center justify-between'>
                                             <Text className="text-gray-600 font-sans text-sm">{selectedDoctor.speciality}</Text>
                                             <View className='bg-primary/80 px-3 py-1 w-[60px] rounded-full'>
@@ -1012,6 +1378,30 @@ export default function Search() {
                                         </View>
                                     </View>
                                 </View>
+
+                                {/* Subscription Button */}
+                                {/* <TouchableOpacity
+                                    onPress={() => {
+                                        if (subscribedDoctors.has(selectedDoctor._id)) {
+                                            handleUnsubscribeFromDoctor(selectedDoctor._id);
+                                        } else {
+                                            handleSubscribeToDoctor(selectedDoctor._id);
+                                        }
+                                    }}
+                                    className={`py-3 rounded-xl mb-3 ${subscribedDoctors.has(selectedDoctor._id)
+                                        ? 'bg-gray-200'
+                                        : 'border border-primary'
+                                        }`}
+                                >
+                                    <Text className={`font-sans-medium text-center ${subscribedDoctors.has(selectedDoctor._id)
+                                        ? 'text-gray-600'
+                                        : 'text-primary'
+                                        }`}>
+                                        {subscribedDoctors.has(selectedDoctor._id)
+                                            ? '✓ Following Location'
+                                            : '+ Track This Doctor'}
+                                    </Text>
+                                </TouchableOpacity> */}
 
                                 {/* Action Buttons */}
                                 <View className="flex-row gap-3 mb-3">

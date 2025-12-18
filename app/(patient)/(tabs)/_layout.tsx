@@ -1,5 +1,5 @@
 import { router, Tabs } from "expo-router";
-import { AntDesign, Ionicons } from "@expo/vector-icons";
+import { AntDesign, Ionicons, Feather } from "@expo/vector-icons";
 import { View } from "react-native";
 
 export default function RootLayout() {
@@ -219,8 +219,8 @@ export default function RootLayout() {
                                 shadowRadius: 8,
                                 elevation: focused ? 8 : 0,
                             }}>
-                                <AntDesign
-                                    name="insurance"
+                                <Feather
+                                    name="shield"
                                     size={24}
                                     color={focused ? 'white' : color}
                                 />

@@ -67,7 +67,7 @@ const SearchScreen = () => {
       className="bg-white p-4 rounded-xl mb-3 flex-row items-center"
       onPress={() => router.push(`/(doctor)/(pages)/patient/${patient._id}`)}
     >
-      {patient.profileImage ? (
+      {patient.profileImage?.url ? (
         <Image 
           source={{ uri: patient.profileImage.url }} 
           className="w-12 h-12 rounded-full mr-4"

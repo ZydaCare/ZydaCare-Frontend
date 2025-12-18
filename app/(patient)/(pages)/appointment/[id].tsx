@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { format as formatDate } from 'date-fns';
+import { addMinutes, format as formatDate, isAfter, isBefore } from 'date-fns';
+import * as Linking from 'expo-linking';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Image, Keyboard, Modal, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAuth } from '@/context/authContext';
 import { getAppointmentDetails, initiateAppointmentPayment } from '@/api/patient/appointments';
+import { getReviewForBooking, submitReview } from '@/api/patient/reviews';
 import { useToast } from '@/components/ui/Toast';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -64,6 +65,15 @@ export default function AppointmentDetailScreen() {
   const [appt, setAppt] = useState<any | null>(null);
   const [payPromptOpen, setPayPromptOpen] = useState(false);
   const [initiating, setInitiating] = useState(false);
+  const [joiningCall, setJoiningCall] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [existingReview, setExistingReview] = useState<any>(null);
 
   const [token, setToken] = useState<string | null>(null);
 
@@ -85,7 +95,7 @@ export default function AppointmentDetailScreen() {
     const run = async () => {
       if (!token || !id) return;
       try {
-        setLoading(true);
+        if (!refreshing) setLoading(true);
         setError(null);
         const res = await getAppointmentDetails(token, id);
         const data = res.data || res;
@@ -97,10 +107,15 @@ export default function AppointmentDetailScreen() {
         setError(e?.message || 'Failed to load appointment');
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     };
     run();
-  }, [id, token]);
+  }, [id, token, refreshing]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+  }, []);
 
   const formatted = useMemo(() => {
     if (!appt) return null;
@@ -147,6 +162,110 @@ export default function AppointmentDetailScreen() {
       createdAt: appt.createdAt ? formatDate(new Date(appt.createdAt), 'd MMM yyyy, h:mm a') : '',
     };
   }, [appt]);
+
+  const canJoinVideoCall = useMemo(() => {
+    if (!appt?.appointmentDate || !appt?.virtualMeeting?.doctorJoinedAt) return false;
+
+    const appointmentDate = new Date(appt.appointmentDate);
+    const fiveMinutesBefore = addMinutes(appointmentDate, -5);
+    const now = new Date();
+
+    // Can join if current time is within 5 minutes before or after the appointment time
+    // and the doctor has already joined
+    return isAfter(now, fiveMinutesBefore) && isBefore(now, addMinutes(appointmentDate, 5));
+  }, [appt]);
+
+  const handleJoinVideoCall = async () => {
+    if (!appt?.virtualMeeting?.link) {
+      showToast('No meeting link available', 'error');
+      return;
+    }
+
+    try {
+      setJoiningCall(true);
+      await Linking.openURL(appt.virtualMeeting.link);
+    } catch (error) {
+      console.error('Error joining video call:', error);
+      showToast('Failed to join video call', 'error');
+    } finally {
+      setJoiningCall(false);
+    }
+  };
+
+  const handleRateDoctor = () => {
+    setRatingModalVisible(true);
+  };
+
+  // Check if user has already reviewed this appointment
+  const checkForExistingReview = useCallback(async () => {
+    if (!token || !id) return;
+
+    try {
+      const response = await getReviewForBooking(token, id);
+      if (response.data) {
+        setHasReviewed(true);
+        setExistingReview(response.data);
+        setRating(response.data.rating);
+        setReview(response.data.comment || '');
+        setSelectedCategories(response.data.categories || []);
+      }
+    } catch (error) {
+      console.error('Error checking for existing review:', error);
+    }
+  }, [token, id]);
+
+  useEffect(() => {
+    if ((formatted?.status === 'awaiting_payment' || formatted?.status === 'paid') && !hasReviewed) {
+      checkForExistingReview();
+    }
+  }, [formatted?.status, hasReviewed, checkForExistingReview]);
+
+  const handleRatingSubmit = async () => {
+    if (rating === 0) {
+      showToast('Please select a rating', 'error');
+      return;
+    }
+
+    if (!token || !id) {
+      showToast('Please log in to submit a review', 'error');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      await submitReview(token, {
+        bookingId: id,
+        rating,
+        comment: review,
+        categories: selectedCategories,
+        isAnonymous: false
+      });
+
+      showToast('Thank you for your feedback!', 'success');
+      setHasReviewed(true);
+      setRatingModalVisible(false);
+    } catch (error: any) {
+      console.error('Error submitting rating:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to submit rating';
+      showToast(errorMessage, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const ratingCategories = [
+    'Professionalism', 'Knowledge', 'Communication', 'Expertise',
+    'Bedside Manner', 'Wait Time', 'Facility'
+  ];
 
   const startPayment = async () => {
     if (!token || !id) return;
@@ -200,7 +319,16 @@ export default function AppointmentDetailScreen() {
           <Text className="text-gray-600 text-center font-sans">We couldn't find this appointment</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#67A9AF']}
+              tintColor="#67A9AF"
+            />
+          }>
           {/* Doctor Card */}
           <View className="bg-white rounded-2xl p-5 shadow-sm mb-4">
             <View className="flex-row items-start mb-4">
@@ -226,7 +354,7 @@ export default function AppointmentDetailScreen() {
                 <View className="flex-row items-start justify-between">
                   <View className="flex-1 mr-2">
                     <Text className="text-xl font-sans-semibold text-gray-900">{formatted.doctorTitle} {formatted.doctorName}</Text>
-                    <Text className="text-gray-600 mb-1">{formatted.speciality}</Text>
+                    <Text className="text-gray-600 mb-1 font-sans-medium">{formatted.speciality}</Text>
                     {formatted.doctorExperience ? (
                       <Text className="text-xs font-sans text-gray-500">{formatted.doctorExperience} years experience</Text>
                     ) : null}
@@ -373,10 +501,94 @@ export default function AppointmentDetailScreen() {
             </View>
           ) : null}
 
+
+
+          {/* Show review if exists, otherwise show rate button */}
+          {(formatted.status === 'awaiting_payment' || formatted.status === 'paid') && (
+            <View className="mt-4">
+              {hasReviewed ? (
+                <View className="bg-white rounded-2xl p-5 shadow-sm">
+                  <View className="flex-row justify-between items-center mb-3">
+                    <Text className="text-lg font-sans-semibold text-gray-900">Your Review</Text>
+                    <View className="flex-row">
+                      {[...Array(5)].map((_, i) => (
+                        <Ionicons
+                          key={i}
+                          name={i < (existingReview?.rating || 0) ? 'star' : 'star-outline'}
+                          size={20}
+                          color={i < (existingReview?.rating || 0) ? '#F59E0B' : '#D1D5DB'}
+                        />
+                      ))}
+                    </View>
+                  </View>
+
+                  {existingReview?.comment && (
+                    <View className="mb-3">
+                      <Text className="text-gray-700 font-sans">{existingReview.comment}</Text>
+                    </View>
+                  )}
+
+                  {existingReview?.categories?.length > 0 && (
+                    <View className="flex-row flex-wrap mt-2">
+                      {existingReview.categories.map((category: string, index: number) => (
+                        <View key={index} className="bg-gray-100 rounded-full px-3 py-1 mr-2 mb-2">
+                          <Text className="text-sm font-sans text-gray-700">{category}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <Text className="text-xs text-gray-500 mt-2">
+                    Reviewed on {new Date(existingReview?.createdAt).toLocaleDateString()}
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={handleRateDoctor}
+                  className="py-4 rounded-xl items-center justify-center flex-row bg-[#67A9AF]"
+                >
+                  <Ionicons name="star" size={20} color="white" />
+                  <Text className="text-white font-sans-bold text-base ml-2">
+                    Rate Your Experience
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           {/* Booking Details */}
-          <View className="bg-gray-100 rounded-xl p-4">
+          <View className="bg-gray-100 rounded-xl p-4 mt-5">
             <Text className="text-xs font-sans text-gray-500">Booking created on {formatted.createdAt}</Text>
           </View>
+
+          {/* Join Video Call Button - Only show for virtual appointments that are accepted/paid */}
+          {formatted.type === 'virtual' && ['accepted'].includes(formatted.status) && (
+            <View className="mt-4">
+              <TouchableOpacity
+                className={`py-4 rounded-xl items-center justify-center flex-row ${canJoinVideoCall ? 'bg-[#67A9AF]' : 'bg-gray-300'}`}
+                onPress={handleJoinVideoCall}
+                disabled={!canJoinVideoCall || joiningCall}
+              >
+                {joiningCall ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <>
+                    <Ionicons name="videocam" size={20} color="white" />
+                    <Text className="text-white font-sans-bold text-base ml-2">
+                      {appt?.virtualMeeting?.doctorJoinedAt ? 'Join Video Call' : 'Waiting for Doctor'}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              {!canJoinVideoCall && (
+                <Text className="text-xs text-gray-500 font-sans mt-2 text-center">
+                  {!appt?.virtualMeeting?.doctorJoinedAt
+                    ? 'The doctor has not joined the call yet.'
+                    : 'You can join the call 5 minutes before the scheduled time.'}
+                </Text>
+              )}
+            </View>
+          )}
         </ScrollView>
       )}
 
@@ -413,6 +625,117 @@ export default function AppointmentDetailScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Rating Modal - Only show if not already reviewed */}
+      <Modal
+        visible={ratingModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => !isSubmitting && setRatingModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+          <View className="flex-1 bg-black/50 justify-end">
+            <TouchableWithoutFeedback>
+              <View className="bg-white rounded-t-3xl p-6 max-h-[90%]">
+                <View className="flex-row justify-between items-center mb-6">
+                  <Text className="text-xl font-sans-bold text-gray-900">Rate Your Experience</Text>
+                  <TouchableOpacity
+                    onPress={() => !isSubmitting && setRatingModalVisible(false)}
+                    disabled={isSubmitting}
+                  >
+                    <Ionicons name="close" size={24} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View className="mb-6">
+                    <Text className="text-base font-sans-medium text-gray-900 mb-3">
+                      {hasReviewed ? 'Your Review of' : 'How was your experience with'} {formatted?.doctorTitle} {formatted?.doctorName}?
+                    </Text>
+                    <View className="flex-row justify-center mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <TouchableOpacity
+                          key={star}
+                          onPress={() => setRating(star)}
+                          disabled={isSubmitting}
+                        >
+                          <Ionicons
+                            name={star <= rating ? 'star' : 'star-outline'}
+                            size={36}
+                            color={star <= rating ? '#F59E0B' : '#D1D5DB'}
+                            style={{ marginHorizontal: 4 }}
+                          />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <Text className="text-center text-sm text-gray-500">
+                      {hasReviewed ? 'Your rating: ' : ''}
+                      {rating === 0 ? 'Not rated' :
+                        rating === 1 ? '⭐ Poor' :
+                          rating === 2 ? '⭐⭐ Fair' :
+                            rating === 3 ? '⭐⭐⭐ Good' :
+                              rating === 4 ? '⭐⭐⭐⭐ Very Good' : '⭐⭐⭐⭐⭐ Excellent'}
+                    </Text>
+                  </View>
+
+                  <View className="mb-6">
+                    <Text className="text-base font-sans-medium text-gray-900 mb-3">What made your experience {rating >= 4 ? 'great' : 'less than expected'}?</Text>
+                    <View className="flex-row flex-wrap -mx-1 mb-3">
+                      {ratingCategories.map((category) => (
+                        <TouchableOpacity
+                          key={category}
+                          onPress={() => toggleCategory(category)}
+                          disabled={isSubmitting}
+                          className={`px-3 py-2 rounded-full m-1 ${selectedCategories.includes(category)
+                            ? 'bg-[#67A9AF]'
+                            : 'bg-gray-100'}`}
+                        >
+                          <Text className={`text-sm font-sans ${selectedCategories.includes(category)
+                            ? 'text-white'
+                            : 'text-gray-700'}`}>
+                            {category}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View className="mb-6">
+                    <Text className="text-base font-sans-medium text-gray-900 mb-3">Add a review (optional)</Text>
+                    <TextInput
+                      value={review}
+                      onChangeText={setReview}
+                      placeholder="Share details about your experience..."
+                      placeholderTextColor="#9CA3AF"
+                      multiline
+                      numberOfLines={4}
+                      editable={!isSubmitting}
+                      className="bg-gray-50 rounded-xl p-4 text-gray-900 font-sans text-base"
+                      style={{ textAlignVertical: 'top' }}
+                    />
+                  </View>
+
+                  {!hasReviewed && (
+                    <TouchableOpacity
+                      onPress={handleRatingSubmit}
+                      disabled={isSubmitting || rating === 0}
+                      className={`py-4 rounded-xl items-center justify-center mb-4 ${isSubmitting || rating === 0 ? 'bg-gray-300' : 'bg-[#67A9AF]'}`}
+                    >
+                      {isSubmitting ? (
+                        <ActivityIndicator color="white" />
+                      ) : (
+                        <Text className="text-white font-sans-bold text-base">
+                          Submit Review
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );

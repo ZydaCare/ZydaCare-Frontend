@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '@/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Types
 export interface AppointmentStats {
@@ -63,6 +63,13 @@ export interface Appointment {
     createdAt: string;
     updatedAt: string;
     chatRoom?: ChatRoom;
+    virtualMeeting?: {
+        link: string;
+        doctorJoinedAt?: string;
+        patientJoinedAt?: string;
+        roomName: string;
+        meetingPassword?: string;
+    };
 }
 
 export interface Patient {
@@ -217,16 +224,54 @@ export const cancelAppointment = async (id: string): Promise<{ success: boolean;
     const response = await fetch(`${BASE_URL}/appointments/${id}/cancel`, {
         method: 'PATCH',
         headers: {
-            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
         },
     });
 
     if (!response.ok) {
-        throw new Error('Failed to cancel appointment');
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to cancel appointment');
     }
 
-    return response.json();
+    return await response.json();
+};
+
+export const markDoctorJoined = async (id: string): Promise<{ success: boolean; message: string }> => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found');
+        }
+
+        console.log('Marking doctor as joined for appointment:', id);
+
+        const response = await fetch(`${BASE_URL}/appointments/${id}/meeting/joined`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+            if (response.status === 403) {
+                throw new Error('You are not authorized to join this meeting. Please ensure you are the assigned doctor for this appointment.');
+            }
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to update meeting status');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error in markDoctorJoined:', error);
+        if (error instanceof Error) {
+            throw error; // Re-throw to be handled by the caller
+        }
+        throw new Error('An unknown error occurred while marking doctor as joined');
+    }
 };
 
 // Get all patients
@@ -263,4 +308,24 @@ export const getPatientDetails = async (id: string): Promise<{ success: boolean;
     }
 
     return response.json();
+};
+
+
+export const getDoctorReview = async (doctorId: string) => {
+    const token = await AsyncStorage.getItem('token');
+    const response = await fetch(`${BASE_URL}/reviews/doctors/${doctorId}/reviews`, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch reviews');
+    }
+
+    const data = await response.json();
+    // Return the first review if exists, or null
+    return data.data && data.data.length > 0 ? data.data[0] : null;
 };

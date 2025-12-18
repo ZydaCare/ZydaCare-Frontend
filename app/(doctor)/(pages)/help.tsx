@@ -24,13 +24,13 @@ export default function HelpAndSupportScreen() {
       title: 'Chat on WhatsApp',
       icon: <Ionicons name="logo-whatsapp" size={22} color="#25D366" />,
       action: () =>
-        openLink('https://wa.me/2349068937365?text=Hi%20ZydaCare%20Support%2C%20I%20need%20help'),
+        openLink('https://wa.me/2349161375954?text=Hi%20ZydaCare%20Support%2C%20I%20need%20help'),
     },
     {
       id: 'twitter',
       title: 'Message on Twitter',
       icon: <Ionicons name="logo-twitter" size={22} color="#1DA1F2" />,
-      action: () => openLink('https://twitter.com/messages/compose?recipient_id=YOUR_TWITTER_ID'),
+      action: () => openLink('https://x.com/ZydaCare'),
     },
     {
       id: 'instagram',
@@ -49,7 +49,7 @@ export default function HelpAndSupportScreen() {
       id: 'call',
       title: 'Call Hotline',
       icon: <Ionicons name="call-outline" size={22} color="#67A9AF" />,
-      action: () => openLink('tel:+2349068937365'),
+      action: () => openLink('tel:+2349161375954'),
     },
   ];
 

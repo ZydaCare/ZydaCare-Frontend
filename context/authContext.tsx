@@ -157,137 +157,130 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
 
-    const login = async (data: LoginData) => {
-        try {
-            setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+   const login = async (data: LoginData) => {
+    try {
+        setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
-            const response = await apiCall('/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: data.email.trim(),
-                    password: data.password,
-                    expoPushToken: expoPushToken?.data || expoPushToken?._j || expoPushToken,
-                }),
+        const response = await apiCall('/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                email: data.email.trim(),
+                password: data.password,
+                expoPushToken: expoPushToken?.data || expoPushToken?._j || expoPushToken,
+            }),
+        });
+
+        console.log('Login API response:', response);
+
+        const { token, user } = response;
+
+        if (!user.isEmailVerified) {
+            await AsyncStorage.setItem('verificationEmail', user.email);
+            router.replace({
+                pathname: '/(auth)/otp',
+                params: {
+                    email: user.email,
+                    flow: 'email_verification'
+                }
             });
+            return { requiresVerification: true };
+        }
 
-            console.log('Login API response:', response);
+        const formattedUserData = {
+            ...user,
+            _id: user.id,
+        };
+        delete formattedUserData.id;
 
-            const { token, user } = response;
+        // Save to AsyncStorage
+        console.log('💾 Saving authentication data...');
+        await AsyncStorage.setItem('token', token);
+        await AsyncStorage.setItem('user', JSON.stringify(formattedUserData));
 
-            if (!user.isEmailVerified) {
-                await AsyncStorage.setItem('verificationEmail', user.email);
-                router.replace({
-                    pathname: '/(auth)/otp',
-                    params: {
-                        email: user.email,
-                        flow: 'email_verification'
-                    }
-                });
-                return { requiresVerification: true };
+        // Verify save
+        const savedToken = await AsyncStorage.getItem('token');
+        console.log('✅ Token verified:', savedToken ? `YES (${savedToken.substring(0, 20)}...)` : 'NO');
+
+        if (!savedToken) {
+            throw new Error('Failed to save authentication token');
+        }
+
+        // Handle role-specific profile loading
+        if (formattedUserData.role === 'doctor') {
+            try {
+                console.log('👨‍⚕️ Fetching doctor profile...');
+                const profile = await getDoctorProfile();
+                if (profile) {
+                    setDoctorProfile(profile);
+                    setIsDoctor(true);
+                    setIsDoctorProfileComplete(!!profile?.isProfileComplete);
+                }
+            } catch (error) {
+                console.error('Error fetching doctor profile:', error);
             }
-
-            const formattedUserData = {
-                ...user,
-                _id: user.id,
-            };
-            delete formattedUserData.id;
-
-            // ✅ CRITICAL: Save token & user with proper sequencing
-            console.log('💾 Saving authentication data...');
-            await AsyncStorage.setItem('token', token);
-            await AsyncStorage.setItem('user', JSON.stringify(formattedUserData));
-
-            // ✅ Add a small delay to ensure AsyncStorage write completes
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // ✅ Verify the token was saved by reading it back
-            const savedToken = await AsyncStorage.getItem('token');
-            console.log('✅ Token verified:', savedToken ? `YES (${savedToken.substring(0, 20)}...)` : 'NO');
-
-            if (!savedToken) {
-                throw new Error('Failed to save authentication token');
+        } else if (formattedUserData.role === 'patient') {
+            try {
+                console.log('👤 Fetching patient profile...');
+                const profile = await getPatientProfile();
+                if (profile) {
+                    setPatientProfile(profile);
+                }
+            } catch (error) {
+                console.error('Error fetching patient profile:', error);
             }
+        }
 
-            // ✅ Update context state with the new token and user data
-            const newAuthState = {
+        // ✅ Call getMe to get the latest user data
+        console.log('🔄 Calling getMe to sync user data...');
+        try {
+            const userData = await getMe();
+            console.log('✅ getMe completed successfully');
+            
+            // ✅ CRITICAL: Wait for state to stabilize
+            // Use a Promise that resolves after state updates
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+        } catch (error) {
+            console.error('⚠️ getMe failed (non-critical):', error);
+            
+            // ✅ If getMe fails, set state manually with login data
+            setAuthState({
                 user: formattedUserData,
                 token,
                 isAuthenticated: true,
                 isLoading: false,
                 error: null,
-            };
-
-            setAuthState(newAuthState);
-
-            // Handle role-specific profile loading
-            if (formattedUserData.role === 'doctor') {
-                try {
-                    console.log('👨\u200d⚕️ Fetching doctor profile...');
-                    const profile = await getDoctorProfile();
-                    if (profile) {
-                        setDoctorProfile(profile);
-                        setIsDoctor(true);
-                        setIsDoctorProfileComplete(!!profile?.isProfileComplete);
-                    }
-                } catch (error) {
-                    console.error('Error fetching doctor profile:', error);
-                    // Don't throw, just log the error
-                }
-            } else if (formattedUserData.role === 'patient') {
-                try {
-                    console.log('👤 Fetching patient profile...');
-                    // Use the token we just got instead of reading from AsyncStorage
-                    const profile = await getPatientProfile();
-                    if (profile) {
-                        setPatientProfile(profile);
-                    }
-                } catch (error) {
-                    console.error('Error fetching patient profile:', error);
-                    // Don't throw, just log the error
-                }
-            }
-
-            // Navigate to home screen after successful login and profile loading
-
-            // ✅ Call getMe AFTER state is set and stable
-            console.log('🔄 Calling getMe to sync user data...');
-            try {
-                await getMe();
-                console.log('✅ getMe completed successfully');
-            } catch (error) {
-                console.error('⚠️ getMe failed (non-critical):', error);
-                // Don't throw here - we already have the user data from login
-            }
-
-            // ✅ Final stability delay before navigation
-            await new Promise(resolve => setTimeout(resolve, 200));
-
-            // Navigate AFTER everything is ready
-            console.log('🚀 Navigating to home screen...');
-            if (formattedUserData.role === 'doctor') {
-                router.replace('/(doctor)/(tabs)/home');
-            } else if (formattedUserData.role === 'patient') {
-                router.replace('/(patient)/(tabs)/home');
-            } else if (formattedUserData.role === 'admin' || formattedUserData.role === 'super_admin' || formattedUserData.role === 'support_admin') {
-                router.replace('/(admin)/(tabs)/dashboard');
-            }
-
-            return response;
-        } catch (error: any) {
-            console.error('Login error:', error);
-            const errorMessage = error.message || 'Login failed';
-            setAuthState(prev => ({
-                ...prev,
-                isLoading: false,
-                error: errorMessage,
-            }));
-            throw new Error(errorMessage);
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
-    };
+
+        // Navigate AFTER state has stabilized
+        console.log('🚀 Navigating to home screen...');
+        if (formattedUserData.role === 'doctor') {
+            router.replace('/(doctor)/(tabs)/home');
+        } else if (formattedUserData.role === 'patient') {
+            router.replace('/(patient)/(tabs)/home');
+        } else if (formattedUserData.role === 'admin' || formattedUserData.role === 'super_admin' || formattedUserData.role === 'support_admin') {
+            router.replace('/(admin)/(tabs)/dashboard');
+        }
+
+        return response;
+    } catch (error: any) {
+        console.error('Login error:', error);
+        const errorMessage = error.message || 'Login failed';
+        setAuthState(prev => ({
+            ...prev,
+            isLoading: false,
+            error: errorMessage,
+        }));
+        throw new Error(errorMessage);
+    }
+};
 
     const register = async (data: RegisterData) => {
         try {
@@ -578,6 +571,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 ...prev,
                 user: userData,
                 isAuthenticated: true,
+                isLoading: false,
                 error: null,
             }));
 

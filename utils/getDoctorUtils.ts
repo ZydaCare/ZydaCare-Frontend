@@ -282,6 +282,39 @@ export const filterDoctors = (
 };
 
 /**
+ * Get nearest doctors within a radius (for map view)
+ * Prioritizes live doctors and sorts by distance
+ */
+export const getNearestDoctors = (
+    doctors: TransformedDoctor[],
+    radiusKm: number,
+    liveDoctorIds: string[] = []
+): TransformedDoctor[] => {
+    // Filter doctors with valid coordinates
+    const validDoctors = doctors.filter(d => 
+        d.latitude !== 0 && 
+        d.longitude !== 0 &&
+        !isNaN(d.latitude) &&
+        !isNaN(d.longitude)
+    );
+
+    // Separate live and non-live doctors
+    const liveDoctors = validDoctors.filter(d => liveDoctorIds.includes(d._id));
+    const otherDoctors = validDoctors
+        .filter(d => !liveDoctorIds.includes(d._id))
+        .filter(d => d.distanceKm <= radiusKm)
+        .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    // If we have live doctors, show all of them + nearest 5 others
+    if (liveDoctors.length > 0) {
+        return [...liveDoctors, ...otherDoctors.slice(0, 5)];
+    }
+
+    // Otherwise, show up to 10 nearest doctors within radius
+    return otherDoctors.slice(0, 10);
+};
+
+/**
  * Sort doctors by distance
  */
 export const sortDoctorsByDistance = (doctors: TransformedDoctor[]): TransformedDoctor[] => {
