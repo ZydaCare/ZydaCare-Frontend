@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { FontAwesome6, Ionicons } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { View } from "react-native";
 
 export default function RootLayout() {
@@ -113,6 +113,29 @@ export default function RootLayout() {
                                     name={focused ? "calendar" : "calendar-outline"}
                                     size={24}
                                     color={focused ? 'white' : color}
+                                />
+                            </View>
+                            {focused && (
+                                <View className="w-1.5 h-1.5 bg-[#67A9AF] rounded-full mt-0.5" />
+                            )}
+                        </View>
+                    ),
+                }}
+            />
+            <Tabs.Screen
+                name="pharmacies"
+                options={{
+                    tabBarIcon: ({ color, focused }) => (
+                        <View className="items-center justify-center">
+                            <View className={`w-[50px] h-[50px] ${focused ? 'bg-[#67A9AF]' : 'bg-transparent'} rounded-2xl items-center justify-center mb-0.5 ${focused ? 'shadow-lg shadow-[#67A9AF]/30' : ''}`}
+                                style={{
+                                    elevation: focused ? 8 : 0,
+                                }}
+                            >
+                                <MaterialCommunityIcons
+                                    name="pill"
+                                    size={24}
+                                    color="black"
                                 />
                             </View>
                             {focused && (

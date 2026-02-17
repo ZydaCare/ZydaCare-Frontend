@@ -1,7 +1,8 @@
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { getDashboardOverview } from '@/api/admin/dashboard';
-import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { getPharmacyStats } from '@/api/admin/pharmacies';
+import { MaterialIcons, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/authContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -104,6 +105,15 @@ function StatCard({ label, value, icon, gradient, trend }: {
 
 export function DashboardOverview() {
   const [data, setData] = useState<DashboardStats>(defaultDashboardStats);
+  const [pharmacyStats, setPharmacyStats] = useState({
+    total: 0,
+    invited: 0,
+    onboarding: 0,
+    approved: 0,
+    rejected: 0,
+    expired: 0,
+    expiringSoon: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user, logout } = useAuth();
@@ -113,13 +123,24 @@ export function DashboardOverview() {
     const loadData = async () => {
       try {
         setLoading(true);
-        const result = await getDashboardOverview();
+        const [dashboardResult, pharmacyResult] = await Promise.all([
+          getDashboardOverview(),
+          getPharmacyStats()
+        ]);
 
-        if (result && typeof result === 'object') {
-          if ('data' in result) {
-            setData(result.data as DashboardStats);
+        if (dashboardResult && typeof dashboardResult === 'object') {
+          if ('data' in dashboardResult) {
+            setData(dashboardResult.data as DashboardStats);
           } else {
-            setData(result as DashboardStats);
+            setData(dashboardResult as DashboardStats);
+          }
+        }
+
+        if (pharmacyResult && typeof pharmacyResult === 'object') {
+          if ('data' in pharmacyResult) {
+            setPharmacyStats(pharmacyResult.data);
+          } else {
+            setPharmacyStats(pharmacyResult);
           }
         }
       } catch (err) {
@@ -136,14 +157,33 @@ export function DashboardOverview() {
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     try {
-      getDashboardOverview();
+      Promise.all([
+        getDashboardOverview(),
+        getPharmacyStats()
+      ]).then(([dashboardResult, pharmacyResult]) => {
+        if (dashboardResult && typeof dashboardResult === 'object') {
+          if ('data' in dashboardResult) {
+            setData(dashboardResult.data as DashboardStats);
+          } else {
+            setData(dashboardResult as DashboardStats);
+          }
+        }
+
+        if (pharmacyResult && typeof pharmacyResult === 'object') {
+          if ('data' in pharmacyResult) {
+            setPharmacyStats(pharmacyResult.data);
+          } else {
+            setPharmacyStats(pharmacyResult);
+          }
+        }
+      });
     } catch (err) {
       setError('Failed to load dashboard data');
       console.error('Dashboard data error:', err);
     } finally {
       setIsRefreshing(false);
     }
-  }, [getDashboardOverview]);
+  }, []);
 
   if (loading) {
     return (
@@ -350,6 +390,16 @@ export function DashboardOverview() {
               label="Total Revenue"
               gradient={['#10B981', '#555']}
               trend={revenueTrend}
+            />
+            <StatCard
+              icon={<MaterialCommunityIcons name="pill" size={28} color="white" />}
+              value={pharmacyStats.total.toString()}
+              label="Total Pharmacies"
+              gradient={['#8B5CF6', '#555']}
+              trend={pharmacyStats.approved > 0 ? {
+                value: `${((pharmacyStats.approved / pharmacyStats.total) * 100).toFixed(1)}%`,
+                isPositive: true
+              } : null}
             />
           </View>
         </View>

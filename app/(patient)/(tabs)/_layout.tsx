@@ -121,19 +121,31 @@ export default function RootLayout() {
                             justifyContent: 'center',
                         }}>
                             <View style={{
-                                width: focused ? 55 : 50,
-                                height: focused ? 55 : 50,
+                                // width: focused ? 55 : 50,
+                                // height: focused ? 55 : 50,
+                                // backgroundColor: focused ? '#67A9AF' : 'transparent',
+                                // borderRadius: focused ? 30 : 15,
+                                // alignItems: 'center',
+                                // justifyContent: 'center',
+                                // marginBottom: 2,
+                                // shadowColor: focused ? '#67A9AF' : 'transparent',
+                                // shadowOffset: { width: 0, height: 6 },
+                                // shadowOpacity: 0.4,
+                                // shadowRadius: 12,
+                                // elevation: focused ? 12 : 0,
+                                // marginTop: focused ? -10 : 0,
+                                width: 50,
+                                height: 50,
                                 backgroundColor: focused ? '#67A9AF' : 'transparent',
-                                borderRadius: focused ? 30 : 15,
+                                borderRadius: 15,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 marginBottom: 2,
                                 shadowColor: focused ? '#67A9AF' : 'transparent',
-                                shadowOffset: { width: 0, height: 6 },
-                                shadowOpacity: 0.4,
-                                shadowRadius: 12,
-                                elevation: focused ? 12 : 0,
-                                marginTop: focused ? -10 : 0,
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: 0.3,
+                                shadowRadius: 8,
+                                elevation: focused ? 8 : 0,
                             }}>
                                 <Ionicons
                                     name={focused ? "heart" : "heart-outline"}
@@ -197,7 +209,7 @@ export default function RootLayout() {
                 }}
             /> */}
 
-            <Tabs.Screen
+            {/* <Tabs.Screen
                 name="insurance"
                 options={{
                     tabBarIcon: ({ color, focused }) => (
@@ -237,7 +249,7 @@ export default function RootLayout() {
                         </View>
                     ),
                 }}
-            />
+            /> */}
 
             <Tabs.Screen
                 name="profile"

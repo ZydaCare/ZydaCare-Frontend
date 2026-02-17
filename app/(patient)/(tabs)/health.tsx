@@ -1,4 +1,10 @@
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import {
+  View, Text, ScrollView, TextInput, TouchableOpacity,
+  Image, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  Keyboard,
+  Linking
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Images } from '@/assets/Images';
@@ -6,6 +12,7 @@ import { useAuth } from '@/context/authContext';
 import axios from 'axios';
 import { BASE_URL } from '@/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 
 interface Doctor {
   id: string;
@@ -14,14 +21,16 @@ interface Doctor {
   image: string;
   experience: number;
   consultationFee: number;
-  location: string;
   rating: number;
   totalReviews: number;
+  location: string;
   availableToday: boolean;
   qualifications: string;
   about: string;
   email?: string;
   phone?: string;
+  matchingScore?: number;
+  matchingReasons?: string[];
 }
 
 interface Message {
@@ -29,8 +38,26 @@ interface Message {
   content: string;
   timestamp: Date;
   doctors?: Doctor[];
-  recommendDoctors?: boolean;
-  askFollowUp?: boolean;
+  showSuggestions?: boolean;
+  emergencyRecommendation?: {
+    message: string;
+    emergencyContacts: { name: string; number: string; }[];
+  };
+  idmeInsights?: {
+    topRecommendation: Doctor;
+    recommendationReason: string;
+    totalAvailableDoctors: number;
+    averageWaitTime: string;
+    consultationTypes: string[];
+  };
+  riskLevel?: 'EMERGENCY' | 'URGENT' | 'ROUTINE' | 'SELF_CARE';
+  diagnosisSuggestions?: string[];
+  images?: string[];
+  articleLink?: {        // 👈 add this
+    title: string;
+    url: string;
+    source: string;
+  };
 }
 
 interface APIResponse {
@@ -40,426 +67,718 @@ interface APIResponse {
     recommendDoctors: boolean;
     doctors: Doctor[];
     specialties: string[];
-    metadata: {
-      tokensUsed: number;
-      timestamp: string;
+    riskLevel?: 'EMERGENCY' | 'URGENT' | 'ROUTINE' | 'SELF_CARE';
+    diagnosisSuggestions?: string[];
+    emergencyRecommendation?: {
+      message: string;
+      emergencyContacts: Array<{ name: string; number: string }>;
     };
+    idmeInsights?: {
+      topRecommendation: Doctor;
+      recommendationReason: string;
+      totalAvailableDoctors: number;
+      averageWaitTime: string;
+      consultationTypes: string[];
+    };
+    articleLink?: {      // 👈 add this
+      title: string;
+      url: string;
+      source: string;
+    };
+    metadata: { tokensUsed: number; timestamp: string; aiModel?: string; idmeVersion?: string };
   };
   message?: string;
 }
 
-const DoctorCard = ({ doctor, onBook }: { doctor: Doctor; onBook: (doctor: Doctor) => void }) => {
-  return (
-    <View className="bg-white border border-gray-200 rounded-xl p-4 mb-3 shadow-sm">
-      <View className="flex-row gap-3">
-        <Image
-          source={{ uri: doctor.image }}
-          className="w-20 h-20 rounded-lg"
-        />
-        <View className="flex-1">
-          <Text className="font-sans-semibold text-base text-gray-900">{doctor.name}</Text>
-          <Text className="text-primary font-sans-medium text-sm">{doctor.specialty}</Text>
-          <Text className="text-gray-600 font-sans text-xs mt-1">{doctor.qualifications}</Text>
+const SYMPTOM_SUGGESTIONS = [
+  { label: '🤕  Headache', symptom: 'headache', area: 'head' },
+  { label: '🌡️  Fever', symptom: 'fever', area: 'body' },
+  { label: '😮‍💨  Cough', symptom: 'cough', area: 'chest' },
+  { label: '🤢  Stomach Pain', symptom: 'stomach pain', area: 'abdomen' },
+  { label: '🩹  Skin Rash', symptom: 'skin rash', area: 'skin' },
+  { label: '🦵  Joint Pain', symptom: 'joint pain', area: 'joints' },
+];
 
-          <View className="flex-row items-center gap-3 mt-2">
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="ribbon" size={12} color="#6B7280" />
-              <Text className="text-xs font-sans text-gray-600">{doctor.experience} years</Text>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="star" size={12} color="#FCD34D" />
-              <Text className="text-xs font-sans text-gray-600">{doctor.rating}</Text>
-            </View>
-            {doctor.totalReviews > 0 && (
-              <Text className="text-xs font-sans text-gray-500">({doctor.totalReviews})</Text>
-            )}
-          </View>
-        </View>
-      </View>
+// ─── Emergency Card ──────────────────────────────────────────────────────────
 
-      <View className="mt-3 pt-3 border-t border-gray-100">
-        <View className="flex-row items-center justify-between mb-3">
-          <View className="flex-row items-center gap-1">
-            <Ionicons name="cash-outline" size={16} color="#6B7280" />
-            <Text className="font-sans-semibold text-sm text-gray-700">₦{doctor.consultationFee.toLocaleString()}</Text>
-            <Text className="text-xs font-sans text-gray-500"> per consultation</Text>
-          </View>
-          {doctor.availableToday && (
-            <View className="bg-primary px-2 py-1 rounded-full">
-              <Text className="text-xs text-white font-medium">Available Today</Text>
-            </View>
-          )}
-        </View>
-
-        <View className="flex-row items-start gap-1 mb-3">
-          <Ionicons name="location-outline" size={14} color="#6B7280" />
-          <Text className="text-xs font-sans text-gray-600 flex-1">{doctor.location}</Text>
-        </View>
-
+const EmergencyCard = ({ recommendation }: { recommendation: any }) => (
+  <View className="mt-3 rounded-2xl overflow-hidden border border-red-100">
+    <View className="bg-red-500 px-4 py-3 flex-row items-center gap-2">
+      <Ionicons name="warning" size={16} color="white" />
+      <Text className="text-white font-sans-bold text-sm">Emergency Alert</Text>
+    </View>
+    <View className="bg-red-50 px-4 py-3">
+      <Text className="text-red-800 font-sans text-sm leading-relaxed mb-3">{recommendation.message}</Text>
+      {recommendation.emergencyContacts.map((contact: any, i: number) => (
         <TouchableOpacity
-          onPress={() => onBook(doctor)}
-          className="w-full bg-secondary py-3 rounded-lg active:bg-secondary/80"
+          key={i}
+          onPress={() => Alert.alert('Emergency Call', `Call ${contact.name} at ${contact.number}?`)}
+          className="flex-row items-center justify-between bg-white rounded-xl px-3 py-2 mb-2"
         >
-          <View className="flex-row items-center justify-center gap-2">
-            <Ionicons name="calendar-outline" size={18} color="white" />
-            <Text className="text-white font-sans-semibold text-sm">Book Appointment</Text>
+          <View className="flex-row items-center gap-2">
+            <View className="w-7 h-7 bg-red-100 rounded-full items-center justify-center">
+              <Ionicons name="call" size={13} color="#EF4444" />
+            </View>
+            <Text className="font-sans-medium text-sm text-gray-700">{contact.name}</Text>
           </View>
+          <Text className="font-sans-bold text-sm text-red-500">{contact.number}</Text>
         </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+);
+
+// ─── IDME Insights Card ──────────────────────────────────────────────────────
+
+const IDMEInsightsCard = ({ insights }: { insights: any }) => (
+  <View className="mt-3 bg-blue-50 border border-blue-100 rounded-2xl p-4">
+    <View className="flex-row items-center gap-2 mb-3">
+      <Ionicons name="sparkles" size={15} color="#3B82F6" />
+      <Text className="font-sans-bold text-sm text-blue-700">AI Recommendation</Text>
+    </View>
+    <View className="bg-white rounded-xl p-3 mb-3">
+      <Text className="font-sans text-xs text-gray-400 mb-1">Best match for you</Text>
+      <Text className="font-sans-bold text-sm text-gray-900">{insights.topRecommendation.name}</Text>
+      <Text className="font-sans-medium text-xs text-primary mt-0.5">{insights.topRecommendation.specialty}</Text>
+      <Text className="font-sans text-xs text-blue-500 mt-1 italic">{insights.recommendationReason}</Text>
+    </View>
+    <View className="flex-row gap-2">
+      {[
+        { label: 'Doctors', value: `${insights.totalAvailableDoctors}` },
+        { label: 'Wait', value: insights.averageWaitTime },
+        { label: 'Mode', value: insights.consultationTypes[0] },
+      ].map((stat, i) => (
+        <View key={i} className="flex-1 bg-white rounded-xl p-2 items-center">
+          <Text className="font-sans-bold text-sm text-gray-800">{stat.value}</Text>
+          <Text className="font-sans text-xs text-gray-400 mt-0.5">{stat.label}</Text>
+        </View>
+      ))}
+    </View>
+  </View>
+);
+
+// ─── Risk Badge ───────────────────────────────────────────────────────────────
+
+const RiskBadge = ({ riskLevel }: { riskLevel: string }) => {
+  const map: Record<string, { icon: any; label: string; desc: string; bg: string; text: string; iconColor: string }> = {
+    EMERGENCY: { icon: 'alert-circle', label: 'Emergency', desc: 'Seek immediate attention', bg: 'bg-red-50', text: 'text-red-700', iconColor: '#EF4444' },
+    URGENT: { icon: 'time-outline', label: 'Urgent', desc: 'See a doctor soon', bg: 'bg-orange-50', text: 'text-orange-700', iconColor: '#F97316' },
+    ROUTINE: { icon: 'calendar-outline', label: 'Routine', desc: 'Schedule when convenient', bg: 'bg-blue-50', text: 'text-blue-700', iconColor: '#3B82F6' },
+    SELF_CARE: { icon: 'checkmark-circle-outline', label: 'Self-Care', desc: 'Home treatment may suffice', bg: 'bg-green-50', text: 'text-green-700', iconColor: '#22C55E' },
+  };
+  const c = map[riskLevel] || map.ROUTINE;
+  return (
+    <View className={`mt-3 flex-row items-center gap-3 ${c.bg} rounded-2xl px-4 py-3`}>
+      <Ionicons name={c.icon} size={20} color={c.iconColor} />
+      <View>
+        <Text className={`font-sans-semibold text-sm ${c.text}`}>{c.label} Priority</Text>
+        <Text className={`font-sans text-xs ${c.text} opacity-70`}>{c.desc}</Text>
       </View>
     </View>
   );
 };
 
-const TypingIndicator = () => (
-  <View className="flex-row mb-4 justify-start">
-    <View className="w-8 h-8 bg-primary rounded-full items-center justify-center mr-2">
-      <Ionicons name="chatbubble" size={18} color="white" />
+// ─── Diagnosis List ───────────────────────────────────────────────────────────
+
+const DiagnosisList = ({ suggestions }: { suggestions: string[] }) => {
+  if (!suggestions?.length) return null;
+  return (
+    <View className="mt-3 bg-purple-50 border border-purple-100 rounded-2xl p-4">
+      <Text className="font-sans-semibold text-sm text-purple-700 mb-2">Possible Conditions</Text>
+      {suggestions.map((s, i) => (
+        <View key={i} className="flex-row items-start gap-2 mb-1.5">
+          <View className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-1.5" />
+          <Text className="font-sans text-sm text-purple-600 flex-1">{s}</Text>
+        </View>
+      ))}
+      <Text className="font-sans text-xs text-purple-400 mt-2 italic">Possibilities only — not a diagnosis</Text>
     </View>
-    <View className="bg-white px-4 py-3 rounded-2xl border border-gray-200 shadow-sm">
-      <View className="flex-row gap-1">
-        <View className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ opacity: 0.4 }} />
-        <View className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ opacity: 0.6 }} />
-        <View className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ opacity: 0.8 }} />
+  );
+};
+
+// ─── Article Card ─────────────────────────────────────────────────────────────
+
+const ArticleCard = ({ article }: { article: { title: string; url: string; source: string } }) => (
+  <TouchableOpacity
+    onPress={() => Linking.openURL(article.url)}
+    activeOpacity={0.8}
+    className="mt-3 bg-white border border-gray-100 rounded-2xl p-4 flex-row items-center gap-3 shadow-sm"
+  >
+    <View className="w-10 h-10 bg-teal-50 rounded-xl items-center justify-center shrink-0">
+      <Ionicons name="newspaper-outline" size={18} color="#67A9AF" />
+    </View>
+    <View className="flex-1">
+      <Text className="font-sans text-xs text-gray-400 mb-0.5">{article.source}</Text>
+      <Text className="font-sans-semibold text-sm text-gray-800 leading-snug" numberOfLines={2}>
+        {article.title}
+      </Text>
+      <View className="flex-row items-center gap-1 mt-1">
+        <Text className="font-sans-medium text-xs text-primary">Read article</Text>
+        <Ionicons name="arrow-forward" size={11} color="#67A9AF" />
+      </View>
+    </View>
+  </TouchableOpacity>
+);
+
+// ─── Message Text ─────────────────────────────────────────────────────────────
+
+const MessageText = ({ content, isUser }: { content: string; isUser: boolean }) => {
+  // Remove any leftover [ARTICLE:...] tags that weren't stripped server-side
+  const cleaned = content.replace(/\[ARTICLE:[^\]]+\]/gi, '').trim();
+
+  // Split on URLs so any that slip through are tappable
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = cleaned.split(urlRegex);
+
+  return (
+    <Text className={`font-sans text-sm leading-relaxed ${isUser ? 'text-white' : 'text-gray-800'}`}>
+      {parts.map((part, i) =>
+        urlRegex.test(part) ? (
+          <Text
+            key={i}
+            className={`underline ${isUser ? 'text-blue-200' : 'text-primary'}`}
+            onPress={() => Linking.openURL(part)}
+          >
+            {part}
+          </Text>
+        ) : (
+          <Text key={i}>{part}</Text>
+        )
+      )}
+    </Text>
+  );
+};
+
+// ─── Doctor Card ──────────────────────────────────────────────────────────────
+
+const DoctorCard = ({ doctor, onBook }: { doctor: Doctor; onBook: (d: Doctor) => void }) => (
+  <View className="bg-white border border-gray-100 rounded-2xl p-4 mb-3">
+    <View className="flex-row gap-3 items-start">
+      <Image source={{ uri: doctor.image }} className="w-14 h-14 rounded-xl" />
+      <View className="flex-1">
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1 mr-2">
+            <Text className="font-sans-bold text-sm text-gray-900">{doctor.name}</Text>
+            <Text className="font-sans-medium text-xs text-primary mt-0.5">{doctor.specialty}</Text>
+          </View>
+          {doctor.matchingScore != null && (
+            <View className="bg-green-50 px-2 py-1 rounded-full">
+              <Text className="font-sans-bold text-xs text-green-600">{Math.round(doctor.matchingScore)}%</Text>
+            </View>
+          )}
+        </View>
+        <Text className="font-sans text-xs text-gray-400 mt-1">{doctor.qualifications}</Text>
+        <View className="flex-row items-center gap-3 mt-2">
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="star" size={11} color="#FBBF24" />
+            <Text className="font-sans-medium text-xs text-gray-600">{doctor.rating}</Text>
+            {doctor.totalReviews > 0 && (
+              <Text className="font-sans text-xs text-gray-400">({doctor.totalReviews})</Text>
+            )}
+          </View>
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="ribbon-outline" size={11} color="#9CA3AF" />
+            <Text className="font-sans text-xs text-gray-500">{doctor.experience} yrs</Text>
+          </View>
+          {doctor.availableToday && (
+            <View className="bg-green-50 px-2 py-0.5 rounded-full">
+              <Text className="font-sans-medium text-xs text-green-600">Today</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+
+    <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-gray-50">
+      <View>
+        <Text className="font-sans-bold text-sm text-gray-900">₦{doctor.consultationFee.toLocaleString()}</Text>
+        <View className="flex-row items-center gap-1 mt-0.5">
+          <Ionicons name="location-outline" size={11} color="#9CA3AF" />
+          <Text className="font-sans text-xs text-gray-400" numberOfLines={1}>{doctor.location}</Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        onPress={() => onBook(doctor)}
+        className="bg-secondary px-4 py-2.5 rounded-xl flex-row items-center gap-1.5 active:opacity-80"
+      >
+        <Ionicons name="calendar-outline" size={14} color="white" />
+        <Text className="font-sans-semibold text-xs text-white">Book</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
+// ─── Typing Indicator ─────────────────────────────────────────────────────────
+
+const TypingIndicator = () => (
+  <View className="flex-row items-end gap-2 mb-6">
+    <View className="w-8 h-8 bg-primary rounded-full items-center justify-center">
+      <Ionicons name="pulse" size={15} color="white" />
+    </View>
+    <View className="bg-white border border-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm">
+      <View className="flex-row gap-1 items-center">
+        <View className="w-2 h-2 rounded-full bg-gray-300" style={{ opacity: 0.5 }} />
+        <View className="w-2 h-2 rounded-full bg-gray-300" style={{ opacity: 0.7 }} />
+        <View className="w-2 h-2 rounded-full bg-gray-300" style={{ opacity: 0.9 }} />
       </View>
     </View>
   </View>
 );
 
+// ─── Suggestion Chips (in-chat) ───────────────────────────────────────────────
+
+const SuggestionChips = ({ onSelect }: { onSelect: (text: string) => void }) => (
+  <View className="mt-4 mb-2">
+    <Text className="font-sans text-xs text-gray-400 mb-2">What are you experiencing?</Text>
+    <View className="flex-row flex-wrap gap-2">
+      {SYMPTOM_SUGGESTIONS.map(chip => (
+        <TouchableOpacity
+          key={chip.label}
+          onPress={() => onSelect(`I'm experiencing ${chip.symptom} in my ${chip.area}. Can you help?`)}
+          className="bg-white border border-gray-200 rounded-full px-3 py-2 active:bg-gray-50"
+        >
+          <Text className="font-sans-medium text-sm text-gray-700">{chip.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+);
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+
 const Health = () => {
-  const { user } = useAuth(); // Make sure your auth context provides token
+  const { user } = useAuth();
   const fullName = `${user?.firstName} ${user?.lastName}`.trim();
+  const avatarUri = user?.profileImage?.url
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'U')}&background=67A9AF&color=fff`;
 
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: `Hello ${user?.firstName}! 👋\n\nI'm your ZydaCare AI Health Assistant. Think of me as your first point of contact for health concerns - I'm here to:\n\n• Listen to your symptoms\n• Provide helpful health guidance\n• Recommend appropriate specialists\n• Answer your health questions\n\nHow are you feeling today? Tell me what's bothering you, and let's figure out the best way to help you feel better.`,
+      content: `Hi ${user?.firstName} 👋  I'm your ZydaCare AI health assistant.\n\nDescribe your symptoms and I'll help assess what's going on, how urgent it is, and connect you with the right doctor.`,
       timestamp: new Date(),
-      doctors: []
-    }
+      doctors: [],
+      showSuggestions: true,
+    },
   ]);
+
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const [token, setToken] = useState<string | null>(null);
-
   useEffect(() => {
-    const loadToken = async () => {
-      try {
-        const storedToken = await AsyncStorage.getItem('token');
-        setToken(storedToken);
-      } catch (error) {
-        console.error('Error loading token:', error);
-      }
-    };
-
-    loadToken();
+    AsyncStorage.getItem('token').then(setToken).catch(console.error);
   }, []);
-
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  // Clear error after 5 seconds
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(timer);
+      const t = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(t);
     }
   }, [error]);
 
-  const getAIResponse = async (conversationHistory: Message[]): Promise<void> => {
+  const getAIResponse = async (history: Message[]) => {
     try {
       setIsTyping(true);
       setError(null);
 
-      // Prepare messages for API (only send role and content)
-      const apiMessages = conversationHistory.map(msg => ({
-        role: msg.role,
-        content: msg.content
+      // Get the last user message to extract images
+      const lastUserMessage = history.find(m => m.role === 'user' && m.images);
+
+      const apiMessages = history.map(m => ({
+        role: m.role,
+        content: m.content,
+        images: m.images || [] // Include images in API call
       }));
 
-      console.log('Sending request to:', `${BASE_URL}/health-ai/chat`);
-      console.log('Message count:', apiMessages.length);
-
-      // Make API call
       const response = await axios.post<APIResponse>(
         `${BASE_URL}/health-ai/chat`,
-        { messages: apiMessages },
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` // Use your auth token
-          },
-          timeout: 30000 // 30 second timeout
+          messages: apiMessages,
+          // Include images from the last user message
+          images: lastUserMessage?.images || []
+        },
+        {
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          timeout: 30000,
         }
       );
-
-      console.log('API Response:', response.data);
-
       if (response.data.success && response.data.data) {
-        const { message, doctors, recommendDoctors } = response.data.data;
-
-        const assistantMessage: Message = {
+        const d = response.data.data;
+        setMessages(prev => [...prev, {
           role: 'assistant',
-          content: message,
+          content: d.message,
           timestamp: new Date(),
-          doctors: doctors || [],
-          recommendDoctors: recommendDoctors
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
+          doctors: d.doctors || [],
+          showSuggestions: false,
+          emergencyRecommendation: d.emergencyRecommendation,
+          idmeInsights: d.idmeInsights,
+          riskLevel: d.riskLevel,
+          diagnosisSuggestions: d.diagnosisSuggestions,
+          articleLink: d.articleLink,   // 👈 add this
+        }]);
       } else {
-        throw new Error(response.data.message || 'Failed to get AI response');
+        throw new Error(response.data.message || 'No response');
       }
-
     } catch (err: any) {
-      console.error('Error getting AI response:', err);
-
-      let errorMessage = "I'm having trouble processing your request. ";
-
-      if (err.response) {
-        // Server responded with error
-        console.error('Server Error:', err.response.data);
-        errorMessage += err.response.data.message || 'Please try again.';
-      } else if (err.request) {
-        // Request made but no response
-        console.error('Network Error:', err.request);
-        errorMessage += 'Please check your internet connection.';
-      } else {
-        // Something else happened
-        console.error('Error:', err.message);
-        errorMessage += 'Please try again.';
-      }
-
-      setError(errorMessage);
-
-      // Show fallback message
-      const fallbackMessage: Message = {
+      let msg = "I'm having trouble right now. ";
+      if (err.response) msg += err.response.data?.message || 'Please try again.';
+      else if (err.request) msg += 'Please check your connection.';
+      else msg += 'Please try again.';
+      setError(msg);
+      setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `${errorMessage}\n\nWould you like to browse our available doctors directly? I can help you find the right specialist for your needs.`,
+        content: msg,
         timestamp: new Date(),
         doctors: [],
-        recommendDoctors: false
-      };
-
-      setMessages(prev => [...prev, fallbackMessage]);
+      }]);
     } finally {
       setIsTyping(false);
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isTyping) return;
-
-    const userMessage: Message = {
+  const handleSend = async (text?: string) => {
+    const content = (text || input).trim();
+    if (!content || isTyping) return;
+    // Hide welcome message and remove suggestions from the first message once user sends
+    setShowWelcome(false);
+    setMessages(prev => prev.map((m, i) => i === 0 ? { ...m, showSuggestions: false } : m));
+    const userMsg: Message = {
       role: 'user',
-      content: input.trim(),
-      timestamp: new Date()
+      content,
+      timestamp: new Date(),
+      images: selectedImages.length > 0 ? selectedImages : undefined
     };
-
-    // Update messages with user message
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    const updated = [...messages.map((m, i) => i === 0 ? { ...m, showSuggestions: false } : m), userMsg];
+    setMessages(updated);
     setInput('');
-
-    // Get AI response
-    await getAIResponse(updatedMessages);
+    setSelectedImages([]); // Clear images after sending
+    await getAIResponse(updated);
   };
 
   const handleBookAppointment = (doctor: Doctor) => {
-    Alert.alert(
-      'Book Appointment',
-      `Would you like to book an appointment with ${doctor.name}?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Book Now',
-          onPress: () => {
-            // TODO: Navigate to booking screen
-            console.log('Booking appointment with:', doctor);
-            Alert.alert('Success', `Proceeding to book appointment with ${doctor.name}`);
-            // In production: navigation.navigate('BookAppointment', { doctorId: doctor.id });
-          }
-        }
-      ]
-    );
+    setSelectedDoctor(doctor);
+    setShowAppointmentModal(true);
   };
 
-  const handleQuickAction = async (action: string) => {
-    const quickMessages: { [key: string]: string } = {
-      'general': "I need a general health checkup",
-      'emergency': "I need urgent medical attention",
-      'followup': "I need help with understanding my symptoms"
-    };
-
-    if (quickMessages[action]) {
-      setInput(quickMessages[action]);
+  const confirmAppointment = () => {
+    if (selectedDoctor) {
+      router.push({
+        pathname: '/appointment/book',
+        params: { doctorId: selectedDoctor.id },
+      });
+      setShowAppointmentModal(false);
+      setSelectedDoctor(null);
     }
+  };
+
+  const cancelAppointment = () => {
+    setShowAppointmentModal(false);
+    setSelectedDoctor(null);
+  };
+
+  const handleImageUpload = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant camera roll permissions to upload images.');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        allowsMultipleSelection: true,
+      });
+
+      if (!result.canceled && result.assets) {
+        const newImages = result.assets.map(asset => asset.uri);
+        setSelectedImages(prev => [...prev, ...newImages]);
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Error', 'Failed to upload image. Please try again.');
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-      style={{ backgroundColor: '#F0FDFA' }}
+      className="flex-1 bg-gray-50"
     >
-      {/* Header */}
-      <View className="bg-white border-b border-gray-200 px-4 py-2 pt-12 shadow-sm">
+
+      {/* ── Header ── */}
+      <View className="bg-white border-b border-gray-100 px-5 pt-14 pb-4">
         <View className="flex-row items-center gap-3">
-          <Image source={Images.LogoIcon} className="w-14 h-14" />
-          <View className="flex-1">
-            <Text className="text-xl font-sans-semibold text-gray-900">AI Health Assistant</Text>
-            <Text className="text-sm font-sans text-gray-600">Powered by ZydaCare</Text>
+          <View className="w-10 h-10 bg-primary rounded-2xl items-center justify-center">
+            <Ionicons name="pulse" size={20} color="white" />
           </View>
-          <View className="items-center">
-            <View className="w-2 h-2 bg-green-500 rounded-full" />
-            <Text className="text-xs font-sans text-gray-500 mt-1">Online</Text>
+          <View className="flex-1">
+            <Text className="font-sans-bold text-base text-gray-900">ZydaCare AI</Text>
+            <Text className="font-sans text-xs text-gray-400">Health Assistant</Text>
+          </View>
+          <View className="flex-row items-center gap-1.5 bg-green-50 px-3 py-1.5 rounded-full">
+            <View className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            <Text className="font-sans-medium text-xs text-green-600">Online</Text>
           </View>
         </View>
 
-        {/* Error Banner */}
         {error && (
-          <View className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 flex-row items-start gap-2">
-            <Ionicons name="alert-circle" size={20} color="#EF4444" />
-            <Text className="flex-1 text-sm font-sans text-red-700">{error}</Text>
+          <View className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3 flex-row items-center gap-2">
+            <Ionicons name="alert-circle" size={16} color="#EF4444" />
+            <Text className="font-sans text-xs text-red-600 flex-1">{error}</Text>
           </View>
         )}
       </View>
 
-      {/* Quick Actions */}
-      <View className="bg-white border-b border-gray-100 px-4 py-3">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="flex-row gap-2">
-            <TouchableOpacity
-              onPress={() => handleQuickAction('general')}
-              className="bg-primary/10 px-4 py-2 rounded-full flex-row items-center gap-2"
-            >
-              <Ionicons name="medical" size={16} color="#67A9AF" />
-              <Text className="text-primary font-sans-medium text-sm">General Checkup</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => handleQuickAction('emergency')}
-              className="bg-red-50 px-4 py-2 rounded-full flex-row items-center gap-2"
-            >
-              <Ionicons name="alert-circle" size={16} color="#EF4444" />
-              <Text className="text-red-600 font-sans-medium text-sm">Emergency</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => handleQuickAction('followup')}
-              className="bg-blue-50 px-4 py-2 rounded-full flex-row items-center gap-2"
-            >
-              <Ionicons name="help-circle" size={16} color="#3B82F6" />
-              <Text className="text-blue-600 font-sans-medium text-sm">Need Help</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
-
-      {/* Messages Container */}
+      {/* ── Messages ── */}
       <ScrollView
         ref={scrollViewRef}
-        className="flex-1 px-4"
-        contentContainerStyle={{ paddingVertical: 16 }}
+        className="flex-1"
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustContentInsets={false}
       >
-        {messages.map((message, index) => (
-          <View key={index} className={`flex-row mb-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            {message.role === 'assistant' && (
-              <View className="w-8 h-8 bg-primary rounded-full items-center justify-center mr-2">
-                <Ionicons name="chatbubble" size={18} color="white" />
-              </View>
-            )}
+        {messages.map((msg, index) => (
+          index === 0 && !showWelcome ? null : (
+            <View
+              key={index}
+              className={`mb-5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+            >
+              {/* Row: avatar + bubble */}
+              <View className={`flex-row items-end gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`} style={{ maxWidth: '88%' }}>
 
-            <View className={`flex-1 ${message.role === 'user' ? 'items-end' : 'items-start'}`} style={{ maxWidth: '85%' }}>
-              <View className={`px-4 py-3 rounded-2xl ${message.role === 'user'
-                  ? 'bg-primary'
-                  : 'bg-white border border-gray-200 shadow-sm'
-                }`}>
-                <Text className={`text-sm font-sans-medium leading-relaxed ${message.role === 'user' ? 'text-white' : 'text-gray-800'
+                {/* Avatar */}
+                {msg.role === 'assistant' ? (
+                  <View className="w-8 h-8 bg-primary rounded-full items-center justify-center mb-1 shrink-0">
+                    <Ionicons name="pulse" size={14} color="white" />
+                  </View>
+                ) : (
+                  <Image source={{ uri: avatarUri }} className="w-8 h-8 rounded-full mb-1 shrink-0" />
+                )}
+
+                {/* Bubble */}
+                <View className={`rounded-2xl px-4 py-3 ${msg.role === 'user'
+                  ? 'bg-primary rounded-br-sm'
+                  : 'bg-white border border-gray-100 rounded-bl-sm shadow-sm'
                   }`}>
-                  {message.content}
-                </Text>
+                  <MessageText content={msg.content} isUser={msg.role === 'user'} />
+
+                  {/* Display images in user messages */}
+                  {msg.images && msg.images.length > 0 && (
+                    <View className="mt-2">
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View className="flex-row gap-2">
+                          {msg.images.map((imageUri, index) => (
+                            <Image
+                              key={index}
+                              source={{ uri: imageUri }}
+                              className="w-24 h-24 rounded-lg"
+                              style={{ resizeMode: 'cover' }}
+                            />
+                          ))}
+                        </View>
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
               </View>
 
-              {/* Doctor Cards */}
-              {message.doctors && message.doctors.length > 0 && (
-                <View className="w-full mt-3">
-                  <Text className="text-sm font-sans-semibold text-gray-700 mb-2">
-                    Recommended Doctors ({message.doctors.length})
-                  </Text>
-                  {message.doctors.map(doctor => (
-                    <DoctorCard
-                      key={doctor.id}
-                      doctor={doctor}
-                      onBook={handleBookAppointment}
-                    />
-                  ))}
+              {/* Rich content below assistant bubble */}
+              {msg.role === 'assistant' && (
+                <View className="ml-10" style={{ maxWidth: '88%', width: '88%' }}>
+                  {msg.emergencyRecommendation && (
+                    <EmergencyCard recommendation={msg.emergencyRecommendation} />
+                  )}
+                  {msg.idmeInsights && (
+                    <IDMEInsightsCard insights={msg.idmeInsights} />
+                  )}
+                  {msg.riskLevel && (msg.doctors?.length || msg.emergencyRecommendation) && (
+                    <RiskBadge riskLevel={msg.riskLevel} />
+                  )}
+                  {msg.diagnosisSuggestions && msg.diagnosisSuggestions.length > 0 && (
+                    <DiagnosisList suggestions={msg.diagnosisSuggestions} />
+                  )}
+                  {msg.articleLink && (
+                    <ArticleCard article={msg.articleLink} />
+                  )}
+
+                  {msg.doctors && msg.doctors.length > 0 && (
+                    <View className="mt-4">
+                      <Text className="font-sans-semibold text-xs text-gray-400 mb-3 tracking-wide uppercase">
+                        Recommended Doctors
+                      </Text>
+                      {msg.doctors.map(d => (
+                        <DoctorCard key={d.id} doctor={d} onBook={handleBookAppointment} />
+                      ))}
+                    </View>
+                  )}
+                  {/* In-chat suggestion chips — only on welcome message */}
+                  {msg.showSuggestions && (
+                    <SuggestionChips onSelect={(text) => handleSend(text)} />
+                  )}
                 </View>
               )}
 
-              <Text className="text-xs font-sans text-gray-500 mt-1">
-                {message.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              {/* Timestamp */}
+              <Text className={`font-sans text-xs text-gray-300 mt-1.5 ${msg.role === 'user' ? 'mr-10' : 'ml-10'}`}>
+                {msg.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </Text>
             </View>
-
-            {message.role === 'user' && (
-              <View className="w-8 h-8 rounded-full ml-2 overflow-hidden">
-                <Image
-                  source={{ uri: user?.profileImage?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'U')}&background=67A9AF&color=fff` }}
-                  className="w-8 h-8"
-                />
-              </View>
-            )}
-          </View>
+          )
         ))}
 
         {isTyping && <TypingIndicator />}
       </ScrollView>
 
-      {/* Input Area */}
-      <View className="bg-white border-t border-gray-200 px-4 py-3 pb-24">
-        <View className="flex-row items-center gap-2">
+      {/* ── Input ── */}
+      <View className="bg-white border-t border-gray-100 px-4 pt-3 pb-24">
+        {/* Image Preview */}
+        {selectedImages.length > 0 && (
+          <View className="mb-3">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View className="flex-row gap-2">
+                {selectedImages.map((imageUri, index) => (
+                  <View key={index} className="relative">
+                    <Image
+                      source={{ uri: imageUri }}
+                      className="w-20 h-20 rounded-lg"
+                      style={{ resizeMode: 'cover' }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full items-center justify-center"
+                    >
+                      <Ionicons name="close" size={12} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        )}
+
+        <View className="flex-row items-end gap-2">
+          {/* Image Upload Button */}
+          <TouchableOpacity
+            onPress={handleImageUpload}
+            className="w-11 h-11 rounded-2xl items-center justify-center bg-gray-100"
+          >
+            <Ionicons name="camera" size={20} color="#6B7280" />
+          </TouchableOpacity>
+
           <TextInput
             value={input}
             onChangeText={setInput}
-            placeholder="Describe your symptoms..."
-            placeholderTextColor="#9CA3AF"
+            placeholder="Describe your symptoms or upload images…"
+            placeholderTextColor="#D1D5DB"
             multiline
             maxLength={500}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-sm font-sans bg-gray-50"
-            style={{ maxHeight: 100 }}
             editable={!isTyping}
-            onSubmitEditing={handleSend}
+            className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-sans text-sm text-gray-800"
+            style={{ maxHeight: 120, lineHeight: 20 }}
+            onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
           />
           <TouchableOpacity
-            onPress={handleSend}
+            onPress={() => handleSend()}
             disabled={!input.trim() || isTyping}
-            className={`p-3 rounded-xl ${(!input.trim() || isTyping) ? 'bg-gray-300' : 'bg-primary active:bg-primary/80'}`}
+            className={`w-11 h-11 rounded-2xl items-center justify-center ${!input.trim() || isTyping ? 'bg-gray-100' : 'bg-primary active:opacity-80'
+              }`}
           >
-            {isTyping ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Ionicons name="send" size={20} color="white" />
-            )}
+            {isTyping
+              ? <ActivityIndicator size="small" color="#9CA3AF" />
+              : <Ionicons name="arrow-up" size={20} color={!input.trim() ? '#9CA3AF' : 'white'} />
+            }
           </TouchableOpacity>
         </View>
-
-        <View className="flex-row items-center justify-center mt-2 gap-1">
-          <Ionicons name="shield-checkmark" size={12} color="#6B7280" />
-          <Text className="text-xs font-sans text-gray-500 text-center">
-            Secure & confidential. AI provides guidance, not medical diagnosis.
-          </Text>
+        <View className="flex-row items-center justify-center gap-1 mt-2">
+          <Ionicons name="shield-checkmark-outline" size={11} color="#9CA3AF" />
+          <Text className="font-sans text-xs text-gray-600">AI guidance only — not a medical diagnosis</Text>
         </View>
       </View>
+
+      {/* Custom Appointment Modal */}
+      {showAppointmentModal && selectedDoctor && (
+        <View className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+          <View className="bg-white rounded-2xl p-4 m-4 w-full max-w-[90%] shadow-2xl">
+            <View className="flex-row justify-between items-start mb-4">
+              <Text className="font-sans-bold text-lg text-gray-900">Book Appointment</Text>
+              <TouchableOpacity onPress={cancelAppointment}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="mb-4">
+              <Image
+                source={{ uri: selectedDoctor.image }}
+                className="w-20 h-20 rounded-full mb-3"
+                style={{ resizeMode: 'cover' }}
+              />
+              <Text className="font-sans-semibold text-base text-gray-900 mb-1">{selectedDoctor.name}</Text>
+              <Text className="font-sans text-sm text-gray-600 mb-2">{selectedDoctor.specialty}</Text>
+              <Text className="font-sans text-xs text-gray-500 mb-4">{selectedDoctor.qualifications}</Text>
+            </View>
+
+            <View className="space-y-2 mb-4">
+              <View className="flex-row justify-between items-center">
+                <Text className="font-sans text-sm text-gray-600">Experience:</Text>
+                <Text className="font-sans-medium text-sm text-gray-900">{selectedDoctor.experience} years</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center">
+                <Text className="font-sans text-sm text-gray-600">Rating:</Text>
+                <Text className="font-sans-medium text-sm text-gray-900">⭐ {selectedDoctor.rating}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center">
+                <Text className="font-sans text-sm text-gray-600">Consultation:</Text>
+                <Text className="font-sans-medium text-sm text-gray-900">₦{selectedDoctor.consultationFee.toLocaleString()}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center">
+                <Text className="font-sans text-sm text-gray-600">Location:</Text>
+                <Text className="font-sans-medium text-sm text-gray-900">{selectedDoctor.location}</Text>
+              </View>
+            </View>
+
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={cancelAppointment}
+                className="flex-1 bg-gray-100 border border-gray-300 rounded-xl py-3 px-4 items-center"
+              >
+                <Text className="font-sans-medium text-gray-700">Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={confirmAppointment}
+                className="flex-1 bg-primary border border-primary rounded-xl py-3 px-4 items-center active:opacity-80"
+              >
+                <Text className="font-sans-medium text-white">Confirm Booking</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 };

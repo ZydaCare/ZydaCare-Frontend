@@ -214,7 +214,7 @@ export default function SecuritySettingsScreen() {
                         </View>
                     </TouchableOpacity>
 
-                    <SecurityItem
+                    {/* <SecurityItem
                         icon={<MaterialIcons name="security" size={20} color="#10B981" />}
                         title="Two-Factor Authentication"
                         description="Add an extra layer of security"
@@ -222,7 +222,7 @@ export default function SecuritySettingsScreen() {
                         switchValue={twoFactorEnabled}
                         onSwitchChange={setTwoFactorEnabled}
                         iconBg="#D1FAE5"
-                    />
+                    /> */}
 
                     {/* {biometricAvailable && (
                         <SecurityItem
