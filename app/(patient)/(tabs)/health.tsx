@@ -2,7 +2,8 @@ import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   Image, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
   Keyboard,
-  Linking
+  Linking,
+  Animated
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef, useEffect } from 'react';
@@ -13,6 +14,8 @@ import axios from 'axios';
 import { BASE_URL } from '@/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 interface Doctor {
   id: string;
@@ -297,13 +300,29 @@ const DoctorCard = ({ doctor, onBook }: { doctor: Doctor; onBook: (d: Doctor) =>
           <Text className="font-sans text-xs text-gray-400" numberOfLines={1}>{doctor.location}</Text>
         </View>
       </View>
-      <TouchableOpacity
-        onPress={() => onBook(doctor)}
-        className="bg-secondary px-4 py-2.5 rounded-xl flex-row items-center gap-1.5 active:opacity-80"
-      >
-        <Ionicons name="calendar-outline" size={14} color="white" />
-        <Text className="font-sans-semibold text-xs text-white">Book</Text>
-      </TouchableOpacity>
+      <View className='flex-row items-center gap-2'>
+        <TouchableOpacity
+          className="bg-primary px-4 py-2.5 rounded-xl flex-row items-center gap-1.5 active:opacity-80"
+          onPress={() => router.push({
+            pathname: '/(patient)/(pages)/doctor/[id]',
+            params: { id: doctor.id }
+          })}
+        >
+          <Text className='font-sans-semibold text-xs text-white'>View Profile</Text>
+        </TouchableOpacity>
+
+        {doctor.availableToday ? (
+          <TouchableOpacity
+            onPress={() => onBook(doctor)}
+            className="bg-secondary px-4 py-2.5 rounded-xl flex-row items-center gap-1.5 active:opacity-80"
+          >
+            <Ionicons name="calendar-outline" size={14} color="white" />
+            <Text className="font-sans-semibold text-xs text-white">Book</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text className='font-sans text-xs text-red-500'>Not Available today</Text>
+        )}
+      </View>
     </View>
   </View>
 );
@@ -347,6 +366,10 @@ const SuggestionChips = ({ onSelect }: { onSelect: (text: string) => void }) => 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 const Health = () => {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
+
   const { user } = useAuth();
   const fullName = `${user?.firstName} ${user?.lastName}`.trim();
   const avatarUri = user?.profileImage?.url
@@ -361,6 +384,32 @@ const Health = () => {
       showSuggestions: true,
     },
   ]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const showSub = Keyboard.addListener('keyboardDidShow', e => {
+      Animated.timing(keyboardOffset, {
+        toValue: e.endCoordinates.height - tabBarHeight, // subtract tab bar to avoid double offset
+        duration: 250,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      Animated.timing(keyboardOffset, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
 
   const [showWelcome, setShowWelcome] = useState(true);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
@@ -488,6 +537,7 @@ const Health = () => {
     setSelectedDoctor(null);
   };
 
+
   const handleImageUpload = async () => {
     try {
       // Request permission
@@ -521,10 +571,7 @@ const Health = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-gray-50"
-    >
+    <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
 
       {/* ── Header ── */}
       <View className="bg-white border-b border-gray-100 px-5 pt-14 pb-4">
@@ -551,108 +598,130 @@ const Health = () => {
       </View>
 
       {/* ── Messages ── */}
-      <ScrollView
-        ref={scrollViewRef}
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        automaticallyAdjustContentInsets={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        {messages.map((msg, index) => (
-          index === 0 && !showWelcome ? null : (
-            <View
-              key={index}
-              className={`mb-5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-            >
-              {/* Row: avatar + bubble */}
-              <View className={`flex-row items-end gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`} style={{ maxWidth: '88%' }}>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingTop: 20,
+            paddingBottom: 200,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {messages.map((msg, index) => (
+            index === 0 && !showWelcome ? null : (
+              <View
+                key={index}
+                className={`mb-5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+              >
+                {/* Row: avatar + bubble */}
+                <View className={`flex-row items-end gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`} style={{ maxWidth: '88%' }}>
 
-                {/* Avatar */}
-                {msg.role === 'assistant' ? (
-                  <View className="w-8 h-8 bg-primary rounded-full items-center justify-center mb-1 shrink-0">
-                    <Ionicons name="pulse" size={14} color="white" />
+                  {/* Avatar */}
+                  {msg.role === 'assistant' ? (
+                    <View className="w-8 h-8 bg-primary rounded-full items-center justify-center mb-1 shrink-0">
+                      <Ionicons name="pulse" size={14} color="white" />
+                    </View>
+                  ) : (
+                    <Image source={{ uri: avatarUri }} className="w-8 h-8 rounded-full mb-1 shrink-0" />
+                  )}
+
+                  {/* Bubble */}
+                  <View className={`rounded-2xl px-4 py-3 ${msg.role === 'user'
+                    ? 'bg-primary rounded-br-sm'
+                    : 'bg-white border border-gray-100 rounded-bl-sm shadow-sm'
+                    }`}>
+                    <MessageText content={msg.content} isUser={msg.role === 'user'} />
+
+                    {/* Display images in user messages */}
+                    {msg.images && msg.images.length > 0 && (
+                      <View className="mt-2">
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          <View className="flex-row gap-2">
+                            {msg.images.map((imageUri, index) => (
+                              <Image
+                                key={index}
+                                source={{ uri: imageUri }}
+                                className="w-24 h-24 rounded-lg"
+                                style={{ resizeMode: 'cover' }}
+                              />
+                            ))}
+                          </View>
+                        </ScrollView>
+                      </View>
+                    )}
                   </View>
-                ) : (
-                  <Image source={{ uri: avatarUri }} className="w-8 h-8 rounded-full mb-1 shrink-0" />
+                </View>
+
+                {/* Rich content below assistant bubble */}
+                {msg.role === 'assistant' && (
+                  <View className="ml-10" style={{ maxWidth: '88%', width: '88%' }}>
+                    {msg.emergencyRecommendation && (
+                      <EmergencyCard recommendation={msg.emergencyRecommendation} />
+                    )}
+                    {msg.idmeInsights && (
+                      <IDMEInsightsCard insights={msg.idmeInsights} />
+                    )}
+                    {msg.riskLevel && (msg.doctors?.length || msg.emergencyRecommendation) && (
+                      <RiskBadge riskLevel={msg.riskLevel} />
+                    )}
+                    {msg.diagnosisSuggestions && msg.diagnosisSuggestions.length > 0 && (
+                      <DiagnosisList suggestions={msg.diagnosisSuggestions} />
+                    )}
+                    {msg.articleLink && (
+                      <ArticleCard article={msg.articleLink} />
+                    )}
+
+                    {msg.doctors && msg.doctors.length > 0 && (
+                      <View className="mt-4">
+                        <Text className="font-sans-semibold text-xs text-gray-400 mb-3 tracking-wide uppercase">
+                          Recommended Doctors
+                        </Text>
+                        {msg.doctors.map(d => (
+                          <DoctorCard key={d.id} doctor={d} onBook={handleBookAppointment} />
+                        ))}
+                      </View>
+                    )}
+                    {/* In-chat suggestion chips — only on welcome message */}
+                    {msg.showSuggestions && (
+                      <SuggestionChips onSelect={(text) => handleSend(text)} />
+                    )}
+                  </View>
                 )}
 
-                {/* Bubble */}
-                <View className={`rounded-2xl px-4 py-3 ${msg.role === 'user'
-                  ? 'bg-primary rounded-br-sm'
-                  : 'bg-white border border-gray-100 rounded-bl-sm shadow-sm'
-                  }`}>
-                  <MessageText content={msg.content} isUser={msg.role === 'user'} />
-
-                  {/* Display images in user messages */}
-                  {msg.images && msg.images.length > 0 && (
-                    <View className="mt-2">
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        <View className="flex-row gap-2">
-                          {msg.images.map((imageUri, index) => (
-                            <Image
-                              key={index}
-                              source={{ uri: imageUri }}
-                              className="w-24 h-24 rounded-lg"
-                              style={{ resizeMode: 'cover' }}
-                            />
-                          ))}
-                        </View>
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
+                {/* Timestamp */}
+                <Text className={`font-sans text-xs text-gray-300 mt-1.5 ${msg.role === 'user' ? 'mr-10' : 'ml-10'}`}>
+                  {msg.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
               </View>
+            )
+          ))}
 
-              {/* Rich content below assistant bubble */}
-              {msg.role === 'assistant' && (
-                <View className="ml-10" style={{ maxWidth: '88%', width: '88%' }}>
-                  {msg.emergencyRecommendation && (
-                    <EmergencyCard recommendation={msg.emergencyRecommendation} />
-                  )}
-                  {msg.idmeInsights && (
-                    <IDMEInsightsCard insights={msg.idmeInsights} />
-                  )}
-                  {msg.riskLevel && (msg.doctors?.length || msg.emergencyRecommendation) && (
-                    <RiskBadge riskLevel={msg.riskLevel} />
-                  )}
-                  {msg.diagnosisSuggestions && msg.diagnosisSuggestions.length > 0 && (
-                    <DiagnosisList suggestions={msg.diagnosisSuggestions} />
-                  )}
-                  {msg.articleLink && (
-                    <ArticleCard article={msg.articleLink} />
-                  )}
-
-                  {msg.doctors && msg.doctors.length > 0 && (
-                    <View className="mt-4">
-                      <Text className="font-sans-semibold text-xs text-gray-400 mb-3 tracking-wide uppercase">
-                        Recommended Doctors
-                      </Text>
-                      {msg.doctors.map(d => (
-                        <DoctorCard key={d.id} doctor={d} onBook={handleBookAppointment} />
-                      ))}
-                    </View>
-                  )}
-                  {/* In-chat suggestion chips — only on welcome message */}
-                  {msg.showSuggestions && (
-                    <SuggestionChips onSelect={(text) => handleSend(text)} />
-                  )}
-                </View>
-              )}
-
-              {/* Timestamp */}
-              <Text className={`font-sans text-xs text-gray-300 mt-1.5 ${msg.role === 'user' ? 'mr-10' : 'ml-10'}`}>
-                {msg.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </View>
-          )
-        ))}
-
-        {isTyping && <TypingIndicator />}
-      </ScrollView>
+          {isTyping && <TypingIndicator />}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* ── Input ── */}
-      <View className="bg-white border-t border-gray-100 px-4 pt-3 pb-24">
+      <Animated.View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          paddingTop: 10,
+          bottom: Platform.OS === 'android'
+            ? Animated.add(keyboardOffset, tabBarHeight)
+            : tabBarHeight,
+          paddingBottom: insets.bottom,
+          backgroundColor: 'white',
+          borderTopWidth: 1,
+          borderTopColor: '#E5E7EB',
+        }}
+      >
+
         {/* Image Preview */}
         {selectedImages.length > 0 && (
           <View className="mb-3">
@@ -678,7 +747,7 @@ const Health = () => {
           </View>
         )}
 
-        <View className="flex-row items-end gap-2">
+        <View className="flex-row items-end gap-2 px-2">
           {/* Image Upload Button */}
           <TouchableOpacity
             onPress={handleImageUpload}
@@ -713,9 +782,9 @@ const Health = () => {
         </View>
         <View className="flex-row items-center justify-center gap-1 mt-2">
           <Ionicons name="shield-checkmark-outline" size={11} color="#9CA3AF" />
-          <Text className="font-sans text-xs text-gray-600">AI guidance only — not a medical diagnosis</Text>
+          <Text className="font-sans text-xs text-gray-600">AI guidance only — Not a medical diagnosis</Text>
         </View>
-      </View>
+      </Animated.View>
 
       {/* Custom Appointment Modal */}
       {showAppointmentModal && selectedDoctor && (
@@ -779,7 +848,7 @@ const Health = () => {
           </View>
         </View>
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 

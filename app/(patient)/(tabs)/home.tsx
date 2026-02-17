@@ -12,8 +12,8 @@ import UpcomingAppointmentCard from '@/components/UpcomingAppointmentCard';
 import HealthTipsSection from '@/components/HealthTipsSection';
 import { ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
 import { useToast } from '@/components/ui/Toast';
+import FloatingSOS from '@/components/FloatingSOS'
 
 interface CategoryItem {
   id: number;
@@ -51,8 +51,6 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const { isLoading, isAuthenticated, user, getMe } = useAuth();
   const [token, setToken] = useState<string | null>(null);
-  const [showSOSModal, setShowSOSModal] = useState(false);
-  const [sendingSOS, setSendingSOS] = useState(false);
   const { showToast } = useToast();
   const [greeting, setGreeting] = useState('');
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -185,43 +183,6 @@ const Home = () => {
 
   const { width } = Dimensions.get('window');
   const cardWidth = (width - 48) / 2 - 8;
-
-  const handleSOS = async () => {
-    try {
-      setSendingSOS(true);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setSendingSOS(false);
-        showToast('Permission Denied! Location access is required to send SOS.', 'error');
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      const coords = {
-        lat: location.coords.latitude,
-        lng: location.coords.longitude,
-      };
-
-      // Send data to your backend or emergency API
-      // await fetch('https://api.zydacare.com/sos', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     location: coords,
-      //     timestamp: new Date().toISOString(),
-      //   }),
-      // });
-
-      setSendingSOS(false);
-      setShowSOSModal(false);
-      showToast('SOS Sent! Emergency responders have been notified. Help are on the way', 'success');
-    } catch (error) {
-      console.error('SOS Error:', error);
-      setSendingSOS(false);
-      setShowSOSModal(false);
-      showToast('Unable to send SOS request.', 'error');
-    }
-  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -377,85 +338,13 @@ const Home = () => {
       </ScrollView>
 
       {/* Floating SOS Button - Slightly larger and more accessible */}
-      <TouchableOpacity
-        onPress={() => setShowSOSModal(true)}
-        activeOpacity={0.9}
-        style={{
-          position: 'absolute',
-          bottom: 100,
-          right: 20,
-          backgroundColor: '#EF4444',
-          width: 55,
-          height: 55,
-          borderRadius: 100,
-          justifyContent: 'center',
-          alignItems: 'center',
-          shadowColor: '#EF4444',
-          shadowOpacity: 0.4,
-          shadowOffset: { width: 0, height: 4 },
-          shadowRadius: 8,
-          elevation: 8,
-        }}
-      >
-        <Ionicons name="alert" size={28} color="#fff" />
-        <Text className="text-white text-xs font-sans-bold ">SOS</Text>
-      </TouchableOpacity>
+      <FloatingSOS />
 
       {/* Bottom spacing */}
       <View className='h-20' />
 
       {/* Enhanced SOS Modal with calmer design */}
-      <Modal
-        visible={showSOSModal}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setShowSOSModal(false)}
-      >
-        <View className="flex-1 bg-black/50 items-center justify-center px-6">
-          <View className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
-            <View className="items-center mb-5">
-              <View className="bg-red-50 p-4 rounded-full mb-3">
-                <Ionicons name="alert-circle" size={48} color="#EF4444" />
-              </View>
-              <Text className="text-xl font-sans-bold text-gray-800">
-                Emergency Alert
-              </Text>
-            </View>
-
-            <Text className="text-gray-600 text-center mb-6 font-sans leading-relaxed">
-              Your location and medical information will be shared with emergency responders immediately. Are you sure you want to proceed?
-            </Text>
-
-            <View className="flex-row justify-between mt-2">
-              <TouchableOpacity
-                onPress={() => setShowSOSModal(false)}
-                className="flex-1 bg-gray-100 rounded-xl py-4 mr-2"
-                activeOpacity={0.7}
-              >
-                <Text className="text-center text-gray-700 font-sans-semibold text-base">
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleSOS}
-                disabled={sendingSOS}
-                className="flex-1 rounded-xl py-4 ml-2"
-                style={{ backgroundColor: sendingSOS ? '#FCA5A5' : '#EF4444' }}
-                activeOpacity={0.8}
-              >
-                {sendingSOS ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text className="text-center text-white font-sans-bold text-base">
-                    Send SOS
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+   
     </SafeAreaView>
   )
 }
